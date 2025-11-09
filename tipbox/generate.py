@@ -18,6 +18,7 @@ def generate(
     bifurcation_type: str = 'fold',
     null_simulation: bool = False,
     num_timesteps: int = 500,
+    steps_before_transition: int = 1,
     dt_sample: float = 1.0,
     sigma_tilde: float = 0.01,
     max_attempts: int = 100
@@ -41,6 +42,8 @@ def generate(
         Finds bifurcation but keeps parameter fixed (no approach to tipping point).
     num_timesteps : int, default=500
         Length of output trajectory
+    steps_before_transition : int, default=1
+        Number of samples to stay before the detected transition (>=0).
     dt_sample : float, default=1.0
         Time between samples
     sigma_tilde : float, default=0.01
@@ -59,6 +62,7 @@ def generate(
         - model: PolynomialModel object
         - bifurcation: BifurcationPoint object
         - bifurcation_type: str ('fold', 'hopf', 'transcritical', or 'null')
+        - steps_before_transition: int gap applied before transition
         - parameters: array of 20 parameters
         - equilibrium: equilibrium point [x, y]
         - recovery_rate: dominant eigenvalue magnitude
@@ -91,21 +95,21 @@ def generate(
         result = simulate_training_trajectory(
             model, bifurcation, subkey,
             series_len=num_timesteps,
+            steps_before_transition=steps_before_transition,
             null_sim=null_simulation,
             dt_sample=dt_sample,
             sigma_tilde=sigma_tilde
         )
         
         if result is not None:
-            time, trajectory, label = result
+            time, trajectory, label, sigma = result
             
             info = {
                 'model': model,
                 'bifurcation': bifurcation,
                 'bifurcation_type': label,
-                'parameters': model.get_parameters(),
-                'equilibrium': model.equi,
-                'recovery_rate': model.recovery_rate
+                'steps_before_transition': steps_before_transition,
+                'sigma': sigma
             }
             return time, trajectory, info
     

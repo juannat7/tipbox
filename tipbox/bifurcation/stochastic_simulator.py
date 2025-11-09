@@ -165,7 +165,7 @@ def simulate_to_bifurcation(
     time = indices * dt_integrate
     param_values = param_schedule[indices]
     
-    return time, trajectory, param_values
+    return time, trajectory, param_values, sigma
 
 
 def detect_transition(
@@ -231,13 +231,14 @@ def extract_pre_transition_series(
     trajectory: jnp.ndarray,
     param_values: jnp.ndarray,
     transition_idx: int,
+    steps_before_transition: int,
     series_len: int
 ) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray, bool]:
     """
-    Extract fixed-length series before transition.
+    Extract fixed-length series before transition with configurable offset.
     
-    Extracts `series_len` points immediately before the transition index.
-    Time is reset to start at 0.
+    Extracts `series_len` points ending `steps_before_transition` samples
+    before the detected transition index. Time is reset to start at 0.
     
     Parameters
     ----------
@@ -245,6 +246,8 @@ def extract_pre_transition_series(
     trajectory : (n, 2) array of states
     param_values : (n,) array of parameter values
     transition_idx : int, transition detection index
+    steps_before_transition : int
+        Number of samples to stay before the transition index (>=0).
     series_len : int, desired output length
     
     Returns
@@ -254,22 +257,23 @@ def extract_pre_transition_series(
     param_out : (series_len,) parameter array
     success : bool, whether extraction succeeded
     """
-    if transition_idx < series_len:
-        # Not enough data before transition
-        return time[:series_len], trajectory[:series_len], param_values[:series_len], False
+    gap = max(steps_before_transition, 0)
+    end_idx = transition_idx - gap
+    start_idx = end_idx - series_len
+    success = (end_idx > 0) and (end_idx >= series_len) and (start_idx >= 0)
     
-    # Extract series_len points before transition
-    start_idx = transition_idx - series_len
-    end_idx = transition_idx
+    if success:
+        time_out = time[start_idx:end_idx]
+        trajectory_out = trajectory[start_idx:end_idx]
+        param_out = param_values[start_idx:end_idx]
+        time_out = time_out - time_out[0]
+    else:
+        time_out = time[:series_len]
+        trajectory_out = trajectory[:series_len]
+        param_out = param_values[:series_len]
+        time_out = time_out - time_out[0]
     
-    time_out = time[start_idx:end_idx]
-    trajectory_out = trajectory[start_idx:end_idx]
-    param_out = param_values[start_idx:end_idx]
-    
-    # Reset time to start at 0
-    time_out = time_out - time_out[0]
-    
-    return time_out, trajectory_out, param_out, True
+    return time_out, trajectory_out, param_out, success
 
 
 def simulate_training_trajectory(
@@ -277,6 +281,7 @@ def simulate_training_trajectory(
     bifurcation: BifurcationPoint,
     key: jax.random.PRNGKey,
     series_len: int = 500,
+    steps_before_transition: int = 1,
     null_sim: bool = False,
     **sim_kwargs
 ) -> Optional[Tuple[jnp.ndarray, jnp.ndarray, str]]:
@@ -297,6 +302,8 @@ def simulate_training_trajectory(
     key : JAX random key
     series_len : int, default=500
         Desired output trajectory length
+    steps_before_transition : int, default=1
+        Number of samples to stay before the detected transition (>=0).
     null_sim : bool, default=False
         If True, simulate null (non-tipping) trajectory
     **sim_kwargs : additional arguments
@@ -311,9 +318,9 @@ def simulate_training_trajectory(
     Returns None if transition occurs too early (< series_len points before)
     """
     # Simulate with buffer to ensure enough pre-transition data
-    buffer_len = series_len + 200
+    buffer_len = series_len + steps_before_transition + 200
     
-    time, trajectory, param_values = simulate_to_bifurcation(
+    time, trajectory, param_values, sigma = simulate_to_bifurcation(
         model, bifurcation, key,
         series_len=buffer_len,
         null_sim=null_sim,
@@ -324,8 +331,8 @@ def simulate_training_trajectory(
     trans_idx = detect_transition(trajectory, time)
     
     # Extract fixed-length series before transition
-    time_out, traj_out, param_out, success = extract_pre_transition_series(
-        time, trajectory, param_values, trans_idx, series_len
+    time_out, traj_out, _, success = extract_pre_transition_series(
+        time, trajectory, param_values, trans_idx, steps_before_transition, series_len
     )
     
     if not success:
@@ -334,5 +341,5 @@ def simulate_training_trajectory(
     # Label based on bifurcation type
     label = 'null' if null_sim else bifurcation.bif_type
     
-    return time_out, traj_out, label
+    return time_out, traj_out, label, sigma
 
