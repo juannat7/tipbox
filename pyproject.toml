@@ -1,0 +1,32 @@
+[project]
+name = "tipbox"
+version = "0.0.1"
+description = "Collection of box models for tipping point analysis"
+authors = [
+    {name = "Juan Nathaniel", email = "jn2808@columbia.edu"},
+]
+dependencies = [
+    "jax",
+    "jaxlib",
+    "numpy",
+    "pandas",
+    "ruptures",
+    "statsmodels",
+    "matplotlib",
+]
+
+requires-python = ">=3.10"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICEN[CS]E*"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+
+[tool.setuptools]
+packages = ["tipbox"]
+
+[project.urls]
+Homepage = "https://github.com/juannat7/tipbox"
+Issues = "https://github.com/juannat7/tipbox/issues"
