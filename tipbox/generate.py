@@ -19,6 +19,7 @@ def generate(
     null_simulation: bool = False,
     num_timesteps: int = 500,
     steps_before_transition: int = 1,
+    buffer_size: int = 1000,
     dt_sample: float = 1.0,
     sigma_tilde: float = 0.01,
     max_attempts: int = 100
@@ -44,6 +45,9 @@ def generate(
         Length of output trajectory
     steps_before_transition : int, default=1
         Number of samples to stay before the detected transition (>=0).
+    buffer_size : int, default=1000
+        Extra samples simulated before the transition to guarantee enough
+        pre-transition context while keeping the parameter ramp rate constant.
     dt_sample : float, default=1.0
         Time between samples
     sigma_tilde : float, default=0.01
@@ -96,6 +100,7 @@ def generate(
             model, bifurcation, subkey,
             series_len=num_timesteps,
             steps_before_transition=steps_before_transition,
+            buffer_size=buffer_size,
             null_sim=null_simulation,
             dt_sample=dt_sample,
             sigma_tilde=sigma_tilde

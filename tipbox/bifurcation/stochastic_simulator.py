@@ -282,9 +282,10 @@ def simulate_training_trajectory(
     key: jax.random.PRNGKey,
     series_len: int = 500,
     steps_before_transition: int = 1,
+    buffer_size: int = 1000,
     null_sim: bool = False,
     **sim_kwargs
-) -> Optional[Tuple[jnp.ndarray, jnp.ndarray, str]]:
+) -> Optional[Tuple[jnp.ndarray, jnp.ndarray, str, jnp.ndarray]]:
     """
     Generate a single training trajectory (either tipping or null).
     
@@ -304,6 +305,10 @@ def simulate_training_trajectory(
         Desired output trajectory length
     steps_before_transition : int, default=1
         Number of samples to stay before the detected transition (>=0).
+    buffer_size : int, default=1000
+        Extra samples simulated prior to the transition to ensure enough
+        pre-transition context. Keep this constant to preserve the
+        bifurcation parameter ramp rate.
     null_sim : bool, default=False
         If True, simulate null (non-tipping) trajectory
     **sim_kwargs : additional arguments
@@ -314,15 +319,22 @@ def simulate_training_trajectory(
     time : (series_len,) time array starting at 0
     trajectory : (series_len, 2) state array [x, y]
     label : str, bifurcation type ('fold', 'hopf', 'transcritical', 'null')
+    sigma : float, effective noise amplitude used
     
     Returns None if transition occurs too early (< series_len points before)
     """
-    # Simulate with buffer to ensure enough pre-transition data
-    buffer_len = series_len + steps_before_transition + 200
+    if steps_before_transition > buffer_size:
+        raise ValueError(
+            "steps_before_transition exceeds buffer_size. "
+            "Increase buffer_size to maintain constant parameter rate."
+        )
+
+    # Simulate with constant buffer to preserve bifurcation ramp rate
+    total_len = series_len + buffer_size
     
     time, trajectory, param_values, sigma = simulate_to_bifurcation(
         model, bifurcation, key,
-        series_len=buffer_len,
+        series_len=total_len,
         null_sim=null_sim,
         **sim_kwargs
     )
