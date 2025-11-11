@@ -12,9 +12,11 @@ import jax.numpy as jnp
 import numpy as np
 import ruptures as rpt
 from statsmodels.nonparametric.smoothers_lowess import lowess
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Dict, Any
 from .polynomial_model import PolynomialModel, polynomial_basis
 from .bifurcation_finder import BifurcationPoint
+from ..types import TrajectoryResult
+from ..utils import extract_segment
 
 
 @jax.jit
@@ -77,7 +79,7 @@ def simulate_to_bifurcation(
     sigma_tilde: float = 0.01,
     noise_scale_triangular: bool = True,
     burn_in_time: float = 100.0,
-    null_sim: bool = False,
+    null_simulation: bool = False,
     null_location: float = 0.0
 ) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray]:
     """
@@ -106,7 +108,7 @@ def simulate_to_bifurcation(
         Scale noise by triangular random variable
     burn_in_time : float, default=100.0
         Burn-in period at initial parameter
-    null_sim : bool, default=False
+    null_simulation : bool, default=False
         If True, fix parameter (null trajectory)
     null_location : float, default=0.0
         For null: parameter fraction [0,1] from start to bifurcation
@@ -128,7 +130,7 @@ def simulate_to_bifurcation(
     param_start = pars[param_idx]
     param_end = bifurcation.bif_value
     
-    if null_sim:
+    if null_simulation:
         param_fixed = param_start + null_location * (param_end - param_start)
         param_start = param_end = param_fixed
     
@@ -226,66 +228,16 @@ def detect_transition(
     return int(np.argmin(np.abs(time_arr - t_trans)))
 
 
-def extract_pre_transition_series(
-    time: jnp.ndarray,
-    trajectory: jnp.ndarray,
-    param_values: jnp.ndarray,
-    transition_idx: int,
-    steps_before_transition: int,
-    series_len: int
-) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray, bool]:
-    """
-    Extract fixed-length series before transition with configurable offset.
-    
-    Extracts `series_len` points ending `steps_before_transition` samples
-    before the detected transition index. Time is reset to start at 0.
-    
-    Parameters
-    ----------
-    time : (n,) array of time points
-    trajectory : (n, 2) array of states
-    param_values : (n,) array of parameter values
-    transition_idx : int, transition detection index
-    steps_before_transition : int
-        Number of samples to stay before the transition index (>=0).
-    series_len : int, desired output length
-    
-    Returns
-    -------
-    time_out : (series_len,) time array starting at 0
-    trajectory_out : (series_len, 2) trajectory array
-    param_out : (series_len,) parameter array
-    success : bool, whether extraction succeeded
-    """
-    gap = max(steps_before_transition, 0)
-    end_idx = transition_idx - gap
-    start_idx = end_idx - series_len
-    success = (end_idx > 0) and (end_idx >= series_len) and (start_idx >= 0)
-    
-    if success:
-        time_out = time[start_idx:end_idx]
-        trajectory_out = trajectory[start_idx:end_idx]
-        param_out = param_values[start_idx:end_idx]
-        time_out = time_out - time_out[0]
-    else:
-        time_out = time[:series_len]
-        trajectory_out = trajectory[:series_len]
-        param_out = param_values[:series_len]
-        time_out = time_out - time_out[0]
-    
-    return time_out, trajectory_out, param_out, success
-
-
-def simulate_training_trajectory(
+def simulate_bifurcation_trajectory(
     model: PolynomialModel,
     bifurcation: BifurcationPoint,
     key: jax.random.PRNGKey,
     series_len: int = 500,
     steps_before_transition: int = 1,
     buffer_size: int = 1000,
-    null_sim: bool = False,
+    null_simulation: bool = False,
     **sim_kwargs
-) -> Optional[Tuple[jnp.ndarray, jnp.ndarray, str, jnp.ndarray]]:
+) -> Optional[TrajectoryResult]:
     """
     Generate a single training trajectory (either tipping or null).
     
@@ -309,7 +261,7 @@ def simulate_training_trajectory(
         Extra samples simulated prior to the transition to ensure enough
         pre-transition context. Keep this constant to preserve the
         bifurcation parameter ramp rate.
-    null_sim : bool, default=False
+    null_simulation : bool, default=False
         If True, simulate null (non-tipping) trajectory
     **sim_kwargs : additional arguments
         Passed to simulate_to_bifurcation (dt_sample, dt_integrate, etc.)
@@ -333,25 +285,43 @@ def simulate_training_trajectory(
     total_len = series_len + buffer_size
     
     time, trajectory, param_values, sigma = simulate_to_bifurcation(
-        model, bifurcation, key,
+        model,
+        bifurcation,
+        key,
         series_len=total_len,
-        null_sim=null_sim,
-        **sim_kwargs
+        null_simulation=null_simulation,
+        **sim_kwargs,
     )
     
     # Detect transition
     trans_idx = detect_transition(trajectory, time)
     
     # Extract fixed-length series before transition
-    time_out, traj_out, _, success = extract_pre_transition_series(
-        time, trajectory, param_values, trans_idx, steps_before_transition, series_len
+    time_seg, traj_seg, _, trans_idx_out, success = extract_segment(
+        time,
+        trajectory,
+        param_values,
+        trans_idx,
+        steps_before_transition,
+        series_len,
     )
     
     if not success:
         return None
-    
-    # Label based on bifurcation type
-    label = 'null' if null_sim else bifurcation.bif_type
-    
-    return time_out, traj_out, label, sigma
+
+    # Label based on tipping behaviour
+    label = 'null' if null_simulation else bifurcation.bif_type
+
+    metadata: Dict[str, Any] = {
+        'transition_index': int(trans_idx_out),
+        'param_value_transition': float(param_values[min(trans_idx_out, param_values.shape[0] - 1)]),
+    }
+
+    return TrajectoryResult(
+        time=time_seg,
+        trajectory=traj_seg,
+        label=label,
+        sigma=float(sigma),
+        metadata=metadata,
+    )
 
