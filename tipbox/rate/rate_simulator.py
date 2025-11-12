@@ -38,14 +38,13 @@ RATE_SYSTEMS: Dict[str, RateSystemSpec] = {
 }
 
 
-def available_rate_systems() -> Tuple[str, ...]:
-    """Return the tuple of available rate-induced tipping systems."""
-
+def available_rate_systems():
+    """Get the available rate-induced tipping systems."""
     return tuple(RATE_SYSTEMS.keys())
 
 
-def _select_system(key: jax.random.PRNGKey) -> RateSystemSpec:
-    """Select a random rate-induced tipping system."""
+def _select_system(key: jax.random.PRNGKey):
+    """Randomly select a rate-induced tipping system."""
     names = available_rate_systems()
     idx = int(jax.random.randint(key, (), 0, len(names)))
     return RATE_SYSTEMS[names[idx]]
@@ -60,9 +59,33 @@ def simulate_rate_trajectory(
     null_simulation: bool = False,
     **generate_kwargs
 ):
-    """Simulate a single rate-induced trajectory attempt.
+    """Simulate a single rate-induced tipping trajectory.
 
-    Returns ``None`` if the simulated trajectory does not match the requested
+    Parameters
+    ----------
+    key : jax.random.PRNGKey
+        Random key for reproducibility
+    series_len : int, default=500
+        Desired output trajectory length
+    steps_before_transition : int, default=1
+        Number of samples to stay before the detected transition (>=0).
+    buffer_size : int, default=1000
+        Extra samples simulated prior to the transition to ensure enough
+        pre-transition context. Keep this constant to preserve the
+        bifurcation parameter ramp rate.
+    null_simulation : bool, default=False
+        If True, simulate null (non-tipping) trajectory
+    **generate_kwargs : additional arguments
+        Passed to the model.simulate method (dt_sample, dt_integrate, param_end_multiplier, etc.)
+
+    Returns
+    -------
+    full_trajectory : tipbox.types.TrajectoryResult
+        Full trajectory with metadata
+    part_trajectory : tipbox.types.TrajectoryResult
+        Part trajectory with metadata
+
+    Returns None if the simulated trajectory does not match the requested
     tipping/null behaviour or lacks sufficient pre-transition context.
     """
 

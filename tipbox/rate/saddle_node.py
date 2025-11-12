@@ -26,10 +26,11 @@ class SaddleNodeConfig:
 class SaddleNodeModel(BoxModel):
     """BoxModel abstraction for the stochastic saddle-node system."""
 
-    def __init__(self, config: SaddleNodeConfig) -> None:
+    def __init__(self, config: SaddleNodeConfig):
         self._config = config
 
-    def get_parameters(self) -> Dict[str, float]:
+    def get_parameters(self):
+        """Get the parameters of the model."""
         return {
             "epsilon": self._config.epsilon,
             "lambda_max": self._config.lambda_max,
@@ -41,15 +42,21 @@ class SaddleNodeModel(BoxModel):
             "tip_threshold": self._config.tip_threshold,
         }
 
-    def _lambda_schedule(self, t: jnp.ndarray, config: SaddleNodeConfig) -> jnp.ndarray:
+    def _lambda_schedule(
+        self, 
+        t: jnp.ndarray, 
+        config: SaddleNodeConfig,
+    ):
         """Compute the lambda schedule."""
         return 0.5 * config.lambda_max * (
             jnp.tanh(0.5 * config.lambda_max * config.epsilon * t) + 1.0
         )
 
     def _sample_initial_state(
-        self, key: jax.random.PRNGKey, config: SaddleNodeConfig
-    ) -> float:
+        self, 
+        key: jax.random.PRNGKey, 
+        config: SaddleNodeConfig,
+    ):
         """Sample an initial state from the uniform distribution."""
         return float(
             jax.random.uniform(
