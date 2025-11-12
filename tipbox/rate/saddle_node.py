@@ -1,10 +1,12 @@
-from dataclasses import replace, dataclass
-from typing import Optional, Tuple
+from dataclasses import asdict, dataclass, replace
+from typing import Dict, Optional, Tuple
 
 import jax
 import jax.numpy as jnp
 from jax import lax
 
+from ..types import BoxModel
+from ..utils import convert_scalar_trajectory, extract_segment
 
 @dataclass(frozen=True)
 class SaddleNodeConfig:
@@ -20,91 +22,138 @@ class SaddleNodeConfig:
     tip_threshold: float = 0.0
 
 
-@jax.jit
-def _simulate_path(
-    key: jax.random.PRNGKey,
-    lambda_t: jnp.ndarray,
-    dt: float,
-    noise_scale: float,
-    initial_state: float,
-) -> jnp.ndarray:
-    """JIT-compiled stochastic integration using lax.scan."""
 
-    noise = jax.random.normal(key, shape=(lambda_t.shape[0] - 1,))
+class SaddleNodeModel(BoxModel):
+    """BoxModel abstraction for the stochastic saddle-node system."""
 
-    def step(x_prev, inputs):
-        lam_t, noise_t = inputs
-        det_part = ((x_prev + lam_t) ** 2 - 1.0) * dt
-        x_next = x_prev + det_part + noise_scale * noise_t
-        return x_next, x_next
+    def __init__(self, config: SaddleNodeConfig) -> None:
+        self._config = config
 
-    _, x_tail = lax.scan(step, initial_state, (lambda_t[:-1], noise))
-    x0 = jnp.full((1,), initial_state, dtype=lambda_t.dtype)
-    return jnp.concatenate([x0, x_tail], axis=0)
+    def get_parameters(self) -> Dict[str, float]:
+        return {
+            "epsilon": self._config.epsilon,
+            "lambda_max": self._config.lambda_max,
+            "dt": self._config.dt,
+            "t_start": self._config.t_start,
+            "t_end": self._config.t_end,
+            "initial_state_min": self._config.initial_state_min,
+            "initial_state_max": self._config.initial_state_max,
+            "tip_threshold": self._config.tip_threshold,
+        }
 
-
-def simulate(
-    key: jax.random.PRNGKey,
-    config: SaddleNodeConfig,
-    total_len: int,
-    sigma_tilde: float = 0.01,
-) -> Tuple[jnp.ndarray, jnp.ndarray, float, float, SaddleNodeConfig]:
-    """Simulate a stochastic saddle-node system and detect tipping.
-
-    Returns time grid, trajectory, tipping flag, effective noise scale (sigma),
-    and the initial state sampled for this simulation.
-    """
-
-    key_noise, key_ic = jax.random.split(key)
-    config = replace(config, t_start=-(total_len * config.dt))
-
-    # Randomly sample IC
-    initial_state = float(
-        jax.random.uniform(
-            key_ic, 
-            (), 
-            minval=config.initial_state_min, 
-            maxval=config.initial_state_max
+    def _lambda_schedule(self, t: jnp.ndarray, config: SaddleNodeConfig) -> jnp.ndarray:
+        """Compute the lambda schedule."""
+        return 0.5 * config.lambda_max * (
+            jnp.tanh(0.5 * config.lambda_max * config.epsilon * t) + 1.0
         )
-    )
 
-    # Get lambda_t (forcing term for tipping point)
-    t = jnp.arange(config.t_start, config.t_end, config.dt)
-    lambda_t = 0.5 * config.lambda_max * (
-        jnp.tanh(0.5 * config.lambda_max * config.epsilon * t) + 1.0
-    )
+    def _sample_initial_state(
+        self, key: jax.random.PRNGKey, config: SaddleNodeConfig
+    ) -> float:
+        """Sample an initial state from the uniform distribution."""
+        return float(
+            jax.random.uniform(
+                key,
+                (),
+                minval=config.initial_state_min,
+                maxval=config.initial_state_max,
+            )
+        )
 
-    # Get noise scale for stochastic integration
-    noise = jnp.sqrt(2.0 * sigma_tilde * config.dt)
+    def _simulate_path(
+        self,
+        key: jax.random.PRNGKey,
+        lambda_t: jnp.ndarray,
+        dt: float,
+        noise_scale: float,
+        initial_state: float,
+    ):
+        """Stochastic integration."""
 
-    # Simulate trajectory
-    trajectory = _simulate_path(
-        key_noise, lambda_t, config.dt, noise, initial_state
-    )
+        noise = jax.random.normal(key, shape=(lambda_t.shape[0] - 1,))
 
-    return t, trajectory, lambda_t, noise, config
+        def step(x_prev, inputs):
+            lam_t, noise_t = inputs
+            det_part = ((x_prev + lam_t) ** 2 - 1.0) * dt
+            x_next = x_prev + det_part + noise_scale * noise_t
+            return x_next, x_next
 
+        _, x_tail = lax.scan(step, initial_state, (lambda_t[:-1], noise))
+        x0 = jnp.full((1,), initial_state, dtype=lambda_t.dtype)
+        return jnp.concatenate([x0, x_tail], axis=0)
+    
 
-def locate_transition_index(
-    trajectory: jnp.ndarray,
-    null_simulation: bool,
-    tip_threshold: float,
-    null_position: Optional[int] = None,
-) -> Optional[int]:
-    """Locate the tipping index in the trajectory."""
+    def simulate(
+        self,
+        key: jax.random.PRNGKey,
+        total_len: int,
+        sigma_tilde: float = 0.01,
+    ):
+        """Simulate the saddle-node system."""
+        key_noise, key_ic = jax.random.split(key)
 
-    data = jnp.asarray(trajectory)
+        # Setup time and lambda schedule
+        self._config = replace(self._config, t_start=-(total_len * self._config.dt))
+        time = jnp.arange(self._config.t_start, self._config.t_end, self._config.dt)
+        lambda_t = self._lambda_schedule(time, self._config)
 
-    if not null_simulation:
-        crossed = jnp.where(data > tip_threshold, 1, 0)
+        # Randomly sample initial state
+        initial_state = self._sample_initial_state(key_ic, self._config)
+
+        # Configure noise scale
+        noise = jnp.sqrt(2.0 * sigma_tilde * self._config.dt)
+
+        # Simulate trajectory
+        trajectory = self._simulate_path(
+            key_noise, lambda_t, self._config.dt, noise, initial_state
+        )
+
+        # Post-process trajectory
+        trajectory = convert_scalar_trajectory(trajectory)
+
+        return time, trajectory, lambda_t, noise
+
+    def is_tipped(
+        self,
+        trajectory: jnp.ndarray,
+    ):
+        """Check if the trajectory is tipped."""
+        scalar_view = trajectory[:, 0] if trajectory.ndim > 1 else trajectory
+        return bool(jnp.any(scalar_view > self._config.tip_threshold))
+
+    def locate_transition(
+        self,
+        trajectory: jnp.ndarray,
+        null_simulation: bool,
+    ):
+        """Locate the transition index."""
+        scalar_view = trajectory[:, 0] if trajectory.ndim > 1 else trajectory
+        if null_simulation:
+            return int(scalar_view.shape[0] // 2)
+
+        crossed = jnp.where(scalar_view > self._config.tip_threshold, 1, 0)
         has_crossed = bool(jnp.any(crossed))
         if not has_crossed:
             return None
-        first_idx = int(jnp.argmax(crossed))
-        return first_idx
+        return int(jnp.argmax(crossed))
 
-    if null_position is not None:
-        return int(jnp.minimum(null_position, data.shape[0] - 1))
+    def extract_segment(
+        self,
+        time: jnp.ndarray,
+        trajectory: jnp.ndarray,
+        param_values: jnp.ndarray,
+        transition_idx: int,
+        steps_before_transition: int,
+        series_len: int,
+    ):
+        """Extract a segment of the trajectory around the transition."""
+        time_seg, traj_seg, param_seg, trans_idx_out, success = extract_segment(
+            time,
+            trajectory,
+            param_values,
+            transition_idx,
+            steps_before_transition,
+            series_len,
+        )
 
-    return int(data.shape[0] // 2)
-
+        return time_seg, traj_seg, param_seg, trans_idx_out, success

@@ -4,9 +4,8 @@ from typing import Any, Dict, Optional, Tuple, Type
 import jax
 import jax.numpy as jnp
 
-from .saddle_node import SaddleNodeConfig, locate_transition_index, simulate
-from ..types import TrajectoryResult
-from ..utils import convert_scalar_trajectory, extract_segment
+from .saddle_node import SaddleNodeConfig, SaddleNodeModel
+from ..types import BoxModel, TrajectoryResult
 
 
 class RateSystemSpec:
@@ -16,27 +15,27 @@ class RateSystemSpec:
         self,
         name: str,
         config_cls: Type[Any],
-        simulate_fn,
-        locate_fn,
+        model_cls: Type[BoxModel],
     ) -> None:
         self.name = name
         self.config_cls = config_cls
-        self.simulate = simulate_fn
-        self.locate_transition = locate_fn
+        self.model_cls = model_cls
 
     def default_config(self) -> Any:
         return self.config_cls()
+
+    def create_model(self, config: Any) -> BoxModel:
+        return self.model_cls(config)
 
 
 RATE_SYSTEMS: Dict[str, RateSystemSpec] = {
     "saddle_node": RateSystemSpec(
         name="saddle_node",
         config_cls=SaddleNodeConfig,
-        simulate_fn=simulate,
-        locate_fn=locate_transition_index,
+        model_cls=SaddleNodeModel,
     )
+    # TODO: Add more rate-induced tipping systems
 }
-
 
 
 def available_rate_systems() -> Tuple[str, ...]:
@@ -46,6 +45,7 @@ def available_rate_systems() -> Tuple[str, ...]:
 
 
 def _select_system(key: jax.random.PRNGKey) -> RateSystemSpec:
+    """Select a random rate-induced tipping system."""
     names = available_rate_systems()
     idx = int(jax.random.randint(key, (), 0, len(names)))
     return RATE_SYSTEMS[names[idx]]
@@ -59,13 +59,13 @@ def simulate_rate_trajectory(
     sigma_tilde: float = 0.01,
     null_simulation: bool = False,
     **generate_kwargs
-) -> Optional[TrajectoryResult]:
+):
     """Simulate a single rate-induced trajectory attempt.
 
     Returns ``None`` if the simulated trajectory does not match the requested
     tipping/null behaviour or lacks sufficient pre-transition context.
     """
-    
+
     key_select, key_sim = jax.random.split(key)
 
     if steps_before_transition > buffer_size:
@@ -74,40 +74,43 @@ def simulate_rate_trajectory(
             "Increase buffer_size to maintain constant parameter rate."
         )
 
-    # Simulate with constant buffer to preserve bifurcation ramp rate
+    # Global configuration
     total_len = series_len + buffer_size
 
-    # Randomly select rate system
+    # Select, setup and initialize model
     system = _select_system(key_select)
     config = system.default_config()
+    model = system.create_model(config)
 
-    # Simulate trajectory
-    time, trajectory, param_values, sigma, config = system.simulate(
-        key_sim, config, total_len=total_len, sigma_tilde=sigma_tilde
+    # Simulate
+    time, trajectory, param_values, sigma = model.simulate(
+        key_sim,
+        total_len=total_len,
+        sigma_tilde=sigma_tilde,
     )
 
-    # Check if tipping occurred
-    is_tipped = bool(jnp.any(trajectory > config.tip_threshold))
+    # Check if the trajectory is tipped
+    is_tipped = model.is_tipped(trajectory)
     if is_tipped == null_simulation:
         return None
 
-    # Detect transition
-    trans_idx = system.locate_transition(
+    # Locate transition index
+    trans_idx = model.locate_transition(
         trajectory,
         null_simulation=null_simulation,
-        tip_threshold=getattr(config, "tip_threshold", 0.0),
-        null_position=trajectory.shape[0] // 2,
     )
 
-    # Extract fixed-length series before transition
-    trajectory = convert_scalar_trajectory(trajectory)
-    time_seg, traj_seg, param_seg, trans_idx_out, success = extract_segment(
+    if trans_idx is None:
+        return None
+
+    # Extract segment
+    time_seg, traj_seg, param_seg, trans_idx_out, success = model.extract_segment(
         time,
         trajectory,
         param_values,
         trans_idx,
-        steps_before_transition,
-        series_len,
+        steps_before_transition=steps_before_transition,
+        series_len=series_len,
     )
 
     if not success:
