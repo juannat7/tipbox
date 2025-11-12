@@ -7,6 +7,7 @@ Implements Euler-Maruyama method with:
 - Noise amplitude scaling based on recovery rate
 """
 
+from sqlite3 import paramstyle
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -80,7 +81,8 @@ def simulate_to_bifurcation(
     noise_scale_triangular: bool = True,
     burn_in_time: float = 100.0,
     null_simulation: bool = False,
-    null_location: float = 0.0
+    null_location: float = 0.0,
+    param_end_multiplier: float = 1.1
 ) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray]:
     """
     Simulate system approaching bifurcation with stochastic noise.
@@ -112,6 +114,8 @@ def simulate_to_bifurcation(
         If True, fix parameter (null trajectory)
     null_location : float, default=0.0
         For null: parameter fraction [0,1] from start to bifurcation
+    param_end_multiplier : float, default=1.1
+        Multiplier for the end parameter value
     
     Returns
     -------
@@ -128,7 +132,7 @@ def simulate_to_bifurcation(
     pars = model.get_parameters()
     param_idx = bifurcation.bif_param_index
     param_start = pars[param_idx]
-    param_end = bifurcation.bif_value
+    param_end = bifurcation.bif_value * param_end_multiplier
     
     if null_simulation:
         param_fixed = param_start + null_location * (param_end - param_start)
@@ -236,7 +240,7 @@ def simulate_bifurcation_trajectory(
     steps_before_transition: int = 1,
     buffer_size: int = 1000,
     null_simulation: bool = False,
-    **sim_kwargs
+    **generate_kwargs
 ) -> Optional[TrajectoryResult]:
     """
     Generate a single training trajectory (either tipping or null).
@@ -263,8 +267,8 @@ def simulate_bifurcation_trajectory(
         bifurcation parameter ramp rate.
     null_simulation : bool, default=False
         If True, simulate null (non-tipping) trajectory
-    **sim_kwargs : additional arguments
-        Passed to simulate_to_bifurcation (dt_sample, dt_integrate, etc.)
+    **generate_kwargs : additional arguments
+        Passed to simulate_to_bifurcation (dt_sample, dt_integrate, param_end_multiplier, etc.)
     
     Returns
     -------
@@ -290,38 +294,47 @@ def simulate_bifurcation_trajectory(
         key,
         series_len=total_len,
         null_simulation=null_simulation,
-        **sim_kwargs,
+        param_end_multiplier=generate_kwargs.get('param_end_multiplier', 1.1)
     )
     
     # Detect transition
     trans_idx = detect_transition(trajectory, time)
     
     # Extract fixed-length series before transition
-    time_seg, traj_seg, _, trans_idx_out, success = extract_segment(
+    time_seg, traj_seg, param_seg, trans_idx_out, success = extract_segment(
         time,
         trajectory,
         param_values,
         trans_idx,
         steps_before_transition,
-        series_len,
+        series_len
     )
     
     if not success:
         return None
 
-    # Label based on tipping behaviour
-    label = 'null' if null_simulation else bifurcation.bif_type
-
+    # Return results
     metadata: Dict[str, Any] = {
+        'label': 'null' if null_simulation else bifurcation.bif_type,
+        'steps_before_transition': steps_before_transition,
         'transition_index': int(trans_idx_out),
         'param_value_transition': float(param_values[min(trans_idx_out, param_values.shape[0] - 1)]),
     }
 
-    return TrajectoryResult(
-        time=time_seg,
-        trajectory=traj_seg,
-        label=label,
-        sigma=float(sigma),
-        metadata=metadata,
+    full_trajectory = TrajectoryResult(
+        time=time,
+        trajectory=trajectory,
+        param_values=param_values,
+        sigma=sigma,
+        metadata=metadata
     )
 
+    part_trajectory = TrajectoryResult(
+        time=time_seg,
+        trajectory=traj_seg,
+        param_values=param_seg,
+        sigma=sigma,
+        metadata=metadata
+    )
+
+    return (full_trajectory, part_trajectory)

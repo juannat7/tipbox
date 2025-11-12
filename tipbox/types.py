@@ -1,7 +1,7 @@
 from dataclasses import dataclass
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
-import jax.numpy as jnp
+import jax.numpy as jnp 
 
 
 @dataclass(frozen=True)
@@ -10,7 +10,7 @@ class TrajectoryResult:
 
     time: jnp.ndarray
     trajectory: jnp.ndarray
-    label: str
+    param_values: jnp.ndarray
     sigma: float
-    metadata: Dict[str, Any]
+    metadata: Optional[Dict[str, Any]]
 

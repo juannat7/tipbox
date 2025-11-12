@@ -58,7 +58,7 @@ def simulate_rate_trajectory(
     buffer_size: int = 1000,
     sigma_tilde: float = 0.01,
     null_simulation: bool = False,
-    **sim_kwargs
+    **generate_kwargs
 ) -> Optional[TrajectoryResult]:
     """Simulate a single rate-induced trajectory attempt.
 
@@ -101,7 +101,7 @@ def simulate_rate_trajectory(
 
     # Extract fixed-length series before transition
     trajectory = convert_scalar_trajectory(trajectory)
-    time_seg, traj_seg, _, trans_idx_out, success = extract_segment(
+    time_seg, traj_seg, param_seg, trans_idx_out, success = extract_segment(
         time,
         trajectory,
         param_values,
@@ -113,20 +113,30 @@ def simulate_rate_trajectory(
     if not success:
         return None
 
-    # Label based on tipping behaviour
-    label = "null" if null_simulation else "rate"
-
+    # Return results
     metadata: Dict[str, Any] = {
+        "label": "null" if null_simulation else "rate",
         "rate_system": system.name,
+        "steps_before_transition": steps_before_transition,
         "system_config": asdict(config),
         "transition_index": int(trans_idx_out),
         "param_value_transition": float(param_values[min(trans_idx_out, param_values.shape[0] - 1)])
     }
 
-    return TrajectoryResult(
+    full_trajectory = TrajectoryResult(
+        time=time,
+        trajectory=trajectory,
+        param_values=param_values,
+        sigma=sigma,
+        metadata=metadata
+    )
+
+    part_trajectory = TrajectoryResult(
         time=time_seg,
         trajectory=traj_seg,
-        label=label,
-        sigma=float(sigma),
-        metadata=metadata,
+        param_values=param_seg,
+        sigma=sigma,
+        metadata=metadata
     )
+
+    return (full_trajectory, part_trajectory)

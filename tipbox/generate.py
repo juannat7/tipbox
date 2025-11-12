@@ -23,7 +23,8 @@ def generate(
     buffer_size: int = 1000,
     dt_sample: float = 1.0,
     sigma_tilde: float = 0.01,
-    max_attempts: int = 100
+    max_attempts: int = 100,
+    **generate_kwargs
 ) -> Tuple[jnp.ndarray, jnp.ndarray, Dict]:
     """
     Generate time series using PNAS paper approach.
@@ -84,75 +85,74 @@ def generate(
 
         for attempt in range(max_attempts):
             key, subkey = jax.random.split(key)
-            result = simulate_rate_trajectory(
+            results = simulate_rate_trajectory(
                 subkey,
                 series_len=num_timesteps,
                 steps_before_transition=steps_before_transition,
                 buffer_size=buffer_size,
                 null_simulation=null_simulation,
                 sigma_tilde=sigma_tilde,
+                **generate_kwargs
             )
             
-            if result is None:
-                continue
+            if results is not None:
+                full_result, part_result = results
 
-            info = {
-                'tipping_type': 'null' if null_simulation else 'rate',
-                'steps_before_transition': steps_before_transition,
-                'sigma': result.sigma,
-                'attempt': attempt + 1,
-            }
-            info.update(result.metadata)
-            return result.time, result.trajectory, info
+                info = {
+                    'attempt': attempt + 1
+                }
+                info.update(full_result.metadata)
+                return full_result, part_result, info
 
         raise RuntimeError(
             f"Could not generate rate trajectory after {max_attempts} attempts. "
             "Try increasing max_attempts or adjust configuration."
         )
 
-    for attempt in range(max_attempts):
-        # Generate random polynomial model
-        key, subkey = jax.random.split(key)
-        model = generate_random_polynomial_model(subkey)
+    else:
 
-        if model is None:
-            continue
+        for attempt in range(max_attempts):
+            # Generate random polynomial model
+            key, subkey = jax.random.split(key)
+            model = generate_random_polynomial_model(subkey)
 
-        # Find bifurcations with AUTO-07P
-        bifurcations = find_all_bifurcations(model)
-        if not bifurcations:
-            continue
+            if model is None:
+                continue
 
-        # Select requested tipping type
-        bifurcation = select_bifurcation(bifurcations, tipping_type)
-        if bifurcation is None:
-            continue
+            # Find bifurcations with AUTO-07P
+            bifurcations = find_all_bifurcations(model)
+            if not bifurcations:
+                continue
 
-        # Simulate stochastic trajectory
-        key, subkey = jax.random.split(key)
-        result = simulate_bifurcation_trajectory(
-            model, bifurcation, subkey,
-            series_len=num_timesteps,
-            steps_before_transition=steps_before_transition,
-            buffer_size=buffer_size,
-            null_simulation=null_simulation,
-            dt_sample=dt_sample,
-            sigma_tilde=sigma_tilde
+            # Select requested tipping type
+            bifurcation = select_bifurcation(bifurcations, tipping_type)
+            if bifurcation is None:
+                continue
+
+            # Simulate stochastic trajectory
+            key, subkey = jax.random.split(key)
+            results = simulate_bifurcation_trajectory(
+                model, bifurcation, subkey,
+                series_len=num_timesteps,
+                steps_before_transition=steps_before_transition,
+                buffer_size=buffer_size,
+                null_simulation=null_simulation,
+                dt_sample=dt_sample,
+                sigma_tilde=sigma_tilde,
+                **generate_kwargs
+            )
+
+            if results is not None:
+                full_result, part_result = results
+                info = {
+                    'model': model,
+                    'bifurcation': bifurcation,
+                    'attempt': attempt + 1,
+                }
+                info.update(full_result.metadata)
+                return full_result, part_result, info
+
+        raise RuntimeError(
+            f"Could not generate {tipping_type} trajectory after {max_attempts} attempts. "
+            "Try increasing max_attempts or choose different tipping_type."
         )
-
-        if result is not None:
-            info = {
-                'model': model,
-                'bifurcation': bifurcation,
-                'tipping_type': result.label,
-                'steps_before_transition': steps_before_transition,
-                'sigma': result.sigma,
-                'attempt': attempt + 1,
-            }
-            info.update(result.metadata)
-            return result.time, result.trajectory, info
-
-    raise RuntimeError(
-        f"Could not generate {tipping_type} trajectory after {max_attempts} attempts. "
-        "Try increasing max_attempts or choose different tipping_type."
-    )
