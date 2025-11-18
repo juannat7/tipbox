@@ -4,7 +4,9 @@ from typing import Any, Dict, Type
 import jax
 
 from .bautin import BautinConfig, BautinModel
+from .compost_bomb import CompostBombConfig, CompostBombModel
 from .saddle_node import SaddleNodeConfig, SaddleNodeModel
+
 from ..types import BoxModel, TrajectoryResult
 
 
@@ -38,6 +40,11 @@ RATE_SYSTEMS: Dict[str, RateSystemSpec] = {
         name="bautin",
         config_cls=BautinConfig,
         model_cls=BautinModel,
+    ),
+    "compost_bomb": RateSystemSpec(
+        name="compost_bomb",
+        config_cls=CompostBombConfig,
+        model_cls=CompostBombModel,
     ),
 }
 
