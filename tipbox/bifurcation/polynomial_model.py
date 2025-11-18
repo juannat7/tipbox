@@ -12,7 +12,6 @@ Generates 2D polynomial systems of the form:
 
 import jax
 import jax.numpy as jnp
-import numpy as np
 from typing import Tuple, Optional
 from dataclasses import dataclass
 

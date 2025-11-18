@@ -3,7 +3,6 @@ Bifurcation detection using AUTO-07P for proper detection of fold, hopf, AND tra
 """
 
 import numpy as np
-import jax.numpy as jnp
 from typing import Optional, Tuple, List
 from dataclasses import dataclass
 from pathlib import Path

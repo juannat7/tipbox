@@ -1,5 +1,4 @@
-from dataclasses import asdict, dataclass, replace
-from typing import Dict, Optional, Tuple
+from dataclasses import dataclass, replace
 
 import jax
 import jax.numpy as jnp
@@ -108,17 +107,17 @@ class SaddleNodeModel(BoxModel):
         initial_state = self._sample_initial_state(key_ic, self._config)
 
         # Configure noise scale
-        noise = jnp.sqrt(2.0 * sigma_tilde * self._config.dt)
+        noise_scale = jnp.sqrt(2.0 * sigma_tilde * self._config.dt)
 
         # Simulate trajectory
         trajectory = self._simulate_path(
-            key_noise, lambda_t, self._config.dt, noise, initial_state
+            key_noise, lambda_t, self._config.dt, noise_scale, initial_state
         )
 
         # Post-process trajectory
         trajectory = convert_scalar_trajectory(trajectory)
 
-        return time, trajectory, lambda_t, noise
+        return time, trajectory, lambda_t, noise_scale
 
     def is_tipped(
         self,

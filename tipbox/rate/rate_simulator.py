@@ -1,9 +1,9 @@
 from dataclasses import asdict
-from typing import Any, Dict, Optional, Tuple, Type
+from typing import Any, Dict, Type
 
 import jax
-import jax.numpy as jnp
 
+from .bautin import BautinConfig, BautinModel
 from .saddle_node import SaddleNodeConfig, SaddleNodeModel
 from ..types import BoxModel, TrajectoryResult
 
@@ -33,8 +33,12 @@ RATE_SYSTEMS: Dict[str, RateSystemSpec] = {
         name="saddle_node",
         config_cls=SaddleNodeConfig,
         model_cls=SaddleNodeModel,
-    )
-    # TODO: Add more rate-induced tipping systems
+    ),
+    "bautin": RateSystemSpec(
+        name="bautin",
+        config_cls=BautinConfig,
+        model_cls=BautinModel,
+    ),
 }
 
 

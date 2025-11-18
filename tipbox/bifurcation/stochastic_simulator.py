@@ -7,7 +7,6 @@ Implements Euler-Maruyama method with:
 - Noise amplitude scaling based on recovery rate
 """
 
-from sqlite3 import paramstyle
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -171,7 +170,7 @@ def simulate_to_bifurcation(
     time = indices * dt_integrate
     param_values = param_schedule[indices]
     
-    return time, trajectory, param_values, sigma
+    return time, trajectory, param_values, noise_scale
 
 
 def detect_transition(
