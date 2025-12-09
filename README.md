@@ -22,6 +22,8 @@ pip install -e .
 
 ## Future Work
 
-- [ ] Add rate-induced tipping (r-tipping)
-- [ ] Implement standard bifurcation models from literature
-- [ ] Add box models
+- [ ] Add Rozenzweig−MacArthur consumer−resource model (Transcritical) -- Bury 2021
+- [ ] Add SEIRx disease dynamics and population vaccinating behavior model (Transcritical) -- Bury 2021
+- [ ] Add three-species chaotic food chain model (Hopf) -- Zhuge 2025
+- [ ] Add Plant-herbivore (Rate) -- Ritchie 2023
+- [ ] Add AMOC 5 box models (Rate) -- Ritchie 2023

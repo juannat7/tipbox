@@ -1,64 +1,27 @@
 from dataclasses import asdict
-from typing import Any, Dict, Type
+from typing import Any, Dict
 
 import jax
 
-from .bautin import BautinConfig, BautinModel
-from .compost_bomb import CompostBombConfig, CompostBombModel
-from .saddle_node import SaddleNodeConfig, SaddleNodeModel
-
-from ..types import BoxModel, TrajectoryResult
-
-
-class RateSystemSpec:
-    """Specification for a rate-induced tipping system."""
-
-    def __init__(
-        self,
-        name: str,
-        config_cls: Type[Any],
-        model_cls: Type[BoxModel],
-    ) -> None:
-        self.name = name
-        self.config_cls = config_cls
-        self.model_cls = model_cls
-
-    def default_config(self) -> Any:
-        return self.config_cls()
-
-    def create_model(self, config: Any) -> BoxModel:
-        return self.model_cls(config)
-
-
-RATE_SYSTEMS: Dict[str, RateSystemSpec] = {
-    "saddle_node": RateSystemSpec(
-        name="saddle_node",
-        config_cls=SaddleNodeConfig,
-        model_cls=SaddleNodeModel,
-    ),
-    "bautin": RateSystemSpec(
-        name="bautin",
-        config_cls=BautinConfig,
-        model_cls=BautinModel,
-    ),
-    "compost_bomb": RateSystemSpec(
-        name="compost_bomb",
-        config_cls=CompostBombConfig,
-        model_cls=CompostBombModel,
-    ),
-}
+from ..types import TrajectoryResult
+from ..system_registry import get_rate_system_spec, get_rate_systems
+from ..utils import calculate_total_len
 
 
 def available_rate_systems():
-    """Get the available rate-induced tipping systems."""
-    return tuple(RATE_SYSTEMS.keys())
+    """Get the available rate-induced tipping systems (internal names)."""
+    return tuple(get_rate_systems())
 
 
 def _select_system(key: jax.random.PRNGKey):
     """Randomly select a rate-induced tipping system."""
-    names = available_rate_systems()
-    idx = int(jax.random.randint(key, (), 0, len(names)))
-    return RATE_SYSTEMS[names[idx]]
+    from ..system_registry import SYSTEM_REGISTRY, SystemType
+    
+    rate_systems = [name for name, spec in SYSTEM_REGISTRY.items() 
+                    if spec.system_type == SystemType.RATE and spec.rate_system]
+    idx = int(jax.random.randint(key, (), 0, len(rate_systems)))
+    system_name = rate_systems[idx]
+    return SYSTEM_REGISTRY[system_name]
 
 
 def simulate_rate_trajectory(
@@ -68,6 +31,8 @@ def simulate_rate_trajectory(
     buffer_size: int = 1000,
     sigma_tilde: float = 0.01,
     null_simulation: bool = False,
+    system_name: str = None,
+    param_end_multiplier: float = 1.1,
     **generate_kwargs
 ):
     """Simulate a single rate-induced tipping trajectory.
@@ -86,8 +51,13 @@ def simulate_rate_trajectory(
         bifurcation parameter ramp rate.
     null_simulation : bool, default=False
         If True, simulate null (non-tipping) trajectory
+    system_name : str, optional
+        Specific rate system to use. If None, randomly selects from available systems.
+        Options: 'bautin', 'compost_bomb', 'saddle_node'
+    param_end_multiplier : float, default=1.1
+        Multiplier for extending simulation time beyond transition
     **generate_kwargs : additional arguments
-        Passed to the model.simulate method (dt_sample, dt_integrate, param_end_multiplier, etc.)
+        Passed to the model.simulate method (dt_sample, dt_integrate, etc.)
 
     Returns
     -------
@@ -108,13 +78,18 @@ def simulate_rate_trajectory(
             "Increase buffer_size to maintain constant parameter rate."
         )
 
-    # Global configuration
-    total_len = series_len + buffer_size
+    # Calculate total simulation length (extended if param_end_multiplier > 1.0)
+    total_len = calculate_total_len(series_len, buffer_size, param_end_multiplier)
 
-    # Select, setup and initialize model
-    system = _select_system(key_select)
-    config = system.default_config()
-    model = system.create_model(config)
+    # Select, setup and initialize model using unified registry
+    if system_name is not None:
+        system_spec = get_rate_system_spec(system_name)
+    else:
+        # Random selection (backward compatibility)
+        system_spec = _select_system(key_select)
+    
+    config = system_spec.default_config()
+    model = system_spec.create_model(config)
 
     # Simulate
     time, trajectory, param_values, sigma = model.simulate(
@@ -153,7 +128,7 @@ def simulate_rate_trajectory(
     # Return results
     metadata: Dict[str, Any] = {
         "label": "null" if null_simulation else "rate",
-        "rate_system": system.name,
+        "rate_system": system_spec.rate_system,
         "steps_before_transition": steps_before_transition,
         "system_config": asdict(config),
         "transition_index": int(trans_idx_out),

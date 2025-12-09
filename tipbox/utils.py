@@ -8,6 +8,36 @@ def convert_scalar_trajectory(x: jnp.ndarray) -> jnp.ndarray:
     return jnp.stack([x, jnp.zeros_like(x)], axis=-1)
 
 
+def calculate_total_len(
+    series_len: int,
+    buffer_size: int,
+    param_end_multiplier: float = 1.1
+) -> int:
+    """Calculate total simulation length with optional extension.
+    
+    For simulations with param_end_multiplier > 1.0, extends the simulation time
+    to ensure enough points before transition (forced) or after transition (null).
+    
+    Parameters
+    ----------
+    series_len : int
+        Desired output trajectory length
+    buffer_size : int
+        Extra samples simulated prior to the transition
+    param_end_multiplier : float, default=1.1
+        Multiplier for extending simulation time beyond transition
+        
+    Returns
+    -------
+    int
+        Total simulation length (extended if param_end_multiplier > 1.0)
+    """
+    base_len = series_len + buffer_size
+    if param_end_multiplier > 1.0:
+        return int(base_len * param_end_multiplier)
+    return base_len
+
+
 def extract_segment(
     time: jnp.ndarray,
     trajectory: jnp.ndarray,

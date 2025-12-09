@@ -114,7 +114,7 @@ def simulate_to_bifurcation(
     null_location : float, default=0.0
         For null: parameter fraction [0,1] from start to bifurcation
     param_end_multiplier : float, default=1.1
-        Multiplier for the end parameter value
+        Multiplier for extending simulation time beyond transition
     
     Returns
     -------
@@ -134,14 +134,25 @@ def simulate_to_bifurcation(
     param_end = bifurcation.bif_value * param_end_multiplier
     
     if null_simulation:
+        # For null simulations, parameter is fixed at a point in the range
+        # null_location is relative to the range from start to (bifurcation * multiplier)
+        # This ensures param_end_multiplier affects the range used for null simulations
         param_fixed = param_start + null_location * (param_end - param_start)
         param_start = param_end = param_fixed
     
     # Time discretization
-    total_time = series_len * dt_sample
+    # For simulations with param_end_multiplier > 1.0, extend simulation time
+    # to ensure enough points before transition (forced) or after transition (null)
+    if param_end_multiplier > 1.0:
+        # Extend simulation time by multiplier
+        total_time = series_len * dt_sample * param_end_multiplier
+    else:
+        total_time = series_len * dt_sample
+    
     n_steps = int(total_time / dt_integrate)
     n_burn = int(burn_in_time / dt_integrate)
     
+    # Parameter schedule: extend to cover the full simulation time
     param_schedule = jnp.linspace(param_start, param_end, n_steps)
     
     # Generate noise
@@ -164,7 +175,7 @@ def simulate_to_bifurcation(
     
     # Downsample to output rate
     sample_every = int(dt_sample / dt_integrate)
-    indices = jnp.arange(0, n_steps, sample_every)[:series_len]
+    indices = jnp.arange(0, n_steps, sample_every)
     
     trajectory = states[indices]
     time = indices * dt_integrate
@@ -231,7 +242,7 @@ def detect_transition(
     return int(np.argmin(np.abs(time_arr - t_trans)))
 
 
-def simulate_bifurcation_trajectory(
+def simulate_synthetic_bifurcation_trajectory(
     model: PolynomialModel,
     bifurcation: BifurcationPoint,
     key: jax.random.PRNGKey,
@@ -296,8 +307,12 @@ def simulate_bifurcation_trajectory(
         param_end_multiplier=generate_kwargs.get('param_end_multiplier', 1.1)
     )
     
-    # Detect transition
-    trans_idx = detect_transition(trajectory, time)
+    # Detect transition (or use midpoint for null simulations)
+    if null_simulation:
+        # For null simulations, use midpoint as transition point
+        trans_idx = len(trajectory) // 2
+    else:
+        trans_idx = detect_transition(trajectory, time)
     
     # Extract fixed-length series before transition
     time_seg, traj_seg, param_seg, trans_idx_out, success = extract_segment(
