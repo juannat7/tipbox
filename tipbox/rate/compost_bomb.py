@@ -1,3 +1,4 @@
+import math
 from dataclasses import dataclass
 
 import jax
@@ -11,11 +12,11 @@ from ..utils import extract_segment
 @dataclass(frozen=True)
 class CompostBombConfig:
     """Configuration for the stochastic compost-bomb dynamic system.
-    
+
     Based on Luke & Cox (2011) equations:
     μ * dT_s/dt = -λ(T_s - T_a) + A * C_s * r_0 * e^(alpha(T_s - T_ref)) + D_3 * dW
     dC_s/dt = Π - C_s * r_0 * e^(alpha(T_s - T_ref))
-    
+
     where:
     - T_a(t) = v * t (atmospheric temperature forcing)
     - r(T_s) = r_0 * e^(alpha(T_s - T_ref)) (temperature-dependent respiration)
@@ -25,10 +26,10 @@ class CompostBombConfig:
     # Forcing parameters
     v: float = 0.15  # Rate of atmospheric temperature forcing
     D3: float = 50  # Noise magnitude (paper default: 0.5, so 50 * 0.01 following default sigma_tilde)
-    
+
     Pi: float = 1.055  # Litter fall from plants (kg m^-2 yr^-1)
     r0: float = 0.01  # Microbial respiration parameter (yr^-1)
-    alpha: float = jnp.log(2.5) / 10.0  # Microbial respiration parameter
+    alpha: float = math.log(2.5) / 10.0  # Microbial respiration parameter
     mu: float = 2.5e6  # Soil heat capacity (J m^-2 degC^-1)
     A: float = 3.9e7  # Specific heat from microbial respiration (J kg^-1)
     lambda_param: float = 5.049e6  # Soil-to-air heat transfer coefficient (J yr^-1 m^-2 degC^-1)
