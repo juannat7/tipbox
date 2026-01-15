@@ -1,12 +1,14 @@
 from dataclasses import dataclass, replace
+from typing import Optional
 
 import jax
 import jax.numpy as jnp
 from jax import lax
 
 from ..types import BoxModel
-from ..utils import convert_scalar_trajectory, extract_segment
+from ..utils import convert_scalar_trajectory, extract_segment, register_dataclass_pytree
 
+@register_dataclass_pytree
 @dataclass(frozen=True)
 class SaddleNodeConfig:
     """Configuration for the stochastic saddle-node system."""
@@ -19,6 +21,12 @@ class SaddleNodeConfig:
     initial_state_min: float = -10.0
     initial_state_max: float = -1.0
     tip_threshold: float = 0.0
+
+    @classmethod
+    def default(cls) -> "SaddleNodeConfig":
+        """Return default configuration."""
+        return cls()
+
 
 
 
@@ -73,10 +81,14 @@ class SaddleNodeModel(BoxModel):
         dt: float,
         noise_scale: float,
         initial_state: float,
+        noise: Optional[jnp.ndarray] = None,
     ):
         """Stochastic integration."""
 
-        noise = jax.random.normal(key, shape=(lambda_t.shape[0] - 1,))
+        if noise is None:
+            noise = jax.random.normal(key, shape=(lambda_t.shape[0] - 1,))
+        else:
+            noise = jnp.asarray(noise)
 
         def step(x_prev, inputs):
             lam_t, noise_t = inputs
@@ -94,6 +106,8 @@ class SaddleNodeModel(BoxModel):
         key: jax.random.PRNGKey,
         total_len: int,
         sigma_tilde: float = 0.01,
+        initial_state: Optional[jnp.ndarray] = None,
+        noise: Optional[jnp.ndarray] = None,
     ):
         """Simulate the saddle-node system."""
         key_noise, key_ic = jax.random.split(key)
@@ -103,15 +117,23 @@ class SaddleNodeModel(BoxModel):
         time = jnp.arange(self._config.t_start, self._config.t_end, self._config.dt)
         lambda_t = self._lambda_schedule(time, self._config)
 
-        # Randomly sample initial state
-        initial_state = self._sample_initial_state(key_ic, self._config)
+        # Randomly sample initial state if not provided
+        if initial_state is None:
+            initial_state = self._sample_initial_state(key_ic, self._config)
+        else:
+            initial_state = jnp.asarray(initial_state)
 
         # Configure noise scale
         noise_scale = jnp.sqrt(2.0 * sigma_tilde * self._config.dt)
 
         # Simulate trajectory
         trajectory = self._simulate_path(
-            key_noise, lambda_t, self._config.dt, noise_scale, initial_state
+            key_noise,
+            lambda_t,
+            self._config.dt,
+            noise_scale,
+            initial_state,
+            noise=noise,
         )
 
         # Post-process trajectory

@@ -1,13 +1,15 @@
 from dataclasses import dataclass, replace
+from typing import Optional
 
 import jax
 import jax.numpy as jnp
 from jax import lax
 
 from ..types import BoxModel
-from ..utils import extract_segment
+from ..utils import extract_segment, register_dataclass_pytree
 
 
+@register_dataclass_pytree
 @dataclass(frozen=True)
 class BautinConfig:
     """Configuration for the stochastic Bautin system.
@@ -30,6 +32,12 @@ class BautinConfig:
     initial_state_min: float = -1.0  # Minimum initial x/y
     initial_state_max: float = 1.0  # Maximum initial x/y
     tip_threshold: float = 10.0  # Threshold for detecting tipping (radius from origin)
+
+    @classmethod
+    def default(cls) -> "BautinConfig":
+        """Return default configuration."""
+        return cls()
+
 
 
 class BautinModel(BoxModel):
@@ -111,6 +119,7 @@ class BautinModel(BoxModel):
         noise_scale: float,
         initial_x: float,
         initial_y: float,
+        noise: Optional[jnp.ndarray] = None,
     ):
         """Stochastic integration in Cartesian coordinates.
         
@@ -118,9 +127,14 @@ class BautinModel(BoxModel):
                     + [Z_t - Λ(t)]⁴[Z_t - Λ(t)]dt + D₂dW₂t
         where w = Z_t - Λ(t) = x + iy
         """
-        key, subkey = jax.random.split(key)
-        noise_x = jax.random.normal(key, shape=(lambda_t.shape[0] - 1,))
-        noise_y = jax.random.normal(subkey, shape=(lambda_t.shape[0] - 1,))
+        if noise is None:
+            key, subkey = jax.random.split(key)
+            noise_x = jax.random.normal(key, shape=(lambda_t.shape[0] - 1,))
+            noise_y = jax.random.normal(subkey, shape=(lambda_t.shape[0] - 1,))
+        else:
+            noise = jnp.asarray(noise)
+            noise_x = noise[:, 0]
+            noise_y = noise[:, 1]
 
         def step(state, inputs):
             lambda_val, noise_x_t, noise_y_t = inputs
@@ -169,6 +183,8 @@ class BautinModel(BoxModel):
         key: jax.random.PRNGKey,
         total_len: int,
         sigma_tilde: float = 0.01,
+        initial_state: Optional[jnp.ndarray] = None,
+        noise: Optional[jnp.ndarray] = None,
     ):
         """Simulate the Bautin system.
         """
@@ -179,15 +195,25 @@ class BautinModel(BoxModel):
         time = jnp.arange(self._config.t_start, self._config.t_end, self._config.dt)
         lambda_t = self._lambda_schedule(time, self._config)
 
-        # Randomly sample initial state
-        initial_x, initial_y = self._sample_initial_state(key_ic, self._config)
+        # Randomly sample initial state if not provided
+        if initial_state is None:
+            initial_x, initial_y = self._sample_initial_state(key_ic, self._config)
+        else:
+            initial_state = jnp.asarray(initial_state)
+            initial_x, initial_y = initial_state[0], initial_state[1]
 
         # Configure noise scale: D2 * sigma_tilde * sqrt(dt) for Euler-Maruyama
         noise_scale = self._config.D2 * sigma_tilde * jnp.sqrt(self._config.dt)
 
         # Simulate trajectory
         trajectory = self._simulate_path(
-            key_noise, lambda_t, self._config.dt, noise_scale, initial_x, initial_y
+            key_noise,
+            lambda_t,
+            self._config.dt,
+            noise_scale,
+            initial_x,
+            initial_y,
+            noise=noise,
         )
 
         # Return lambda_t as param_values for consistency with other models

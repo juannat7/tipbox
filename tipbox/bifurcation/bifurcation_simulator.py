@@ -4,13 +4,13 @@ from typing import Any, Dict
 import jax
 
 from ..types import TrajectoryResult
-from ..system_registry import get_bifurcation_real_system_spec
+from ..registry import get_bifurcation_real_system_spec
 from ..utils import calculate_total_len
 
 
 def available_bifurcation_real_systems():
     """Get the available real systems with bifurcation tipping (internal names)."""
-    from ..system_registry import SYSTEM_REGISTRY
+    from ..registry import SYSTEM_REGISTRY
     return tuple(spec.bifurcation_system 
                 for spec in SYSTEM_REGISTRY.values() 
                 if spec.bifurcation_system is not None and not spec.is_synthetic_bifurcation)
@@ -25,7 +25,7 @@ def _select_system(key: jax.random.PRNGKey, system_name: str = None):
     system_name : str, optional
         If provided, select this specific system. Otherwise, randomly select.
     """
-    from ..system_registry import SYSTEM_REGISTRY, SystemType
+    from ..registry import SYSTEM_REGISTRY, SystemType
     
     if system_name is not None:
         return get_bifurcation_real_system_spec(system_name)

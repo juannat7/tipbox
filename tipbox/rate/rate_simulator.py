@@ -4,7 +4,7 @@ from typing import Any, Dict
 import jax
 
 from ..types import TrajectoryResult
-from ..system_registry import get_rate_system_spec, get_rate_systems
+from ..registry import get_rate_system_spec, get_rate_systems
 from ..utils import calculate_total_len
 
 
@@ -15,7 +15,7 @@ def available_rate_systems():
 
 def _select_system(key: jax.random.PRNGKey):
     """Randomly select a rate-induced tipping system."""
-    from ..system_registry import SYSTEM_REGISTRY, SystemType
+    from ..registry import SYSTEM_REGISTRY, SystemType
     
     rate_systems = [name for name, spec in SYSTEM_REGISTRY.items() 
                     if spec.system_type == SystemType.RATE and spec.rate_system]

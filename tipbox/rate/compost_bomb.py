@@ -1,14 +1,16 @@
 import math
 from dataclasses import dataclass
+from typing import Optional
 
 import jax
 import jax.numpy as jnp
 from jax import lax
 
 from ..types import BoxModel
-from ..utils import extract_segment
+from ..utils import extract_segment, register_dataclass_pytree
 
 
+@register_dataclass_pytree
 @dataclass(frozen=True)
 class CompostBombConfig:
     """Configuration for the stochastic compost-bomb dynamic system.
@@ -43,6 +45,12 @@ class CompostBombConfig:
     initial_state_max: float = 0  # Initial state (carbon and temperature) (paper: starts at 0)
     T_ref: float = 0.0 # Reference temperature (0.0 is the default)
     tip_threshold: float = 30.0  # Threshold for detecting tipping (temperature)
+
+    @classmethod
+    def default(cls) -> "CompostBombConfig":
+        """Return default configuration."""
+        return cls()
+
 
 
 class CompostBombModel(BoxModel):
@@ -123,6 +131,7 @@ class CompostBombModel(BoxModel):
         noise_scale: float,
         initial_C: float,
         initial_T: float,
+        noise: Optional[jnp.ndarray] = None,
     ):
         """Stochastic integration of the compost-bomb system.
         
@@ -132,7 +141,10 @@ class CompostBombModel(BoxModel):
         
         where r(T_s) = r_0 * e^(alpha(T_s - T_ref)) (temperature-dependent respiration)
         """
-        noise_T = jax.random.normal(key, shape=(T_a_t.shape[0] - 1,))
+        if noise is None:
+            noise_T = jax.random.normal(key, shape=(T_a_t.shape[0] - 1,))
+        else:
+            noise_T = jnp.asarray(noise)
 
         def step(state, inputs):
             T_a_val, noise_T_t = inputs
@@ -167,6 +179,8 @@ class CompostBombModel(BoxModel):
         key: jax.random.PRNGKey,
         total_len: int,
         sigma_tilde: float = 0.01,
+        initial_state: Optional[jnp.ndarray] = None,
+        noise: Optional[jnp.ndarray] = None,
     ):
         """Simulate the compost-bomb system."""
         key_noise, key_ic = jax.random.split(key)
@@ -177,8 +191,12 @@ class CompostBombModel(BoxModel):
         time = jnp.arange(self._config.t_start, self._config.t_end, self._config.dt)
         T_a_t = self._T_a_schedule(time, self._config)
 
-        # Randomly sample initial state
-        initial_C, initial_T = self._sample_initial_state(key_ic, self._config)
+        # Randomly sample initial state if not provided
+        if initial_state is None:
+            initial_C, initial_T = self._sample_initial_state(key_ic, self._config)
+        else:
+            initial_state = jnp.asarray(initial_state)
+            initial_C, initial_T = initial_state[0], initial_state[1]
 
         # Configure noise scale: D3 * sigma_tilde * sqrt(dt) for Euler-Maruyama
         # For the dT equation, we use D3 directly (D3 already has appropriate units)
@@ -186,7 +204,13 @@ class CompostBombModel(BoxModel):
 
         # Simulate trajectory
         trajectory = self._simulate_path(
-            key_noise, T_a_t, self._config.dt, noise_scale, initial_C, initial_T
+            key_noise,
+            T_a_t,
+            self._config.dt,
+            noise_scale,
+            initial_C,
+            initial_T,
+            noise=noise,
         )
 
         # Return T_a_t as param_values for consistency with other models

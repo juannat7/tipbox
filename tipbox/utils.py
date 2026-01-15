@@ -1,6 +1,29 @@
-from typing import Tuple, Optional
+from typing import Tuple, Type, TypeVar
 
+import jax
 import jax.numpy as jnp
+
+T = TypeVar("T")
+
+
+def register_dataclass_pytree(cls: Type[T]) -> Type[T]:
+    """Register a dataclass as a JAX pytree, with backward-compatible fallback."""
+    register = getattr(jax.tree_util, "register_pytree_node_dataclass", None)
+    if register is not None:
+        return register(cls)
+
+    # Older JAX: register manually using dataclass fields.
+    from dataclasses import fields
+
+    def flatten(instance: T):
+        children = tuple(getattr(instance, f.name) for f in fields(instance))
+        return children, None
+
+    def unflatten(aux_data, children):
+        return cls(*children)
+
+    jax.tree_util.register_pytree_node(cls, flatten, unflatten)
+    return cls
 
 
 def convert_scalar_trajectory(x: jnp.ndarray) -> jnp.ndarray:

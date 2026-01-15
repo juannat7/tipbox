@@ -13,7 +13,7 @@ from .bifurcation.bifurcation_finder import find_all_bifurcations, select_bifurc
 from .bifurcation.stochastic_simulator import simulate_synthetic_bifurcation_trajectory
 from .bifurcation.bifurcation_simulator import simulate_real_bifurcation_trajectory
 from .rate.rate_simulator import simulate_rate_trajectory
-from .system_registry import (
+from .registry import (
     normalize_system_name,
     get_system_info,
     SystemType,
@@ -99,7 +99,7 @@ def generate(
         raise ValueError(
             f"Unknown system: {tipping_type}. "
             f"Use explicit names like 'b_fold', 'r_bautin', 'b_harvesting', etc. "
-            f"See tipbox.system_registry for available systems."
+            f"See tipbox.registry for available systems."
         ) from e
     
     system_spec = get_system_info(system_name)

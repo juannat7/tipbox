@@ -81,7 +81,11 @@ def simulate_to_bifurcation(
     burn_in_time: float = 100.0,
     null_simulation: bool = False,
     null_location: float = 0.0,
-    param_end_multiplier: float = 1.1
+    param_end_multiplier: float = 1.1,
+    initial_state: Optional[jnp.ndarray] = None,
+    noise_burn: Optional[jnp.ndarray] = None,
+    noise: Optional[jnp.ndarray] = None,
+    rv_tri: Optional[jnp.ndarray] = None,
 ) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray]:
     """
     Simulate system approaching bifurcation with stochastic noise.
@@ -124,7 +128,8 @@ def simulate_to_bifurcation(
     """
     # Noise amplitude: sigma = sqrt(2*lambda) * sigma_tilde * triangular_rv
     key, subkey = jax.random.split(key)
-    rv_tri = jax.random.triangular(subkey, 0.75, 1.0, 1.25) if noise_scale_triangular else 1.0
+    if rv_tri is None:
+        rv_tri = jax.random.triangular(subkey, 0.75, 1.0, 1.25) if noise_scale_triangular else 1.0
     sigma = jnp.sqrt(2 * model.recovery_rate) * sigma_tilde * rv_tri
     
     # Parameter schedule
@@ -158,12 +163,19 @@ def simulate_to_bifurcation(
     # Generate noise
     key, subkey1, subkey2 = jax.random.split(key, 3)
     noise_scale = sigma * jnp.sqrt(dt_integrate)
-    dW_burn = jax.random.normal(subkey1, (n_burn, 2)) * noise_scale
-    dW = jax.random.normal(subkey2, (n_steps, 2)) * noise_scale
+    if noise_burn is None:
+        dW_burn = jax.random.normal(subkey1, (n_burn, 2)) * noise_scale
+    else:
+        dW_burn = jnp.asarray(noise_burn) * noise_scale
+    if noise is None:
+        dW = jax.random.normal(subkey2, (n_steps, 2)) * noise_scale
+    else:
+        dW = jnp.asarray(noise) * noise_scale
     
     # Burn-in: run at initial parameter
     pars_a, pars_b = pars[:10], pars[10:]
-    carry_burn = (model.equi, pars_a, pars_b, dt_integrate)
+    burn_start = model.equi if initial_state is None else jnp.asarray(initial_state)
+    carry_burn = (burn_start, pars_a, pars_b, dt_integrate)
     (state_after_burn, _, _, _), _ = jax.lax.scan(_burn_in_scan, carry_burn, dW_burn)
     
     # Main simulation: vectorized with scan

@@ -1,13 +1,15 @@
 from dataclasses import dataclass
+from typing import Optional
 
 import jax
 import jax.numpy as jnp
 from jax import lax
 
 from ..types import BoxModel
-from ..utils import extract_segment
+from ..utils import extract_segment, register_dataclass_pytree
 
 
+@register_dataclass_pytree
 @dataclass(frozen=True)
 class MayHarvestingConfig:
     """Configuration for May's harvesting model.
@@ -48,6 +50,12 @@ class MayHarvestingConfig:
     # Initial state
     initial_state_min: float = 0.5  # Start near stable equilibrium (for h_min, equilibrium is ~0.7-0.8)
     initial_state_max: float = 1.0  # Start near carrying capacity
+
+    @classmethod
+    def default(cls) -> "MayHarvestingConfig":
+        """Return default configuration."""
+        return cls()
+
 
 
 class MayHarvestingModel(BoxModel):
@@ -183,12 +191,16 @@ class MayHarvestingModel(BoxModel):
         dt: float,
         noise_scale: float,
         initial_x: float,
+        noise: Optional[jnp.ndarray] = None,
     ):
         """Stochastic integration of May's harvesting model using Euler-Maruyama.
         
         dx/dt = rx(1 - x/k) - h(x^2 / (s^2 + x^2)) + σξ(t)
         """
-        noise = jax.random.normal(key, shape=(h_t.shape[0] - 1,))
+        if noise is None:
+            noise = jax.random.normal(key, shape=(h_t.shape[0] - 1,))
+        else:
+            noise = jnp.asarray(noise)
 
         def step(state, inputs):
             h_val, noise_t = inputs
@@ -221,6 +233,8 @@ class MayHarvestingModel(BoxModel):
         null_simulation: bool = False,
         dt_sample: float = 1.0,
         param_end_multiplier: float = 1.1,
+        initial_state: Optional[jnp.ndarray] = None,
+        noise: Optional[jnp.ndarray] = None,
         **kwargs
     ):
         """Simulate May's harvesting model.
@@ -265,15 +279,23 @@ class MayHarvestingModel(BoxModel):
         # param_end_multiplier extends beyond the bifurcation point to allow simulation past tipping
         h_t = self._h_schedule(time_fine, null_simulation=null_simulation, param_end_multiplier=param_end_multiplier)
 
-        # Randomly sample initial state
-        initial_x = self._sample_initial_state(key_ic, null_simulation=null_simulation)
+        # Randomly sample initial state if not provided
+        if initial_state is None:
+            initial_x = self._sample_initial_state(key_ic, null_simulation=null_simulation)
+        else:
+            initial_x = jnp.asarray(initial_state)
 
         # Configure noise scale: sigma * sigma_tilde * sqrt(dt) for Euler-Maruyama
         noise_scale = self._config.sigma * sigma_tilde * jnp.sqrt(self._config.dt)
 
         # Simulate trajectory at fine time steps
         x_traj_fine = self._simulate_path(
-            key_noise, h_t, self._config.dt, noise_scale, initial_x
+            key_noise,
+            h_t,
+            self._config.dt,
+            noise_scale,
+            initial_x,
+            noise=noise,
         )
 
         # Downsample to output rate
