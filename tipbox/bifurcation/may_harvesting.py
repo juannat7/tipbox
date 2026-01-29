@@ -245,7 +245,7 @@ class MayHarvestingModel(BoxModel):
         total_len : int
             Total number of output time points
         sigma_tilde : float, default=0.01
-            Base noise amplitude (scales the config.sigma)
+            Base noise amplitude
         null_simulation : bool, default=False
             If True, keep h fixed at h_min (null trajectory)
         dt_sample : float, default=1.0
@@ -285,8 +285,8 @@ class MayHarvestingModel(BoxModel):
         else:
             initial_x = jnp.asarray(initial_state)
 
-        # Configure noise scale: sigma * sigma_tilde * sqrt(dt) for Euler-Maruyama
-        noise_scale = self._config.sigma * sigma_tilde * jnp.sqrt(self._config.dt)
+        # Configure noise scale: sigma_tilde * sqrt(dt) for Euler-Maruyama
+        noise_scale = sigma_tilde * self._config.sigma * jnp.sqrt(self._config.dt)
 
         # Simulate trajectory at fine time steps
         x_traj_fine = self._simulate_path(
@@ -314,83 +314,27 @@ class MayHarvestingModel(BoxModel):
     def is_tipped(
         self,
         trajectory: jnp.ndarray,
+        param_values: jnp.ndarray,
     ):
-        """Check if the trajectory is tipped.
-        
-        For May's harvesting model, tipping occurs when biomass drops significantly
-        after crossing the fold bifurcation point. We detect this by checking if
-        biomass drops significantly below its initial/equilibrium value.
-        
-        Returns True if the trajectory shows a significant collapse (tipping),
-        False otherwise (stable trajectory).
-        """
-        x = trajectory[:, 0]
-        
-        # Get initial biomass (first 10% of trajectory average)
-        initial_window = max(1, int(0.1 * len(x)))
-        initial_avg = float(jnp.mean(x[:initial_window]))
-        
-        # Get final biomass (last 10% of trajectory average)
-        final_window = max(1, int(0.1 * len(x)))
-        final_avg = float(jnp.mean(x[-final_window:]))
-        
-        # Check if biomass drops significantly below initial value
-        # Threshold: drop to less than 50% of initial value
-        threshold = 0.5 * initial_avg
-        min_x = float(jnp.min(x))
-        
-        # Check for significant drop: final value much lower than initial
-        significant_drop = (initial_avg - final_avg) > 0.4 * initial_avg
-        
-        # Also check if minimum drops below threshold
-        below_threshold = min_x < threshold
-        
-        return bool(below_threshold or significant_drop)
+        """Check if the parameter crossed the bifurcation point (h = 0.26)."""
+        return float(jnp.max(param_values)) >= self._config.h_bifurcation
 
     def locate_transition(
         self,
         trajectory: jnp.ndarray,
         null_simulation: bool,
+        param_values: jnp.ndarray,
     ):
-        """Locate the transition index.
-        
-        For null simulations, return midpoint.
-        For forced simulations, find where biomass drops significantly.
-        """
+        """Locate transition index: midpoint for null, bifurcation crossing for forced."""
         if null_simulation:
-            return int(trajectory.shape[0] // 2)
-
-        x = trajectory[:, 0]
+            return len(param_values) // 2
         
-        # Get initial biomass (first 10% of trajectory average)
-        initial_window = max(1, int(0.1 * len(x)))
-        initial_avg = float(jnp.mean(x[:initial_window]))
-        threshold = 0.3 * initial_avg
+        crossed = param_values >= self._config.h_bifurcation
         
-        # Find first point where biomass drops below threshold
-        below_threshold = jnp.where(x < threshold, 1, 0)
-        has_crossed = bool(jnp.any(below_threshold))
+        if bool(jnp.any(crossed)):
+            return int(jnp.argmax(crossed))
         
-        if has_crossed:
-            return int(jnp.argmax(below_threshold))
-        
-        # If no clear threshold crossing, check for significant drop
-        # Find point of maximum negative change (steepest drop)
-        dx = jnp.diff(x)
-        max_drop_idx = jnp.argmin(dx)
-        max_drop = float(dx[max_drop_idx])
-        
-        # Check if the drop is significant relative to initial value
-        if max_drop < -0.2 * initial_avg:  # Drop of at least 20% of initial
-            return int(max_drop_idx + 1)
-        
-        # If still no clear transition, find where biomass first drops below 50% of initial
-        half_threshold = 0.5 * initial_avg
-        below_half = jnp.where(x < half_threshold, 1, 0)
-        if bool(jnp.any(below_half)):
-            return int(jnp.argmax(below_half))
-        
-        return None
+        return len(param_values) - 1
 
     def extract_segment(
         self,

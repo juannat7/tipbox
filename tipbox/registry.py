@@ -20,6 +20,7 @@ from .rate.bautin import BautinConfig, BautinModel
 from .rate.compost_bomb import CompostBombConfig, CompostBombModel
 from .rate.saddle_node import SaddleNodeConfig, SaddleNodeModel
 from .bifurcation.may_harvesting import MayHarvestingConfig, MayHarvestingModel
+from .bifurcation.rosenzweig_macarthur import RosenzweigMacArthurConfig, RosenzweigMacArthurModel
 
 
 class SystemType(Enum):
@@ -40,6 +41,7 @@ class SystemSpec:
         model_cls: Optional[Type[BoxModel]] = None,
         bifurcation_system: Optional[str] = None,
         rate_system: Optional[str] = None,
+        config_kwargs: Optional[Dict[str, Any]] = None,
     ):
         self.name = name
         self.system_type = system_type
@@ -48,6 +50,7 @@ class SystemSpec:
         self.model_cls = model_cls
         self.bifurcation_system = bifurcation_system
         self.rate_system = rate_system
+        self.config_kwargs = config_kwargs or {}
     
     @property
     def is_synthetic_bifurcation(self) -> bool:
@@ -59,7 +62,7 @@ class SystemSpec:
         """Create default configuration for this system."""
         if self.config_cls is None:
             raise ValueError(f"System '{self.name}' does not have a config class")
-        return self.config_cls()
+        return self.config_cls(**self.config_kwargs)
     
     def create_model(self, config: Optional[Any] = None) -> BoxModel:
         """Create model instance for this system."""
@@ -126,6 +129,27 @@ SYSTEM_REGISTRY: Dict[str, SystemSpec] = {
         config_cls=MayHarvestingConfig,
         model_cls=MayHarvestingModel,
         description="May's harvesting model (semi-real bifurcation)",
+    ),
+    
+    # Rosenzweig-MacArthur consumer-resource model (Bury et al. 2021)
+    # Supports both transcritical and Hopf bifurcations
+    "b_rosenzweig_macarthur_tc": SystemSpec(
+        name="b_rosenzweig_macarthur_tc",
+        system_type=SystemType.BIFURCATION,
+        bifurcation_system="rosenzweig_macarthur_transcritical",
+        config_cls=RosenzweigMacArthurConfig,
+        model_cls=RosenzweigMacArthurModel,
+        description="Rosenzweig-MacArthur consumer-resource model (transcritical bifurcation)",
+        config_kwargs={"bifurcation_type": "transcritical"},
+    ),
+    "b_rosenzweig_macarthur_hopf": SystemSpec(
+        name="b_rosenzweig_macarthur_hopf",
+        system_type=SystemType.BIFURCATION,
+        bifurcation_system="rosenzweig_macarthur_hopf",
+        config_cls=RosenzweigMacArthurConfig,
+        model_cls=RosenzweigMacArthurModel,
+        description="Rosenzweig-MacArthur consumer-resource model (Hopf bifurcation)",
+        config_kwargs={"bifurcation_type": "hopf"},
     ),
 }
 

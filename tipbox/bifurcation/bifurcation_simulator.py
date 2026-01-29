@@ -112,15 +112,16 @@ def simulate_real_bifurcation_trajectory(
         **generate_kwargs
     )
 
-    # Check if the trajectory is tipped
-    is_tipped = model.is_tipped(trajectory)
+    # Check if the trajectory crossed the bifurcation point
+    is_tipped = model.is_tipped(trajectory, param_values=param_values)
     if is_tipped == null_simulation:
         return None
 
-    # Locate transition index
+    # Locate transition index (pass param_values for parameter-based detection)
     trans_idx = model.locate_transition(
         trajectory,
         null_simulation=null_simulation,
+        param_values=param_values,
     )
 
     if trans_idx is None:
