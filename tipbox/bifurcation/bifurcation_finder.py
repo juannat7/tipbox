@@ -11,6 +11,8 @@ import shutil
 import os
 import sys
 import re
+import io
+from contextlib import redirect_stdout, nullcontext
 
 from .polynomial_model import PolynomialModel
 from .auto.convert_bifdata import convert_bifdata
@@ -47,26 +49,29 @@ class BifurcationPoint:
 
 def find_all_bifurcations(
     model: PolynomialModel,
-    param_range: Tuple[float, float] = (-5.0, 5.0)
+    param_range: Tuple[float, float] = (-5.0, 5.0),
+    verbose: bool = True,
 ) -> List[BifurcationPoint]:
     """
     Find bifurcations using AUTO-07P for all nonzero parameters.
-    
+
     Following Bury et al. (2021) PNAS paper approach.
     Returns BifurcationPoint for every nonzero parameter:
     - bif_type='fold'/'hopf'/'transcritical' if bifurcation found
     - bif_type='null' if no bifurcation in param_range
-    
+
     Parameters
     ----------
     model : PolynomialModel
     param_range : tuple
         Parameter range for continuation. Default (-5, 5) as in PNAS paper.
-    
+    verbose : bool
+        If True (default), print AUTO-07P output. Set to False to suppress output.
+
     Returns
     -------
     list of BifurcationPoint objects for all nonzero parameters
-    
+
     Raises
     ------
     ImportError if AUTO-07P not installed (checked at module import)
@@ -94,22 +99,28 @@ def find_all_bifurcations(
         nonzero_params = [par_labels[i] for i in nonzero_idx]
         
         results = []
-        
+
+        # Context manager for suppressing AUTO-07P stdout when verbose=False
+        # Note: stderr is NOT redirected so errors are always visible
+        devnull = io.StringIO()
+        output_ctx = nullcontext() if verbose else redirect_stdout(devnull)
+
         # Run continuation for each nonzero parameter
         for par in nonzero_params:
             try:
-                # Run AUTO continuation
-                model_auto = auto.load('model')
-                model_auto = auto.load(u, PAR=p, ICP=par, UZSTOP={par: list(param_range)})
-                auto_result = auto.run(model_auto)
-                
-                # Save and parse results (PNAS approach)
-                auto.save(auto_result, f'out{par}')
+                with output_ctx:
+                    model_auto = auto.load('model')
+                    model_auto = auto.load(u, PAR=p, ICP=par, UZSTOP={par: list(param_range)})
+                    auto_result = auto.run(model_auto)
+                    auto.save(auto_result, f'out{par}')
+                    auto.clean()
+
+                # Parse results (PNAS approach)
                 out = convert_bifdata(f'b.out{par}')
-                
+
                 # Map AUTO type codes to our names
                 type_map = {'LP': 'fold', 'HB': 'hopf', 'BP': 'transcritical', 'NA': 'null'}
-                
+
                 # Create BifurcationPoint object
                 bif = BifurcationPoint(
                     bif_type=type_map.get(out['type'], 'null'),
@@ -118,17 +129,15 @@ def find_all_bifurcations(
                     bif_value=float(out['value'])
                 )
                 results.append(bif)
-                
-                # Clean up
-                auto.clean()
-                
+
             except Exception:
                 # Silently continue if parameter fails
                 try:
-                    auto.clean()
+                    with output_ctx:
+                        auto.clean()
                 except:
                     pass
-        
+
         return results
         
     finally:

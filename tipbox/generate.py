@@ -30,6 +30,7 @@ def generate(
     dt_sample: float = 1.0,
     sigma_tilde: float = 0.01,
     max_attempts: int = 100,
+    verbose: bool = True,
     **generate_kwargs
 ) -> Tuple[jnp.ndarray, jnp.ndarray, Dict]:
     """
@@ -65,6 +66,9 @@ def generate(
         Base noise amplitude (PNAS default)
     max_attempts : int, default=100
         Max attempts to find suitable model
+    verbose : bool, default=True
+        If True (default), print AUTO-07P output during bifurcation detection.
+        Set to False to suppress verbose compilation output.
     **generate_kwargs : additional arguments
         Passed to simulation functions (dt_sample, dt_integrate, param_end_multiplier, etc.)
 
@@ -153,7 +157,7 @@ def generate(
                 continue
 
             # Find bifurcations with AUTO-07P
-            bifurcations = find_all_bifurcations(model)
+            bifurcations = find_all_bifurcations(model, verbose=verbose)
             if not bifurcations:
                 continue
 
