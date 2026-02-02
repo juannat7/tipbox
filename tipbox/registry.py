@@ -21,6 +21,7 @@ from .rate.compost_bomb import CompostBombConfig, CompostBombModel
 from .rate.saddle_node import SaddleNodeConfig, SaddleNodeModel
 from .bifurcation.may_harvesting import MayHarvestingConfig, MayHarvestingModel
 from .bifurcation.rosenzweig_macarthur import RosenzweigMacArthurConfig, RosenzweigMacArthurModel
+from .bifurcation.seirx import SEIRxConfig, SEIRxModel
 
 
 class SystemType(Enum):
@@ -150,6 +151,16 @@ SYSTEM_REGISTRY: Dict[str, SystemSpec] = {
         model_cls=RosenzweigMacArthurModel,
         description="Rosenzweig-MacArthur consumer-resource model (Hopf bifurcation)",
         config_kwargs={"bifurcation_type": "hopf"},
+    ),
+
+    # SEIRx behaviour–disease model (Bury et al. 2021) — transcritical bifurcation
+    "b_seirx_tc": SystemSpec(
+        name="b_seirx_tc",
+        system_type=SystemType.BIFURCATION,
+        bifurcation_system="seirx_transcritical",
+        config_cls=SEIRxConfig,
+        model_cls=SEIRxModel,
+        description="SEIRx disease dynamics with vaccinator behaviour (transcritical bifurcatio)",
     ),
 }
 

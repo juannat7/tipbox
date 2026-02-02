@@ -26,6 +26,7 @@ pip install -e .
 | `b_harvesting` | Semi-real | May's harvesting model (fold) | May 1977 |
 | `b_rosenzweig_macarthur_tc` | Semi-real | Consumer-resource model (transcritical) | Bury et al. 2021 |
 | `b_rosenzweig_macarthur_hopf` | Semi-real | Consumer-resource model (Hopf) | Bury et al. 2021 |
+| `b_seirx_tc` | Semi-real | SEIRx disease–vaccination behaviour (transcritical) | Bury et al. 2021 |
 
 ### Rate-Induced Tipping
 
@@ -64,7 +65,6 @@ full, part, info = generate.generate(
 
 ## TODO
 
-- [ ] Add SEIRx disease dynamics model (Transcritical) — Bury 2021
 - [ ] Add three-species chaotic food chain model (Hopf) — Zhuge 2025
 - [ ] Add Plant-herbivore model (Rate) — Ritchie 2023
 - [ ] Add AMOC 5-box model (Rate) — Ritchie 2023
