@@ -73,14 +73,14 @@ def generate(
         Passed to simulation functions. Key parameters include:
         - param_end_multiplier: Optional[float], default=1.1
             Legacy multiplier for extending simulation past bif_value.
-            XOR with transition_fraction.
-        - transition_fraction: Optional[float], default=None
-            Fraction of timeline (0-1) when bif_value is reached.
+            XOR with critical_at.
+        - critical_at: Optional[float], default=None
+            Fraction of timeline (0-1) when critical parameter value is reached.
             Requires param_end_multiplier=None. When set, uses direct mode
-            (exact length, pre-determined transition position).
-        - hold_at_bifurcation: bool, default=False
-            If True and transition_fraction is set, hold parameter at bif_value
-            after reaching it (prevents post-bifurcation divergence).
+            (exact length, pre-determined critical point position).
+        - hold_at_critical: bool, default=False
+            If True and critical_at is set, hold parameter at critical value
+            after reaching it (prevents post-critical divergence).
 
     Returns
     -------

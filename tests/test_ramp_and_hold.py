@@ -1,4 +1,4 @@
-"""Tests for ramp-and-hold bifurcation parameter schedule."""
+"""Tests for critical_at parameter schedule (ramp-and-hold behavior)."""
 
 import jax
 import numpy as np
@@ -13,16 +13,16 @@ def rng_key():
 
 
 class TestRampAndHold:
-    """Tests for transition_fraction + hold_at_bifurcation behavior."""
+    """Tests for critical_at + hold_at_critical behavior."""
 
-    def test_hold_at_bifurcation(self, rng_key):
-        """Parameter should hold constant at bif_value after transition_fraction."""
+    def test_hold_at_critical(self, rng_key):
+        """Parameter should hold constant at bif_value after critical_at."""
         full, _, info = generate(
             rng_key,
             tipping_type='b_fold',
             param_end_multiplier=None,
-            transition_fraction=0.5,
-            hold_at_bifurcation=True,
+            critical_at=0.5,
+            hold_at_critical=True,
             verbose=False,
         )
 
@@ -41,8 +41,8 @@ class TestRampAndHold:
             rng_key,
             tipping_type='b_fold',
             param_end_multiplier=None,
-            transition_fraction=0.5,
-            hold_at_bifurcation=False,
+            critical_at=0.5,
+            hold_at_critical=False,
             verbose=False,
         )
 
@@ -55,23 +55,23 @@ class TestRampAndHold:
         # At end, param should be extrapolated past bif_value
         assert params[-1] > bif_value
 
-    @pytest.mark.parametrize("transition_fraction", [0.3, 0.5, 0.7])
-    def test_transition_at_exact_position(self, rng_key, transition_fraction):
-        """Transition should occur at exactly transition_fraction of trajectory."""
+    @pytest.mark.parametrize("critical_at", [0.3, 0.5, 0.7])
+    def test_transition_at_exact_position(self, rng_key, critical_at):
+        """Transition should occur at exactly critical_at of trajectory."""
         num_timesteps = 256
         full, _, info = generate(
             rng_key,
             tipping_type='b_fold',
             param_end_multiplier=None,
-            transition_fraction=transition_fraction,
-            hold_at_bifurcation=True,
+            critical_at=critical_at,
+            hold_at_critical=True,
             num_timesteps=num_timesteps,
             verbose=False,
         )
 
         bif_value = info['bifurcation'].bif_value
         params = np.array(full.param_values)
-        expected_idx = int(num_timesteps * transition_fraction)
+        expected_idx = int(num_timesteps * critical_at)
 
         # Verify param reaches bif_value at expected index
         assert np.isclose(params[expected_idx], bif_value, rtol=0.02)
@@ -85,8 +85,8 @@ class TestRampAndHold:
             rng_key,
             tipping_type='b_fold',
             param_end_multiplier=None,
-            transition_fraction=0.3,  # more post-tip time
-            hold_at_bifurcation=True,
+            critical_at=0.3,  # more post-tip time
+            hold_at_critical=True,
             num_timesteps=num_timesteps,
             verbose=False,
         )
@@ -114,13 +114,13 @@ class TestXORConstraint:
     """Tests for parameter validation."""
 
     def test_error_when_both_specified(self, rng_key):
-        """Should error if both transition_fraction and param_end_multiplier are set."""
-        with pytest.raises(ValueError, match="Cannot use transition_fraction"):
+        """Should error if both critical_at and param_end_multiplier are set."""
+        with pytest.raises(ValueError, match="Cannot use critical_at"):
             generate(
                 rng_key,
                 tipping_type='b_fold',
                 param_end_multiplier=1.1,
-                transition_fraction=0.5,
+                critical_at=0.5,
                 verbose=False,
             )
 
@@ -131,6 +131,6 @@ class TestXORConstraint:
                 rng_key,
                 tipping_type='b_fold',
                 param_end_multiplier=None,
-                transition_fraction=None,
+                critical_at=None,
                 verbose=False,
             )
