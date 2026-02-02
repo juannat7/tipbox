@@ -134,3 +134,14 @@ class TestXORConstraint:
                 critical_at=None,
                 verbose=False,
             )
+
+    @pytest.mark.parametrize("system", ["b_harvesting", "r_bautin"])
+    def test_error_critical_at_unsupported_system(self, rng_key, system):
+        """Should error if critical_at used with non-synthetic system."""
+        with pytest.raises(NotImplementedError, match="critical_at is not yet implemented"):
+            generate(
+                rng_key,
+                tipping_type=system,
+                param_end_multiplier=None,
+                critical_at=0.5,
+            )

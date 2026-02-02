@@ -118,7 +118,14 @@ def generate(
     
     system_spec = get_system_info(system_name)
     system_type = system_spec.system_type
-    
+
+    # Validate critical_at is only used with supported systems
+    if generate_kwargs.get('critical_at') is not None and not system_spec.is_synthetic_bifurcation:
+        raise NotImplementedError(
+            f"critical_at is not yet implemented for {system_name}. "
+            f"Currently only supported for synthetic bifurcations (b_fold, b_hopf, b_transcritical)."
+        )
+
     # Route to appropriate simulator based on system type
     if system_type == SystemType.RATE:
         # Rate-induced tipping
