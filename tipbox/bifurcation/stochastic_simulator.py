@@ -81,7 +81,9 @@ def simulate_to_bifurcation(
     burn_in_time: float = 100.0,
     null_simulation: bool = False,
     null_location: float = 0.0,
-    param_end_multiplier: float = 1.1,
+    param_end_multiplier: Optional[float] = 1.1,
+    transition_fraction: Optional[float] = None,
+    hold_at_bifurcation: bool = False,
     initial_state: Optional[jnp.ndarray] = None,
     noise_burn: Optional[jnp.ndarray] = None,
     noise: Optional[jnp.ndarray] = None,
@@ -89,11 +91,11 @@ def simulate_to_bifurcation(
 ) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray]:
     """
     Simulate system approaching bifurcation with stochastic noise.
-    
+
     - Bifurcation parameter increases linearly from initial value to bifurcation value
     - Noise amplitude: sigma = sqrt(2 * recovery_rate) * sigma_tilde * rv_tri
     - Uses Euler-Maruyama integration
-    
+
     Parameters
     ----------
     model : PolynomialModel
@@ -117,14 +119,22 @@ def simulate_to_bifurcation(
         If True, fix parameter (null trajectory)
     null_location : float, default=0.0
         For null: parameter fraction [0,1] from start to bifurcation
-    param_end_multiplier : float, default=1.1
-        Multiplier for extending simulation time beyond transition
-    
+    param_end_multiplier : Optional[float], default=1.1
+        Multiplier for extending simulation time beyond transition.
+        XOR with transition_fraction - only one can be specified.
+    transition_fraction : Optional[float], default=None
+        Fraction of timeline (0-1) when bif_value is reached.
+        XOR with param_end_multiplier - requires param_end_multiplier=None.
+    hold_at_bifurcation : bool, default=False
+        If True and transition_fraction is set, hold parameter at bif_value
+        after reaching it (prevents post-bifurcation divergence).
+
     Returns
     -------
     time : (series_len,) array of time points
     trajectory : (series_len, 2) array of [x, y] states
     param_values : (series_len,) array of bifurcation parameter values
+    noise_scale : float, effective noise scale used
     """
     # Noise amplitude: sigma = sqrt(2*lambda) * sigma_tilde * triangular_rv
     key, subkey = jax.random.split(key)
@@ -132,33 +142,71 @@ def simulate_to_bifurcation(
         rv_tri = jax.random.triangular(subkey, 0.75, 1.0, 1.25) if noise_scale_triangular else 1.0
     sigma = jnp.sqrt(2 * model.recovery_rate) * sigma_tilde * rv_tri
     
+    # Validate XOR constraint: transition_fraction requires param_end_multiplier=None
+    if transition_fraction is not None and param_end_multiplier is not None:
+        raise ValueError(
+            "Cannot use transition_fraction with param_end_multiplier. "
+            "To use transition_fraction, set param_end_multiplier=None explicitly."
+        )
+    if transition_fraction is None and param_end_multiplier is None:
+        raise ValueError(
+            "Must specify either transition_fraction or param_end_multiplier"
+        )
+
     # Parameter schedule
     pars = model.get_parameters()
     param_idx = bifurcation.bif_param_index
     param_start = pars[param_idx]
-    param_end = bifurcation.bif_value * param_end_multiplier
-    
-    if null_simulation:
-        # For null simulations, parameter is fixed at a point in the range
-        # null_location is relative to the range from start to (bifurcation * multiplier)
-        # This ensures param_end_multiplier affects the range used for null simulations
-        param_fixed = param_start + null_location * (param_end - param_start)
-        param_start = param_end = param_fixed
-    
-    # Time discretization
-    # For simulations with param_end_multiplier > 1.0, extend simulation time
-    # to ensure enough points before transition (forced) or after transition (null)
-    if param_end_multiplier > 1.0:
-        # Extend simulation time by multiplier
+    bif_value = bifurcation.bif_value
+
+    # Time discretization - compute n_steps first
+    if transition_fraction is not None:
+        # New behavior: exact length, no time extension
+        total_time = series_len * dt_sample
+    elif param_end_multiplier > 1.0:
+        # Legacy behavior: extend simulation time by multiplier
         total_time = series_len * dt_sample * param_end_multiplier
     else:
         total_time = series_len * dt_sample
-    
+
     n_steps = int(total_time / dt_integrate)
     n_burn = int(burn_in_time / dt_integrate)
-    
-    # Parameter schedule: extend to cover the full simulation time
-    param_schedule = jnp.linspace(param_start, param_end, n_steps)
+
+    # Build parameter schedule based on mode
+    if null_simulation:
+        # Null simulation: parameter fixed at a point in the range
+        if param_end_multiplier is not None:
+            param_end = bif_value * param_end_multiplier
+        else:
+            param_end = param_start + (bif_value - param_start) / transition_fraction
+        param_fixed = param_start + null_location * (param_end - param_start)
+        param_schedule = jnp.full(n_steps, param_fixed)
+    elif transition_fraction is not None:
+        # New behavior: use transition_fraction to control when bif_value is reached
+        #
+        # We integrate at fine resolution (dt_integrate) but output at coarser
+        # resolution (dt_sample). To ensure the transition occurs at exactly the
+        # desired output step, we align ramp_steps with the downsampling grid:
+        #   - desired_output_idx: which output step should have param = bif_value
+        #   - ramp_steps: corresponding fine step (must be a multiple of sample_every)
+        sample_every = int(dt_sample / dt_integrate)
+        desired_output_idx = int(series_len * transition_fraction)
+        ramp_steps = max(desired_output_idx * sample_every, 1)
+
+        if hold_at_bifurcation:
+            # Ramp to bif_value, then hold constant
+            hold_steps = n_steps - ramp_steps
+            ramp_part = jnp.linspace(param_start, bif_value, ramp_steps)
+            hold_part = jnp.full(hold_steps, bif_value)
+            param_schedule = jnp.concatenate([ramp_part, hold_part])
+        else:
+            # Linear extrapolation: continue past bif_value at same rate
+            param_end = param_start + (bif_value - param_start) / transition_fraction
+            param_schedule = jnp.linspace(param_start, param_end, n_steps)
+    else:
+        # Legacy behavior: linear ramp to bif_value * multiplier
+        param_end = bif_value * param_end_multiplier
+        param_schedule = jnp.linspace(param_start, param_end, n_steps)
     
     # Generate noise
     key, subkey1, subkey2 = jax.random.split(key, 3)
@@ -266,12 +314,17 @@ def simulate_synthetic_bifurcation_trajectory(
 ) -> Optional[TrajectoryResult]:
     """
     Generate a single training trajectory (either tipping or null).
-    
+
     This is the high-level function that wraps the PNAS approach:
     1. Simulate system to bifurcation
     2. Detect transition point
     3. Extract series_len points before transition
-    
+
+    When transition_fraction is specified (via generate_kwargs), uses direct mode:
+    - Simulates exact series_len points
+    - Transition occurs at pre-determined position
+    - No detection or extraction needed
+
     Parameters
     ----------
     model : PolynomialModel
@@ -283,24 +336,72 @@ def simulate_synthetic_bifurcation_trajectory(
         Desired output trajectory length
     steps_before_transition : int, default=1
         Number of samples to stay before the detected transition (>=0).
+        Only used in legacy mode (when transition_fraction is None).
     buffer_size : int, default=1000
         Extra samples simulated prior to the transition to ensure enough
         pre-transition context. Keep this constant to preserve the
-        bifurcation parameter ramp rate.
+        bifurcation parameter ramp rate. Only used in legacy mode.
     null_simulation : bool, default=False
         If True, simulate null (non-tipping) trajectory
     **generate_kwargs : additional arguments
-        Passed to simulate_to_bifurcation (dt_sample, dt_integrate, param_end_multiplier, etc.)
-    
+        Passed to simulate_to_bifurcation. Key parameters:
+        - transition_fraction: Optional[float] - when bif_value is reached (0-1)
+        - hold_at_bifurcation: bool - hold at bif_value after transition
+        - param_end_multiplier: Optional[float] - legacy multiplier (XOR with transition_fraction)
+
     Returns
     -------
-    time : (series_len,) time array starting at 0
-    trajectory : (series_len, 2) state array [x, y]
-    label : str, bifurcation type ('fold', 'hopf', 'transcritical', 'null')
-    sigma : float, effective noise amplitude used
-    
+    Tuple of (full_trajectory, part_trajectory) as TrajectoryResult objects.
     Returns None if transition occurs too early (< series_len points before)
+    in legacy mode.
     """
+    # Check if using new transition_fraction mode
+    transition_fraction = generate_kwargs.get('transition_fraction', None)
+    hold_at_bifurcation = generate_kwargs.get('hold_at_bifurcation', False)
+    param_end_multiplier = generate_kwargs.get('param_end_multiplier', 1.1)
+
+    # Validate XOR constraint early
+    if transition_fraction is not None and param_end_multiplier is not None:
+        raise ValueError(
+            "Cannot use transition_fraction with param_end_multiplier. "
+            "To use transition_fraction, set param_end_multiplier=None explicitly."
+        )
+
+    if transition_fraction is not None:
+        # Direct mode: simulate exact length, transition at known position
+        time, trajectory, param_values, sigma = simulate_to_bifurcation(
+            model,
+            bifurcation,
+            key,
+            series_len=series_len,  # exact length, no buffer
+            null_simulation=null_simulation,
+            transition_fraction=transition_fraction,
+            hold_at_bifurcation=hold_at_bifurcation,
+            param_end_multiplier=None,  # XOR: must be None when using transition_fraction
+            **{k: v for k, v in generate_kwargs.items()
+               if k not in ('transition_fraction', 'hold_at_bifurcation', 'param_end_multiplier')}
+        )
+
+        # Transition index is pre-determined by transition_fraction
+        trans_idx = int(series_len * transition_fraction)
+
+        # Return full trajectory (no extraction needed)
+        metadata: Dict[str, Any] = {
+            'label': 'null' if null_simulation else bifurcation.bif_type,
+            'transition_index': trans_idx,
+            'param_value_transition': float(param_values[min(trans_idx, len(param_values) - 1)]),
+        }
+
+        result = TrajectoryResult(
+            time=time,
+            trajectory=trajectory,
+            param_values=param_values,
+            sigma=sigma,
+            metadata=metadata
+        )
+        return (result, result)  # full and part are identical in direct mode
+
+    # Legacy mode: use buffer + detection + extraction
     if steps_before_transition > buffer_size:
         raise ValueError(
             "steps_before_transition exceeds buffer_size. "
@@ -309,23 +410,24 @@ def simulate_synthetic_bifurcation_trajectory(
 
     # Simulate with constant buffer to preserve bifurcation ramp rate
     total_len = series_len + buffer_size
-    
+
     time, trajectory, param_values, sigma = simulate_to_bifurcation(
         model,
         bifurcation,
         key,
         series_len=total_len,
         null_simulation=null_simulation,
-        param_end_multiplier=generate_kwargs.get('param_end_multiplier', 1.1)
+        param_end_multiplier=generate_kwargs.get('param_end_multiplier', 1.1),
+        **{k: v for k, v in generate_kwargs.items() if k != 'param_end_multiplier'}
     )
-    
+
     # Detect transition (or use midpoint for null simulations)
     if null_simulation:
         # For null simulations, use midpoint as transition point
         trans_idx = len(trajectory) // 2
     else:
         trans_idx = detect_transition(trajectory, time)
-    
+
     # Extract fixed-length series before transition
     time_seg, traj_seg, param_seg, trans_idx_out, success = extract_segment(
         time,
@@ -335,7 +437,7 @@ def simulate_synthetic_bifurcation_trajectory(
         steps_before_transition,
         series_len
     )
-    
+
     if not success:
         return None
 

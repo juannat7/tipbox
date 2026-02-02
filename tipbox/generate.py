@@ -70,7 +70,17 @@ def generate(
         If True (default), print AUTO-07P output during bifurcation detection.
         Set to False to suppress verbose compilation output.
     **generate_kwargs : additional arguments
-        Passed to simulation functions (dt_sample, dt_integrate, param_end_multiplier, etc.)
+        Passed to simulation functions. Key parameters include:
+        - param_end_multiplier: Optional[float], default=1.1
+            Legacy multiplier for extending simulation past bif_value.
+            XOR with transition_fraction.
+        - transition_fraction: Optional[float], default=None
+            Fraction of timeline (0-1) when bif_value is reached.
+            Requires param_end_multiplier=None. When set, uses direct mode
+            (exact length, pre-determined transition position).
+        - hold_at_bifurcation: bool, default=False
+            If True and transition_fraction is set, hold parameter at bif_value
+            after reaching it (prevents post-bifurcation divergence).
 
     Returns
     -------
