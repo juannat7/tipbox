@@ -101,19 +101,19 @@ def find_all_bifurcations(
         results = []
 
         # Context manager for suppressing AUTO-07P stdout when verbose=False
-        # Note: stderr is NOT redirected so errors are always visible
+        # Only wraps auto.run() - the main source of verbose output
         devnull = io.StringIO()
         output_ctx = nullcontext() if verbose else redirect_stdout(devnull)
 
         # Run continuation for each nonzero parameter
         for par in nonzero_params:
             try:
+                model_auto = auto.load('model')
+                model_auto = auto.load(u, PAR=p, ICP=par, UZSTOP={par: list(param_range)})
                 with output_ctx:
-                    model_auto = auto.load('model')
-                    model_auto = auto.load(u, PAR=p, ICP=par, UZSTOP={par: list(param_range)})
                     auto_result = auto.run(model_auto)
-                    auto.save(auto_result, f'out{par}')
-                    auto.clean()
+                auto.save(auto_result, f'out{par}')
+                auto.clean()
 
                 # Parse results (PNAS approach)
                 out = convert_bifdata(f'b.out{par}')
@@ -133,8 +133,7 @@ def find_all_bifurcations(
             except Exception:
                 # Silently continue if parameter fails
                 try:
-                    with output_ctx:
-                        auto.clean()
+                    auto.clean()
                 except:
                     pass
 
