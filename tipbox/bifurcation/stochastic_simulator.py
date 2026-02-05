@@ -7,38 +7,44 @@ Implements Euler-Maruyama method with:
 - Noise amplitude scaling based on recovery rate
 """
 
+from typing import Any
+
 import jax
 import jax.numpy as jnp
 import numpy as np
 import ruptures as rpt
 from statsmodels.nonparametric.smoothers_lowess import lowess
-from typing import Tuple, Optional, Dict, Any
-from .polynomial_model import PolynomialModel, polynomial_basis
-from .bifurcation_finder import BifurcationPoint
+
 from ..types import TrajectoryResult
 from ..utils import extract_segment
+from .bifurcation_finder import BifurcationPoint
+from .polynomial_model import PolynomialModel, polynomial_basis
+from .schedule import (
+    Schedule,
+    apply_to_params,
+    constant,
+    legacy_multiplier_schedule,
+    linear,
+    resolve_schedule,
+)
 
 
 @jax.jit
 def euler_maruyama_step(
-    state: jnp.ndarray,
-    pars_a: jnp.ndarray,
-    pars_b: jnp.ndarray,
-    dt: float,
-    dW: jnp.ndarray
+    state: jnp.ndarray, pars_a: jnp.ndarray, pars_b: jnp.ndarray, dt: float, dW: jnp.ndarray
 ) -> jnp.ndarray:
     """
     Single Euler-Maruyama integration step.
-    
+
     dx = f(x) * dt + dW
-    
+
     Parameters
     ----------
     state : [x, y] current state
     pars_a, pars_b : polynomial parameters
     dt : time step
     dW : Brownian increment [dW_x, dW_y]
-    
+
     Returns
     -------
     new_state : [x, y] next state
@@ -61,11 +67,11 @@ def _simulation_scan(carry, inputs):
     """Scan function for main simulation (JIT-compiled)."""
     state, param_idx, dt = carry
     pars, dW = inputs
-    
+
     pars_a = pars[:10]
     pars_b = pars[10:]
     state = euler_maruyama_step(state, pars_a, pars_b, dt, dW)
-    
+
     return (state, param_idx, dt), state
 
 
@@ -81,18 +87,17 @@ def simulate_to_bifurcation(
     burn_in_time: float = 100.0,
     null_simulation: bool = False,
     null_location: float = 0.0,
-    param_end_multiplier: Optional[float] = 1.1,
-    critical_at: Optional[float] = None,
-    hold_at_critical: bool = False,
-    initial_state: Optional[jnp.ndarray] = None,
-    noise_burn: Optional[jnp.ndarray] = None,
-    noise: Optional[jnp.ndarray] = None,
-    rv_tri: Optional[jnp.ndarray] = None,
-) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray]:
+    param_end_multiplier: float | None = 1.1,
+    schedule: Schedule | None = None,
+    initial_state: jnp.ndarray | None = None,
+    noise_burn: jnp.ndarray | None = None,
+    noise: jnp.ndarray | None = None,
+    rv_tri: jnp.ndarray | None = None,
+) -> tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray, float]:
     """
     Simulate system approaching bifurcation with stochastic noise.
 
-    - Bifurcation parameter increases linearly from initial value to bifurcation value
+    - Bifurcation parameter changes according to the schedule
     - Noise amplitude: sigma = sqrt(2 * recovery_rate) * sigma_tilde * rv_tri
     - Uses Euler-Maruyama integration
 
@@ -120,14 +125,12 @@ def simulate_to_bifurcation(
     null_location : float, default=0.0
         For null: parameter fraction [0,1] from start to bifurcation
     param_end_multiplier : Optional[float], default=1.1
-        Multiplier for extending simulation time beyond transition.
-        XOR with critical_at - only one can be specified.
-    critical_at : Optional[float], default=None
-        Fraction of timeline (0-1) when bif_value is reached.
-        XOR with param_end_multiplier - requires param_end_multiplier=None.
-    hold_at_critical : bool, default=False
-        If True and critical_at is set, hold parameter at bif_value
-        after reaching it (prevents post-bifurcation divergence).
+        Legacy multiplier for extending simulation past bif_value.
+        Ignored if schedule is provided.
+    schedule : Optional[Schedule], default=None
+        Parameter schedule (array, callable, or dict config).
+        If provided, takes precedence over param_end_multiplier.
+        See tipbox.bifurcation.schedule for available schedule types.
 
     Returns
     -------
@@ -141,30 +144,33 @@ def simulate_to_bifurcation(
     if rv_tri is None:
         rv_tri = jax.random.triangular(subkey, 0.75, 1.0, 1.25) if noise_scale_triangular else 1.0
     sigma = jnp.sqrt(2 * model.recovery_rate) * sigma_tilde * rv_tri
-    
-    # Validate XOR constraint: critical_at requires param_end_multiplier=None
-    if critical_at is not None and param_end_multiplier is not None:
-        raise ValueError(
-            "Cannot use critical_at with param_end_multiplier. "
-            "To use critical_at, set param_end_multiplier=None explicitly."
-        )
-    if critical_at is None and param_end_multiplier is None:
-        raise ValueError(
-            "Must specify either critical_at or param_end_multiplier"
-        )
 
-    # Parameter schedule
+    # Parameter schedule setup
     pars = model.get_parameters()
     param_idx = bifurcation.bif_param_index
     param_start = pars[param_idx]
     bif_value = bifurcation.bif_value
 
-    # Time discretization - compute n_steps first
-    if critical_at is not None:
-        # New behavior: exact length, no time extension
-        total_time = series_len * dt_sample
-    elif param_end_multiplier > 1.0:
-        # Legacy behavior: extend simulation time by multiplier
+    # Time discretization
+    sample_every = int(dt_sample / dt_integrate)
+
+    # Determine effective schedule (all paths go through schedule system)
+    if null_simulation:
+        # Null: constant schedule at null_location
+        effective_schedule = constant(null_location)
+    elif schedule is not None:
+        # Explicit schedule provided (array, callable, or dict)
+        effective_schedule = schedule
+    elif param_end_multiplier is not None:
+        # Legacy API: translate multiplier to schedule
+        effective_schedule = legacy_multiplier_schedule(param_end_multiplier)
+    else:
+        # Default: linear ramp to bif_value
+        effective_schedule = linear()
+
+    # For legacy mode with param_end_multiplier > 1.0, extend total time
+    # to match original behavior (but this is usually not needed with schedule)
+    if schedule is None and param_end_multiplier is not None and param_end_multiplier > 1.0:
         total_time = series_len * dt_sample * param_end_multiplier
     else:
         total_time = series_len * dt_sample
@@ -172,42 +178,15 @@ def simulate_to_bifurcation(
     n_steps = int(total_time / dt_integrate)
     n_burn = int(burn_in_time / dt_integrate)
 
-    # Build parameter schedule based on mode
-    if null_simulation:
-        # Null simulation: parameter fixed at a point in the range
-        if param_end_multiplier is not None:
-            param_end = bif_value * param_end_multiplier
-        else:
-            param_end = param_start + (bif_value - param_start) / critical_at
-        param_fixed = param_start + null_location * (param_end - param_start)
-        param_schedule = jnp.full(n_steps, param_fixed)
-    elif critical_at is not None:
-        # New behavior: use critical_at to control when bif_value is reached
-        #
-        # We integrate at fine resolution (dt_integrate) but output at coarser
-        # resolution (dt_sample). To ensure the transition occurs at exactly the
-        # desired output step, we align ramp_steps with the downsampling grid:
-        #   - desired_output_idx: which output step should have param = bif_value
-        #   - ramp_steps: corresponding fine step (must be a multiple of sample_every)
-        sample_every = int(dt_sample / dt_integrate)
-        desired_output_idx = int(series_len * critical_at)
-        ramp_steps = max(desired_output_idx * sample_every, 1)
+    # Resolve schedule to array at output resolution
+    normalized = resolve_schedule(effective_schedule, series_len)
 
-        if hold_at_critical:
-            # Ramp to bif_value, then hold constant
-            hold_steps = n_steps - ramp_steps
-            ramp_part = jnp.linspace(param_start, bif_value, ramp_steps)
-            hold_part = jnp.full(hold_steps, bif_value)
-            param_schedule = jnp.concatenate([ramp_part, hold_part])
-        else:
-            # Linear extrapolation: continue past bif_value at same rate
-            param_end = param_start + (bif_value - param_start) / critical_at
-            param_schedule = jnp.linspace(param_start, param_end, n_steps)
-    else:
-        # Legacy behavior: linear ramp to bif_value * multiplier
-        param_end = bif_value * param_end_multiplier
-        param_schedule = jnp.linspace(param_start, param_end, n_steps)
-    
+    # Interpolate to fine integration resolution
+    normalized_fine = jnp.interp(jnp.arange(n_steps), jnp.arange(0, n_steps, sample_every), normalized)
+
+    # Apply to parameter range
+    param_schedule = apply_to_params(normalized_fine, param_start, bif_value)
+
     # Generate noise
     key, subkey1, subkey2 = jax.random.split(key, 3)
     noise_scale = sigma * jnp.sqrt(dt_integrate)
@@ -219,71 +198,68 @@ def simulate_to_bifurcation(
         dW = jax.random.normal(subkey2, (n_steps, 2)) * noise_scale
     else:
         dW = jnp.asarray(noise) * noise_scale
-    
+
     # Burn-in: run at initial parameter
     pars_a, pars_b = pars[:10], pars[10:]
     burn_start = model.equi if initial_state is None else jnp.asarray(initial_state)
     carry_burn = (burn_start, pars_a, pars_b, dt_integrate)
     (state_after_burn, _, _, _), _ = jax.lax.scan(_burn_in_scan, carry_burn, dW_burn)
-    
+
     # Main simulation: vectorized with scan
     # Create parameter arrays for each step
     pars_varying = jax.vmap(lambda p: pars.at[param_idx].set(p))(param_schedule)
-    
+
     carry_sim = (state_after_burn, param_idx, dt_integrate)
     _, states = jax.lax.scan(_simulation_scan, carry_sim, (pars_varying, dW))
-    
+
     # Downsample to output rate
     sample_every = int(dt_sample / dt_integrate)
     indices = jnp.arange(0, n_steps, sample_every)
-    
+
     trajectory = states[indices]
     time = indices * dt_integrate
     param_values = param_schedule[indices]
-    
+
     return time, trajectory, param_values, noise_scale
 
 
-def detect_transition(
-    trajectory: jnp.ndarray,
-    time: Optional[jnp.ndarray] = None
-) -> int:
+def detect_transition(trajectory: jnp.ndarray, time: jnp.ndarray | None = None) -> int:
     """
     Detect transition point in trajectory.
-    
+
     Finds transition via:
     1. NaN jump detection
     2. LOWESS detrending (span=0.2)
     3. Change-point detection on residuals (window=10, penalty=1)
-    
+
     Parameters
     ----------
     trajectory : (n_time, 2) array
     time : (n_time,) array, optional
-    
+
     Returns
     -------
     int : transition index (or len-1 if none detected)
     """
     x_series = np.array(trajectory[:, 0])
     time_arr = np.array(time) if time is not None else np.arange(len(x_series))
-    
+
     # Find first NaN (if any)
     nan_mask = np.isnan(x_series)
     t_nan = time_arr[np.argmax(nan_mask)] if np.any(nan_mask) else 1e6
-    
+
     # Change-point detection (only if no early NaN)
     if t_nan > 500:
         # Truncate at NaN if present
         cutoff = np.argmax(nan_mask) if t_nan < 1e6 else len(x_series)
         x_data = x_series[:cutoff]
         t_data = time_arr[:cutoff]
-        
+
         # LOWESS smoothing
         smooth = lowess(x_data, t_data, frac=0.2)[:, 1]
         if len(smooth) != len(x_data):  # Rare failure
             return 0
-        
+
         # Detect jump in residuals
         residuals = x_data - smooth
         algo = rpt.Window(width=10, model="l2", jump=1, min_size=2)
@@ -291,14 +267,14 @@ def detect_transition(
         t_jump = bps[0]
     else:
         t_jump = 1e6
-    
+
     # Take earlier transition
     t_trans = min(max(0, t_nan - 1), t_jump - 1)
-    
+
     # Convert to array index
     if t_trans >= 1e6:
         return len(trajectory) - 1
-    
+
     return int(np.argmin(np.abs(time_arr - t_trans)))
 
 
@@ -310,8 +286,8 @@ def simulate_synthetic_bifurcation_trajectory(
     steps_before_transition: int = 1,
     buffer_size: int = 1000,
     null_simulation: bool = False,
-    **generate_kwargs
-) -> Optional[TrajectoryResult]:
+    **generate_kwargs,
+) -> TrajectoryResult | None:
     """
     Generate a single training trajectory (either tipping or null).
 
@@ -320,9 +296,9 @@ def simulate_synthetic_bifurcation_trajectory(
     2. Detect transition point
     3. Extract series_len points before transition
 
-    When critical_at is specified (via generate_kwargs), uses direct mode:
+    When a schedule is provided (via generate_kwargs), uses direct mode:
     - Simulates exact series_len points
-    - Transition occurs at pre-determined position
+    - Transition occurs at pre-determined position based on schedule
     - No detection or extraction needed
 
     Parameters
@@ -336,7 +312,7 @@ def simulate_synthetic_bifurcation_trajectory(
         Desired output trajectory length
     steps_before_transition : int, default=1
         Number of samples to stay before the detected transition (>=0).
-        Only used in legacy mode (when critical_at is None).
+        Only used in legacy mode (when schedule is None).
     buffer_size : int, default=1000
         Extra samples simulated prior to the transition to ensure enough
         pre-transition context. Keep this constant to preserve the
@@ -345,9 +321,8 @@ def simulate_synthetic_bifurcation_trajectory(
         If True, simulate null (non-tipping) trajectory
     **generate_kwargs : additional arguments
         Passed to simulate_to_bifurcation. Key parameters:
-        - critical_at: Optional[float] - when bif_value is reached (0-1)
-        - hold_at_critical: bool - hold at bif_value after transition
-        - param_end_multiplier: Optional[float] - legacy multiplier (XOR with critical_at)
+        - schedule: Optional[Schedule] - parameter schedule (array, callable, or dict)
+        - param_end_multiplier: Optional[float] - legacy multiplier (ignored if schedule provided)
 
     Returns
     -------
@@ -355,19 +330,10 @@ def simulate_synthetic_bifurcation_trajectory(
     Returns None if transition occurs too early (< series_len points before)
     in legacy mode.
     """
-    # Check if using new critical_at mode
-    critical_at = generate_kwargs.get('critical_at', None)
-    hold_at_critical = generate_kwargs.get('hold_at_critical', False)
-    param_end_multiplier = generate_kwargs.get('param_end_multiplier', 1.1)
+    # Check if using schedule mode
+    schedule = generate_kwargs.get("schedule")
 
-    # Validate XOR constraint early
-    if critical_at is not None and param_end_multiplier is not None:
-        raise ValueError(
-            "Cannot use critical_at with param_end_multiplier. "
-            "To use critical_at, set param_end_multiplier=None explicitly."
-        )
-
-    if critical_at is not None:
+    if schedule is not None:
         # Direct mode: simulate exact length, transition at known position
         time, trajectory, param_values, sigma = simulate_to_bifurcation(
             model,
@@ -375,37 +341,36 @@ def simulate_synthetic_bifurcation_trajectory(
             key,
             series_len=series_len,  # exact length, no buffer
             null_simulation=null_simulation,
-            critical_at=critical_at,
-            hold_at_critical=hold_at_critical,
-            param_end_multiplier=None,  # XOR: must be None when using critical_at
-            **{k: v for k, v in generate_kwargs.items()
-               if k not in ('critical_at', 'hold_at_critical', 'param_end_multiplier')}
+            schedule=schedule,
+            param_end_multiplier=None,  # schedule takes precedence
+            **{k: v for k, v in generate_kwargs.items() if k not in ("schedule", "param_end_multiplier")},
         )
 
-        # Transition index is pre-determined by critical_at
-        trans_idx = int(series_len * critical_at)
+        # Estimate transition index from schedule
+        # For ramp_and_hold at 0.5, transition is at 50%
+        # For linear, we estimate based on when value reaches ~1.0
+        # This is metadata for user info, not critical for simulation
+        normalized = resolve_schedule(schedule, series_len)
+        # Find first index where normalized >= 1.0 (reaching bif_value)
+        above_threshold = jnp.where(normalized >= 1.0, size=series_len, fill_value=series_len - 1)
+        trans_idx = int(above_threshold[0][0]) if len(above_threshold[0]) > 0 else series_len - 1
 
         # Return full trajectory (no extraction needed)
-        metadata: Dict[str, Any] = {
-            'label': 'null' if null_simulation else bifurcation.bif_type,
-            'transition_index': trans_idx,
-            'param_value_transition': float(param_values[min(trans_idx, len(param_values) - 1)]),
+        metadata: dict[str, Any] = {
+            "label": "null" if null_simulation else bifurcation.bif_type,
+            "transition_index": trans_idx,
+            "param_value_transition": float(param_values[min(trans_idx, len(param_values) - 1)]),
         }
 
         result = TrajectoryResult(
-            time=time,
-            trajectory=trajectory,
-            param_values=param_values,
-            sigma=sigma,
-            metadata=metadata
+            time=time, trajectory=trajectory, param_values=param_values, sigma=sigma, metadata=metadata
         )
         return (result, result)  # full and part are identical in direct mode
 
     # Legacy mode: use buffer + detection + extraction
     if steps_before_transition > buffer_size:
         raise ValueError(
-            "steps_before_transition exceeds buffer_size. "
-            "Increase buffer_size to maintain constant parameter rate."
+            "steps_before_transition exceeds buffer_size. Increase buffer_size to maintain constant parameter rate."
         )
 
     # Simulate with constant buffer to preserve bifurcation ramp rate
@@ -417,8 +382,8 @@ def simulate_synthetic_bifurcation_trajectory(
         key,
         series_len=total_len,
         null_simulation=null_simulation,
-        param_end_multiplier=generate_kwargs.get('param_end_multiplier', 1.1),
-        **{k: v for k, v in generate_kwargs.items() if k != 'param_end_multiplier'}
+        param_end_multiplier=generate_kwargs.get("param_end_multiplier", 1.1),
+        **{k: v for k, v in generate_kwargs.items() if k != "param_end_multiplier"},
     )
 
     # Detect transition (or use midpoint for null simulations)
@@ -430,39 +395,26 @@ def simulate_synthetic_bifurcation_trajectory(
 
     # Extract fixed-length series before transition
     time_seg, traj_seg, param_seg, trans_idx_out, success = extract_segment(
-        time,
-        trajectory,
-        param_values,
-        trans_idx,
-        steps_before_transition,
-        series_len
+        time, trajectory, param_values, trans_idx, steps_before_transition, series_len
     )
 
     if not success:
         return None
 
     # Return results
-    metadata: Dict[str, Any] = {
-        'label': 'null' if null_simulation else bifurcation.bif_type,
-        'steps_before_transition': steps_before_transition,
-        'transition_index': int(trans_idx_out),
-        'param_value_transition': float(param_values[min(trans_idx_out, param_values.shape[0] - 1)]),
+    metadata: dict[str, Any] = {
+        "label": "null" if null_simulation else bifurcation.bif_type,
+        "steps_before_transition": steps_before_transition,
+        "transition_index": int(trans_idx_out),
+        "param_value_transition": float(param_values[min(trans_idx_out, param_values.shape[0] - 1)]),
     }
 
     full_trajectory = TrajectoryResult(
-        time=time,
-        trajectory=trajectory,
-        param_values=param_values,
-        sigma=sigma,
-        metadata=metadata
+        time=time, trajectory=trajectory, param_values=param_values, sigma=sigma, metadata=metadata
     )
 
     part_trajectory = TrajectoryResult(
-        time=time_seg,
-        trajectory=traj_seg,
-        param_values=param_seg,
-        sigma=sigma,
-        metadata=metadata
+        time=time_seg, trajectory=traj_seg, param_values=param_seg, sigma=sigma, metadata=metadata
     )
 
     return (full_trajectory, part_trajectory)

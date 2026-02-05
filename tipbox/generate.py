@@ -7,22 +7,22 @@ then simulates stochastic trajectories approaching the tipping point.
 
 import jax
 import jax.numpy as jnp
-from typing import Tuple, Dict
-from .bifurcation.polynomial_model import generate_random_polynomial_model
+
 from .bifurcation.bifurcation_finder import find_all_bifurcations, select_bifurcation
-from .bifurcation.stochastic_simulator import simulate_synthetic_bifurcation_trajectory
 from .bifurcation.bifurcation_simulator import simulate_real_bifurcation_trajectory
+from .bifurcation.polynomial_model import generate_random_polynomial_model
+from .bifurcation.stochastic_simulator import simulate_synthetic_bifurcation_trajectory
 from .rate.rate_simulator import simulate_rate_trajectory
 from .registry import (
-    normalize_system_name,
-    get_system_info,
     SystemType,
+    get_system_info,
+    normalize_system_name,
 )
 
 
 def generate(
     key: jax.random.PRNGKey,
-    tipping_type: str = 'b_fold',
+    tipping_type: str = "b_fold",
     null_simulation: bool = False,
     num_timesteps: int = 500,
     steps_before_transition: int = 1,
@@ -31,8 +31,8 @@ def generate(
     sigma_tilde: float = 0.01,
     max_attempts: int = 100,
     verbose: bool = True,
-    **generate_kwargs
-) -> Tuple[jnp.ndarray, jnp.ndarray, Dict]:
+    **generate_kwargs,
+) -> tuple[jnp.ndarray, jnp.ndarray, dict]:
     """
     Generate time series using PNAS paper approach.
 
@@ -73,14 +73,16 @@ def generate(
         Passed to simulation functions. Key parameters include:
         - param_end_multiplier: Optional[float], default=1.1
             Legacy multiplier for extending simulation past bif_value.
-            XOR with critical_at.
-        - critical_at: Optional[float], default=None
-            Fraction of timeline (0-1) when critical parameter value is reached.
-            Requires param_end_multiplier=None. When set, uses direct mode
-            (exact length, pre-determined critical point position).
-        - hold_at_critical: bool, default=False
-            If True and critical_at is set, hold parameter at critical value
-            after reaching it (prevents post-critical divergence).
+            Ignored if schedule is provided.
+        - schedule: Optional[Schedule], default=None
+            Parameter schedule (array, callable, or dict config).
+            When provided, uses direct mode (exact length, pre-determined position).
+            See tipbox.bifurcation.schedule for available schedule types:
+            - linear: Linear ramp reaching 1.0 at critical_at fraction
+            - ramp_and_hold: Ramp to param_level at hold_at, then hold
+            - constant: Fixed value (useful for null simulations)
+            - piecewise_linear: Concatenated linear segments
+            - from_array: Direct array passthrough
 
     Returns
     -------
@@ -105,7 +107,7 @@ def generate(
     ValueError
         If system name is not recognized
     """
-    
+
     # Normalize system name
     try:
         system_name = normalize_system_name(tipping_type)
@@ -115,16 +117,9 @@ def generate(
             f"Use explicit names like 'b_fold', 'r_bautin', 'b_harvesting', etc. "
             f"See tipbox.registry for available systems."
         ) from e
-    
+
     system_spec = get_system_info(system_name)
     system_type = system_spec.system_type
-
-    # Validate critical_at is only used with supported systems
-    if generate_kwargs.get('critical_at') is not None and not system_spec.is_synthetic_bifurcation:
-        raise NotImplementedError(
-            f"critical_at is not yet implemented for {system_name}. "
-            f"Currently only supported for synthetic bifurcations (b_fold, b_hopf, b_transcritical)."
-        )
 
     # Route to appropriate simulator based on system type
     if system_type == SystemType.RATE:
@@ -132,7 +127,7 @@ def generate(
         rate_system = system_spec.rate_system
         if rate_system is None:
             raise ValueError(f"Rate system '{system_name}' missing rate_system specification")
-        
+
         for attempt in range(max_attempts):
             key, subkey = jax.random.split(key)
             results = simulate_rate_trajectory(
@@ -143,15 +138,15 @@ def generate(
                 null_simulation=null_simulation,
                 sigma_tilde=sigma_tilde,
                 system_name=rate_system,
-                **generate_kwargs
+                **generate_kwargs,
             )
-            
+
             if results is not None:
                 full_result, part_result = results
                 info = {
-                    'attempt': attempt + 1,
-                    'system_name': system_name,
-                    'type': system_spec.system_type.value,
+                    "attempt": attempt + 1,
+                    "system_name": system_name,
+                    "type": system_spec.system_type.value,
                 }
                 info.update(full_result.metadata)
                 return full_result, part_result, info
@@ -160,7 +155,7 @@ def generate(
             f"Could not generate {system_name} trajectory after {max_attempts} attempts. "
             "Try increasing max_attempts or adjust configuration."
         )
-    
+
     elif system_spec.is_synthetic_bifurcation:
         # Synthetic bifurcation (polynomial models) - b_fold, b_hopf, b_transcritical
         bifurcation_type = system_spec.bifurcation_system
@@ -186,24 +181,26 @@ def generate(
             # Simulate stochastic trajectory
             key, subkey = jax.random.split(key)
             results = simulate_synthetic_bifurcation_trajectory(
-                model, bifurcation, subkey,
+                model,
+                bifurcation,
+                subkey,
                 series_len=num_timesteps,
                 steps_before_transition=steps_before_transition,
                 buffer_size=buffer_size,
                 null_simulation=null_simulation,
                 dt_sample=dt_sample,
                 sigma_tilde=sigma_tilde,
-                **generate_kwargs
+                **generate_kwargs,
             )
 
             if results is not None:
                 full_result, part_result = results
                 info = {
-                    'model': model,
-                    'bifurcation': bifurcation,
-                    'attempt': attempt + 1,
-                    'system_name': system_name,
-                    'type': system_type.value,
+                    "model": model,
+                    "bifurcation": bifurcation,
+                    "attempt": attempt + 1,
+                    "system_name": system_name,
+                    "type": system_type.value,
                 }
                 info.update(full_result.metadata)
                 return full_result, part_result, info
@@ -212,11 +209,11 @@ def generate(
             f"Could not generate {system_name} trajectory after {max_attempts} attempts. "
             "Try increasing max_attempts or choose different system."
         )
-    
+
     else:
         # Real bifurcation system (e.g., May's harvesting)
         real_system_name = system_spec.bifurcation_system
-        
+
         for attempt in range(max_attempts):
             key, subkey = jax.random.split(key)
             results = simulate_real_bifurcation_trajectory(
@@ -227,15 +224,15 @@ def generate(
                 null_simulation=null_simulation,
                 sigma_tilde=sigma_tilde,
                 system_name=real_system_name,
-                **generate_kwargs
+                **generate_kwargs,
             )
-            
+
             if results is not None:
                 full_result, part_result = results
                 info = {
-                    'attempt': attempt + 1,
-                    'system_name': system_name,
-                    'type': system_spec.system_type.value,
+                    "attempt": attempt + 1,
+                    "system_name": system_name,
+                    "type": system_spec.system_type.value,
                 }
                 info.update(full_result.metadata)
                 return full_result, part_result, info
