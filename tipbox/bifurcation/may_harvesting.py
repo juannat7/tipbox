@@ -350,3 +350,11 @@ class MayHarvestingModel(BoxModel):
 
         return time_seg, traj_seg, param_seg, trans_idx_out, success
 
+    def normalize_param_values(self, param_values):
+        """Normalize harvesting rate: 0 = h_min, 1 = h_bifurcation.
+
+        Values > 1.0 are possible when param_end_multiplier pushes h past
+        the bifurcation point toward h_max.
+        """
+        return (param_values - self._config.h_min) / (self._config.h_bifurcation - self._config.h_min)
+

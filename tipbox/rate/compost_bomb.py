@@ -272,3 +272,7 @@ class CompostBombModel(BoxModel):
 
         return time_seg, traj_seg, param_seg, trans_idx_out, success
 
+    def normalize_param_values(self, param_values):
+        """Normalize atmospheric forcing by max value (v * t_end)."""
+        return param_values / (self._config.v * self._config.t_end)
+

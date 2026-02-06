@@ -195,3 +195,7 @@ class SaddleNodeModel(BoxModel):
         )
 
         return time_seg, traj_seg, param_seg, trans_idx_out, success
+
+    def normalize_param_values(self, param_values):
+        """Normalize forcing values by max forcing amplitude."""
+        return param_values / self._config.lambda_max

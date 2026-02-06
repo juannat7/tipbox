@@ -61,13 +61,17 @@ def simulate_rate_trajectory(
 
     Returns
     -------
-    full_trajectory : tipbox.types.TrajectoryResult
-        Full trajectory with metadata
-    part_trajectory : tipbox.types.TrajectoryResult
-        Part trajectory with metadata
+    tuple[TrajectoryResult, TrajectoryResult] or None
+        Tuple of (full_trajectory, part_trajectory), or None if the trajectory
+        does not match the requested tipping/null behaviour or lacks sufficient
+        pre-transition context.
 
-    Returns None if the simulated trajectory does not match the requested
-    tipping/null behaviour or lacks sufficient pre-transition context.
+        Each TrajectoryResult.metadata includes:
+        - label: "rate" or "null"
+        - rate_system: name of the rate system used
+        - transition_index: detected transition position
+        - param_value_transition: parameter value at transition
+        - param_normalized: normalized forcing values (0=initial, 1=max forcing)
     """
 
     key_select, key_sim = jax.random.split(key)
@@ -132,17 +136,29 @@ def simulate_rate_trajectory(
     if not success:
         return None
 
+    # Compute normalized parameter values
+    normalized = model.normalize_param_values(param_values)
+    normalized_seg = model.normalize_param_values(param_seg)
+
     # Return results
-    # TODO: Consider adding param_schedule to metadata for consistency with
-    # synthetic bifurcation systems. For rate-induced systems, this would be
-    # a normalized version of the forcing function (e.g., Λ(t) for Bautin).
-    metadata: Dict[str, Any] = {
+    full_metadata: Dict[str, Any] = {
         "label": "null" if null_simulation else "rate",
         "rate_system": system_spec.rate_system,
         "steps_before_transition": steps_before_transition,
         "system_config": asdict(config),
         "transition_index": int(trans_idx_out),
-        "param_value_transition": float(param_values[min(trans_idx_out, param_values.shape[0] - 1)])
+        "param_value_transition": float(param_values[min(trans_idx_out, param_values.shape[0] - 1)]),
+        "param_normalized": normalized,
+    }
+
+    part_metadata: Dict[str, Any] = {
+        "label": "null" if null_simulation else "rate",
+        "rate_system": system_spec.rate_system,
+        "steps_before_transition": steps_before_transition,
+        "system_config": asdict(config),
+        "transition_index": int(trans_idx_out),
+        "param_value_transition": float(param_values[min(trans_idx_out, param_values.shape[0] - 1)]),
+        "param_normalized": normalized_seg,
     }
     if state_trajectory is not None:
         metadata["state_trajectory"] = state_trajectory
@@ -152,7 +168,7 @@ def simulate_rate_trajectory(
         trajectory=trajectory,
         param_values=param_values,
         sigma=sigma,
-        metadata=metadata
+        metadata=full_metadata,
     )
 
     part_trajectory = TrajectoryResult(
@@ -160,7 +176,7 @@ def simulate_rate_trajectory(
         trajectory=traj_seg,
         param_values=param_seg,
         sigma=sigma,
-        metadata=metadata
+        metadata=part_metadata,
     )
 
     return (full_trajectory, part_trajectory)

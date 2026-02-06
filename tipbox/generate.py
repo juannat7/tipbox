@@ -98,21 +98,21 @@ def generate(
         - sigma: float noise scale used during simulation
         - attempt: int number of the successful attempt (>=1)
         - transition_index: int detected transition position
-        - param_schedule: array of normalized schedule values in [0,1]
+        - param_normalized: array of normalized parameter values in [0,1]
         - Additional fields depend on system type
 
     Notes
     -----
-    The `param_schedule` in metadata contains the normalized parameter schedule
-    (values in [0,1]) that was used to drive the bifurcation parameter. This is
-    useful for understanding the forcing profile. Access via:
-    - `full_result.metadata["param_schedule"]` - schedule for full trajectory
-    - `part_result.metadata["param_schedule"]` - schedule for extracted segment
-    - `info["param_schedule"]` - same as full_result (copied to info dict)
+    The `param_normalized` in metadata contains normalized parameter values
+    (generally in [0,1]) useful for understanding the forcing profile. Access via:
+    - `full_result.metadata["param_normalized"]` - values for full trajectory
+    - `part_result.metadata["param_normalized"]` - values for extracted segment
+    - `info["param_normalized"]` - same as full_result (copied to info dict)
 
-    Note: `param_schedule` is currently only available for synthetic bifurcation
-    systems (b_fold, b_hopf, b_transcritical). Rate-induced and real bifurcation
-    systems do not yet include this metadata field.
+    Normalization semantics differ by system type:
+    - Synthetic bifurcation: 0 = param_start, 1 = bif_value (schedule system)
+    - Rate-induced: normalized by max forcing (0 = initial, 1 = max)
+    - Real bifurcation: normalized by bifurcation point (0 = param_min, 1 = bif_value)
 
     Raises
     ------

@@ -474,8 +474,8 @@ class TestIntegrationWithGenerate:
         # After midpoint, all values should be at bif_value
         assert np.allclose(params[midpoint:], bif_value, rtol=0.02)
 
-    def test_param_schedule_in_metadata(self, rng_key):
-        """Metadata should include normalized param_schedule."""
+    def test_param_normalized_in_metadata(self, rng_key):
+        """Metadata should include normalized param_normalized."""
         from tipbox.generate import generate
 
         full, part, info = generate(
@@ -485,23 +485,23 @@ class TestIntegrationWithGenerate:
             verbose=False,
         )
 
-        # Check that param_schedule is in metadata
-        assert "param_schedule" in full.metadata
-        param_schedule = np.array(full.metadata["param_schedule"])
+        # Check that param_normalized is in metadata
+        assert "param_normalized" in full.metadata
+        param_normalized = np.array(full.metadata["param_normalized"])
 
         # Check shape matches trajectory
-        assert len(param_schedule) == len(full.trajectory)
+        assert len(param_normalized) == len(full.trajectory)
 
         # Check range is [0, 1] (normalized)
-        assert param_schedule.min() >= 0.0
-        assert param_schedule.max() <= 1.0
+        assert param_normalized.min() >= 0.0
+        assert param_normalized.max() <= 1.0
 
         # For ramp_and_hold(hold_at=0.5), values after midpoint should be 1.0
-        midpoint = len(param_schedule) // 2
-        assert np.allclose(param_schedule[midpoint:], 1.0, rtol=0.02)
+        midpoint = len(param_normalized) // 2
+        assert np.allclose(param_normalized[midpoint:], 1.0, rtol=0.02)
 
-    def test_param_schedule_legacy_mode(self, rng_key):
-        """Legacy mode should also include param_schedule in metadata."""
+    def test_param_normalized_legacy_mode(self, rng_key):
+        """Legacy mode should also include param_normalized in metadata."""
         from tipbox.generate import generate
 
         # Use legacy mode (no schedule, uses param_end_multiplier)
@@ -511,18 +511,18 @@ class TestIntegrationWithGenerate:
             verbose=False,
         )
 
-        # Check that param_schedule is in metadata for both full and part
-        assert "param_schedule" in full.metadata
-        assert "param_schedule" in part.metadata
+        # Check that param_normalized is in metadata for both full and part
+        assert "param_normalized" in full.metadata
+        assert "param_normalized" in part.metadata
 
-        full_schedule = np.array(full.metadata["param_schedule"])
-        part_schedule = np.array(part.metadata["param_schedule"])
+        full_normalized = np.array(full.metadata["param_normalized"])
+        part_normalized = np.array(part.metadata["param_normalized"])
 
-        # Full schedule should match full trajectory length
-        assert len(full_schedule) == len(full.trajectory)
+        # Full normalized should match full trajectory length
+        assert len(full_normalized) == len(full.trajectory)
 
-        # Part schedule should match part trajectory length
-        assert len(part_schedule) == len(part.trajectory)
+        # Part normalized should match part trajectory length
+        assert len(part_normalized) == len(part.trajectory)
 
     def test_dict_schedule_with_generate(self, rng_key):
         """Dict schedule config should work with generate() API."""
@@ -628,3 +628,152 @@ class TestIntegrationWithGenerate:
                 schedule=non_zero_start,
                 verbose=False,
             )
+
+
+class TestParamNormalizedRateAndReal:
+    """Tests for param_normalized in rate-induced and real bifurcation systems."""
+
+    def test_rate_system_has_param_normalized(self):
+        """Rate system metadata should include param_normalized."""
+        from tipbox.rate.rate_simulator import simulate_rate_trajectory
+
+        key = jax.random.PRNGKey(42)
+        for attempt in range(20):
+            key, subkey = jax.random.split(key)
+            result = simulate_rate_trajectory(
+                subkey,
+                series_len=200,
+                system_name="saddle_node",
+            )
+            if result is not None:
+                full, part = result
+                assert "param_normalized" in full.metadata
+                assert "param_normalized" in part.metadata
+                break
+        else:
+            pytest.skip("Could not generate rate trajectory in 20 attempts")
+
+    def test_rate_system_param_normalized_shape(self):
+        """param_normalized shape should match trajectory length."""
+        from tipbox.rate.rate_simulator import simulate_rate_trajectory
+
+        key = jax.random.PRNGKey(123)
+        for attempt in range(20):
+            key, subkey = jax.random.split(key)
+            result = simulate_rate_trajectory(
+                subkey,
+                series_len=200,
+                system_name="saddle_node",
+            )
+            if result is not None:
+                full, part = result
+                assert len(full.metadata["param_normalized"]) == len(full.trajectory)
+                assert len(part.metadata["param_normalized"]) == len(part.trajectory)
+                break
+        else:
+            pytest.skip("Could not generate rate trajectory in 20 attempts")
+
+    def test_rate_system_param_normalized_range(self):
+        """param_normalized values should be >= 0."""
+        from tipbox.rate.rate_simulator import simulate_rate_trajectory
+
+        key = jax.random.PRNGKey(7)
+        for attempt in range(20):
+            key, subkey = jax.random.split(key)
+            result = simulate_rate_trajectory(
+                subkey,
+                series_len=200,
+                system_name="saddle_node",
+            )
+            if result is not None:
+                full, _ = result
+                normalized = np.array(full.metadata["param_normalized"])
+                assert normalized.min() >= -0.01  # allow small floating point error
+                break
+        else:
+            pytest.skip("Could not generate rate trajectory in 20 attempts")
+
+    def test_real_bifurcation_has_param_normalized(self):
+        """Real bifurcation metadata should include param_normalized."""
+        from tipbox.bifurcation.bifurcation_simulator import simulate_real_bifurcation_trajectory
+
+        key = jax.random.PRNGKey(42)
+        for attempt in range(20):
+            key, subkey = jax.random.split(key)
+            result = simulate_real_bifurcation_trajectory(
+                subkey,
+                series_len=200,
+                system_name="may_harvesting",
+            )
+            if result is not None:
+                full, part = result
+                assert "param_normalized" in full.metadata
+                assert "param_normalized" in part.metadata
+                break
+        else:
+            pytest.skip("Could not generate real bifurcation trajectory in 20 attempts")
+
+    def test_real_bifurcation_param_normalized_shape(self):
+        """param_normalized shape should match trajectory length."""
+        from tipbox.bifurcation.bifurcation_simulator import simulate_real_bifurcation_trajectory
+
+        key = jax.random.PRNGKey(123)
+        for attempt in range(20):
+            key, subkey = jax.random.split(key)
+            result = simulate_real_bifurcation_trajectory(
+                subkey,
+                series_len=200,
+                system_name="may_harvesting",
+            )
+            if result is not None:
+                full, part = result
+                assert len(full.metadata["param_normalized"]) == len(full.trajectory)
+                assert len(part.metadata["param_normalized"]) == len(part.trajectory)
+                break
+        else:
+            pytest.skip("Could not generate real bifurcation trajectory in 20 attempts")
+
+    def test_real_bifurcation_param_normalized_range(self):
+        """param_normalized for May harvesting: starts >= 0, reaches around 1."""
+        from tipbox.bifurcation.bifurcation_simulator import simulate_real_bifurcation_trajectory
+
+        key = jax.random.PRNGKey(7)
+        for attempt in range(20):
+            key, subkey = jax.random.split(key)
+            result = simulate_real_bifurcation_trajectory(
+                subkey,
+                series_len=200,
+                system_name="may_harvesting",
+            )
+            if result is not None:
+                full, _ = result
+                normalized = np.array(full.metadata["param_normalized"])
+                assert normalized.min() >= -0.01
+                # Should reach close to or past 1.0 (bifurcation point)
+                assert normalized.max() > 0.5
+                break
+        else:
+            pytest.skip("Could not generate real bifurcation trajectory in 20 attempts")
+
+    def test_rate_null_simulation_has_param_normalized(self):
+        """Null rate simulation should also have param_normalized."""
+        from tipbox.rate.rate_simulator import simulate_rate_trajectory
+
+        key = jax.random.PRNGKey(99)
+        for attempt in range(20):
+            key, subkey = jax.random.split(key)
+            result = simulate_rate_trajectory(
+                subkey,
+                series_len=200,
+                system_name="saddle_node",
+                null_simulation=True,
+            )
+            if result is not None:
+                full, part = result
+                assert "param_normalized" in full.metadata
+                assert "param_normalized" in part.metadata
+                normalized = np.array(full.metadata["param_normalized"])
+                assert len(normalized) == len(full.trajectory)
+                break
+        else:
+            pytest.skip("Could not generate null rate trajectory in 20 attempts")

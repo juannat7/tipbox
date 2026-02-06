@@ -3,6 +3,16 @@
 This module provides flexible parameter schedules for bifurcation simulations.
 Schedules define how the bifurcation parameter changes over time, normalized to [0, 1].
 
+Resolved schedules are exposed as ``param_normalized`` in TrajectoryResult metadata.
+Normalization semantics differ by system type:
+
+- **Synthetic bifurcation** (b_fold, b_hopf, b_transcritical): the schedule system
+  produces [0, 1] directly where 0 = param_start and 1 = bif_value.
+- **Rate-induced** (r_bautin, r_compost_bomb, r_saddle_node): normalized by max
+  forcing value (0 = initial forcing, 1 = max forcing).
+- **Real bifurcation** (b_harvesting): normalized by bifurcation point
+  (0 = param_min, 1 = bif_value). Values > 1 are possible past bifurcation.
+
 IMPORTANT: Schedules must start at 0. This is required because the burn-in phase
 equilibrates the system at param_start (normalized=0). A non-zero start would cause
 a sudden parameter jump at t=0, creating transient artifacts. Future versions may

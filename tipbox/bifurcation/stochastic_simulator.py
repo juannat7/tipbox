@@ -355,7 +355,7 @@ def simulate_synthetic_bifurcation_trajectory(
         - label: bifurcation type or "null"
         - transition_index: detected/estimated transition position
         - param_value_transition: parameter value at transition
-        - param_schedule: normalized schedule values in [0,1] matching trajectory length
+        - param_normalized: normalized parameter values in [0,1] matching trajectory length
     """
 
     if schedule is not None:
@@ -384,7 +384,7 @@ def simulate_synthetic_bifurcation_trajectory(
             "label": "null" if null_simulation else bifurcation.bif_type,
             "transition_index": trans_idx,
             "param_value_transition": float(param_values[min(trans_idx, len(param_values) - 1)]),
-            "param_schedule": normalized,
+            "param_normalized": normalized,
         }
 
         result = TrajectoryResult(
@@ -430,7 +430,7 @@ def simulate_synthetic_bifurcation_trajectory(
     # extract_segment uses: start = trans_idx - series_len + steps_before_transition + 1
     start_idx = trans_idx - series_len + steps_before_transition + 1
     end_idx = start_idx + series_len
-    param_schedule_seg = normalized[start_idx:end_idx]
+    param_normalized_seg = normalized[start_idx:end_idx]
 
     # Return results
     full_metadata: dict[str, Any] = {
@@ -438,7 +438,7 @@ def simulate_synthetic_bifurcation_trajectory(
         "steps_before_transition": steps_before_transition,
         "transition_index": int(trans_idx_out),
         "param_value_transition": float(param_values[min(trans_idx_out, param_values.shape[0] - 1)]),
-        "param_schedule": normalized,
+        "param_normalized": normalized,
     }
 
     part_metadata: dict[str, Any] = {
@@ -446,7 +446,7 @@ def simulate_synthetic_bifurcation_trajectory(
         "steps_before_transition": steps_before_transition,
         "transition_index": int(trans_idx_out),
         "param_value_transition": float(param_values[min(trans_idx_out, param_values.shape[0] - 1)]),
-        "param_schedule": param_schedule_seg,
+        "param_normalized": param_normalized_seg,
     }
 
     full_trajectory = TrajectoryResult(

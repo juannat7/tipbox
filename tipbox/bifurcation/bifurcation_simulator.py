@@ -77,13 +77,17 @@ def simulate_real_bifurcation_trajectory(
 
     Returns
     -------
-    full_trajectory : tipbox.types.TrajectoryResult
-        Full trajectory with metadata
-    part_trajectory : tipbox.types.TrajectoryResult
-        Part trajectory with metadata
+    tuple[TrajectoryResult, TrajectoryResult] or None
+        Tuple of (full_trajectory, part_trajectory), or None if the trajectory
+        does not match the requested tipping/null behaviour or lacks sufficient
+        pre-transition context.
 
-    Returns None if the simulated trajectory does not match the requested
-    tipping/null behaviour or lacks sufficient pre-transition context.
+        Each TrajectoryResult.metadata includes:
+        - label: bifurcation system name or "null"
+        - bifurcation_real_system: name of the real system used
+        - transition_index: detected transition position
+        - param_value_transition: parameter value at transition
+        - param_normalized: normalized param values (0=param_min, 1=bif_value)
     """
 
     key_select, key_sim = jax.random.split(key)
@@ -140,17 +144,29 @@ def simulate_real_bifurcation_trajectory(
     if not success:
         return None
 
+    # Compute normalized parameter values
+    normalized = model.normalize_param_values(param_values)
+    normalized_seg = model.normalize_param_values(param_seg)
+
     # Return results
-    # TODO: Consider adding param_schedule to metadata for consistency with
-    # synthetic bifurcation systems. This would be a normalized version of
-    # the parameter ramp used during simulation.
-    metadata: Dict[str, Any] = {
+    full_metadata: Dict[str, Any] = {
         "label": "null" if null_simulation else system_spec.bifurcation_system,
         "bifurcation_real_system": system_spec.bifurcation_system,
         "steps_before_transition": steps_before_transition,
         "system_config": asdict(config),
         "transition_index": int(trans_idx_out),
-        "param_value_transition": float(param_values[min(trans_idx_out, param_values.shape[0] - 1)])
+        "param_value_transition": float(param_values[min(trans_idx_out, param_values.shape[0] - 1)]),
+        "param_normalized": normalized,
+    }
+
+    part_metadata: Dict[str, Any] = {
+        "label": "null" if null_simulation else system_spec.bifurcation_system,
+        "bifurcation_real_system": system_spec.bifurcation_system,
+        "steps_before_transition": steps_before_transition,
+        "system_config": asdict(config),
+        "transition_index": int(trans_idx_out),
+        "param_value_transition": float(param_values[min(trans_idx_out, param_values.shape[0] - 1)]),
+        "param_normalized": normalized_seg,
     }
 
     full_trajectory = TrajectoryResult(
@@ -158,7 +174,7 @@ def simulate_real_bifurcation_trajectory(
         trajectory=trajectory,
         param_values=param_values,
         sigma=sigma,
-        metadata=metadata
+        metadata=full_metadata,
     )
 
     part_trajectory = TrajectoryResult(
@@ -166,7 +182,7 @@ def simulate_real_bifurcation_trajectory(
         trajectory=traj_seg,
         param_values=param_seg,
         sigma=sigma,
-        metadata=metadata
+        metadata=part_metadata,
     )
 
     return (full_trajectory, part_trajectory)
