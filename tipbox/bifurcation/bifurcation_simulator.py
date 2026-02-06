@@ -141,6 +141,9 @@ def simulate_real_bifurcation_trajectory(
         return None
 
     # Return results
+    # TODO: Consider adding param_schedule to metadata for consistency with
+    # synthetic bifurcation systems. This would be a normalized version of
+    # the parameter ramp used during simulation.
     metadata: Dict[str, Any] = {
         "label": "null" if null_simulation else system_spec.bifurcation_system,
         "bifurcation_real_system": system_spec.bifurcation_system,

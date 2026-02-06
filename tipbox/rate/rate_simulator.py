@@ -133,6 +133,9 @@ def simulate_rate_trajectory(
         return None
 
     # Return results
+    # TODO: Consider adding param_schedule to metadata for consistency with
+    # synthetic bifurcation systems. For rate-induced systems, this would be
+    # a normalized version of the forcing function (e.g., Λ(t) for Bautin).
     metadata: Dict[str, Any] = {
         "label": "null" if null_simulation else "rate",
         "rate_system": system_spec.rate_system,

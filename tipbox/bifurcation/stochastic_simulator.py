@@ -26,6 +26,7 @@ from .schedule import (
     legacy_multiplier_schedule,
     linear,
     resolve_schedule,
+    validate_schedule_start,
 )
 
 
@@ -93,7 +94,7 @@ def simulate_to_bifurcation(
     noise_burn: jnp.ndarray | None = None,
     noise: jnp.ndarray | None = None,
     rv_tri: jnp.ndarray | None = None,
-) -> tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray, float]:
+) -> tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray, float, jnp.ndarray]:
     """
     Simulate system approaching bifurcation with stochastic noise.
 
@@ -138,6 +139,7 @@ def simulate_to_bifurcation(
     trajectory : (series_len, 2) array of [x, y] states
     param_values : (series_len,) array of bifurcation parameter values
     noise_scale : float, effective noise scale used
+    normalized : (series_len,) array of normalized schedule values in [0,1]
     """
     # Noise amplitude: sigma = sqrt(2*lambda) * sigma_tilde * triangular_rv
     key, subkey = jax.random.split(key)
@@ -178,8 +180,15 @@ def simulate_to_bifurcation(
     n_steps = int(total_time / dt_integrate)
     n_burn = int(burn_in_time / dt_integrate)
 
+    # Calculate actual number of output samples (may differ from series_len when extended)
+    n_output_samples = len(range(0, n_steps, sample_every))
+
     # Resolve schedule to array at output resolution
-    normalized = resolve_schedule(effective_schedule, series_len)
+    normalized = resolve_schedule(effective_schedule, n_output_samples)
+
+    # Validate that non-null schedules start at 0 (null simulations use constant schedules)
+    if not null_simulation:
+        validate_schedule_start(normalized)
 
     # Interpolate to fine integration resolution
     normalized_fine = jnp.interp(jnp.arange(n_steps), jnp.arange(0, n_steps, sample_every), normalized)
@@ -220,7 +229,7 @@ def simulate_to_bifurcation(
     time = indices * dt_integrate
     param_values = param_schedule[indices]
 
-    return time, trajectory, param_values, noise_scale
+    return time, trajectory, param_values, noise_scale, normalized
 
 
 def detect_transition(trajectory: jnp.ndarray, time: jnp.ndarray | None = None) -> int:
@@ -286,7 +295,9 @@ def simulate_synthetic_bifurcation_trajectory(
     steps_before_transition: int = 1,
     buffer_size: int = 1000,
     null_simulation: bool = False,
-    **generate_kwargs,
+    schedule: Schedule | None = None,
+    param_end_multiplier: float | None = 1.1,
+    **simulate_kwargs,
 ) -> TrajectoryResult | None:
     """
     Generate a single training trajectory (either tipping or null).
@@ -296,7 +307,7 @@ def simulate_synthetic_bifurcation_trajectory(
     2. Detect transition point
     3. Extract series_len points before transition
 
-    When a schedule is provided (via generate_kwargs), uses direct mode:
+    When a schedule is provided, uses direct mode:
     - Simulates exact series_len points
     - Transition occurs at pre-determined position based on schedule
     - No detection or extraction needed
@@ -319,23 +330,37 @@ def simulate_synthetic_bifurcation_trajectory(
         bifurcation parameter ramp rate. Only used in legacy mode.
     null_simulation : bool, default=False
         If True, simulate null (non-tipping) trajectory
-    **generate_kwargs : additional arguments
-        Passed to simulate_to_bifurcation. Key parameters:
-        - schedule: Optional[Schedule] - parameter schedule (array, callable, or dict)
-        - param_end_multiplier: Optional[float] - legacy multiplier (ignored if schedule provided)
+    schedule : Schedule, optional
+        Parameter schedule (array, callable, or dict config).
+        When provided, uses direct mode with exact length and pre-determined
+        transition position. See tipbox.bifurcation.schedule for available types.
+    param_end_multiplier : float, optional, default=1.1
+        Multiplier for extending simulation past bifurcation value.
+        Only used in legacy mode (when schedule is None).
+    **simulate_kwargs : additional arguments
+        Passed to simulate_to_bifurcation. Common parameters include:
+        - dt_sample: float - sampling interval (default 1.0)
+        - dt_integrate: float - integration time step (default 0.01)
+        - sigma_tilde: float - base noise amplitude (default 0.01)
+        - burn_in_time: float - burn-in period (default 100.0)
 
     Returns
     -------
-    Tuple of (full_trajectory, part_trajectory) as TrajectoryResult objects.
-    Returns None if transition occurs too early (< series_len points before)
-    in legacy mode.
+    tuple[TrajectoryResult, TrajectoryResult]
+        Tuple of (full_trajectory, part_trajectory). In schedule mode, both are
+        identical. In legacy mode, part_trajectory is the extracted segment.
+        Returns None if transition occurs too early in legacy mode.
+
+        Each TrajectoryResult.metadata includes:
+        - label: bifurcation type or "null"
+        - transition_index: detected/estimated transition position
+        - param_value_transition: parameter value at transition
+        - param_schedule: normalized schedule values in [0,1] matching trajectory length
     """
-    # Check if using schedule mode
-    schedule = generate_kwargs.get("schedule")
 
     if schedule is not None:
         # Direct mode: simulate exact length, transition at known position
-        time, trajectory, param_values, sigma = simulate_to_bifurcation(
+        time, trajectory, param_values, sigma, normalized = simulate_to_bifurcation(
             model,
             bifurcation,
             key,
@@ -343,14 +368,13 @@ def simulate_synthetic_bifurcation_trajectory(
             null_simulation=null_simulation,
             schedule=schedule,
             param_end_multiplier=None,  # schedule takes precedence
-            **{k: v for k, v in generate_kwargs.items() if k not in ("schedule", "param_end_multiplier")},
+            **simulate_kwargs,
         )
 
         # Estimate transition index from schedule
         # For ramp_and_hold at 0.5, transition is at 50%
         # For linear, we estimate based on when value reaches ~1.0
         # This is metadata for user info, not critical for simulation
-        normalized = resolve_schedule(schedule, series_len)
         # Find first index where normalized >= 1.0 (reaching bif_value)
         above_threshold = jnp.where(normalized >= 1.0, size=series_len, fill_value=series_len - 1)
         trans_idx = int(above_threshold[0][0]) if len(above_threshold[0]) > 0 else series_len - 1
@@ -360,6 +384,7 @@ def simulate_synthetic_bifurcation_trajectory(
             "label": "null" if null_simulation else bifurcation.bif_type,
             "transition_index": trans_idx,
             "param_value_transition": float(param_values[min(trans_idx, len(param_values) - 1)]),
+            "param_schedule": normalized,
         }
 
         result = TrajectoryResult(
@@ -376,14 +401,14 @@ def simulate_synthetic_bifurcation_trajectory(
     # Simulate with constant buffer to preserve bifurcation ramp rate
     total_len = series_len + buffer_size
 
-    time, trajectory, param_values, sigma = simulate_to_bifurcation(
+    time, trajectory, param_values, sigma, normalized = simulate_to_bifurcation(
         model,
         bifurcation,
         key,
         series_len=total_len,
         null_simulation=null_simulation,
-        param_end_multiplier=generate_kwargs.get("param_end_multiplier", 1.1),
-        **{k: v for k, v in generate_kwargs.items() if k != "param_end_multiplier"},
+        param_end_multiplier=param_end_multiplier,
+        **simulate_kwargs,
     )
 
     # Detect transition (or use midpoint for null simulations)
@@ -401,20 +426,35 @@ def simulate_synthetic_bifurcation_trajectory(
     if not success:
         return None
 
+    # Slice the normalized schedule to match the extracted segment
+    # extract_segment uses: start = trans_idx - series_len + steps_before_transition + 1
+    start_idx = trans_idx - series_len + steps_before_transition + 1
+    end_idx = start_idx + series_len
+    param_schedule_seg = normalized[start_idx:end_idx]
+
     # Return results
-    metadata: dict[str, Any] = {
+    full_metadata: dict[str, Any] = {
         "label": "null" if null_simulation else bifurcation.bif_type,
         "steps_before_transition": steps_before_transition,
         "transition_index": int(trans_idx_out),
         "param_value_transition": float(param_values[min(trans_idx_out, param_values.shape[0] - 1)]),
+        "param_schedule": normalized,
+    }
+
+    part_metadata: dict[str, Any] = {
+        "label": "null" if null_simulation else bifurcation.bif_type,
+        "steps_before_transition": steps_before_transition,
+        "transition_index": int(trans_idx_out),
+        "param_value_transition": float(param_values[min(trans_idx_out, param_values.shape[0] - 1)]),
+        "param_schedule": param_schedule_seg,
     }
 
     full_trajectory = TrajectoryResult(
-        time=time, trajectory=trajectory, param_values=param_values, sigma=sigma, metadata=metadata
+        time=time, trajectory=trajectory, param_values=param_values, sigma=sigma, metadata=full_metadata
     )
 
     part_trajectory = TrajectoryResult(
-        time=time_seg, trajectory=traj_seg, param_values=param_seg, sigma=sigma, metadata=metadata
+        time=time_seg, trajectory=traj_seg, param_values=param_seg, sigma=sigma, metadata=part_metadata
     )
 
     return (full_trajectory, part_trajectory)

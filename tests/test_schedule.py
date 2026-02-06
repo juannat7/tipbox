@@ -474,6 +474,56 @@ class TestIntegrationWithGenerate:
         # After midpoint, all values should be at bif_value
         assert np.allclose(params[midpoint:], bif_value, rtol=0.02)
 
+    def test_param_schedule_in_metadata(self, rng_key):
+        """Metadata should include normalized param_schedule."""
+        from tipbox.generate import generate
+
+        full, part, info = generate(
+            rng_key,
+            tipping_type="b_fold",
+            schedule=schedule.ramp_and_hold(hold_at=0.5, hold_level=1.0),
+            verbose=False,
+        )
+
+        # Check that param_schedule is in metadata
+        assert "param_schedule" in full.metadata
+        param_schedule = np.array(full.metadata["param_schedule"])
+
+        # Check shape matches trajectory
+        assert len(param_schedule) == len(full.trajectory)
+
+        # Check range is [0, 1] (normalized)
+        assert param_schedule.min() >= 0.0
+        assert param_schedule.max() <= 1.0
+
+        # For ramp_and_hold(hold_at=0.5), values after midpoint should be 1.0
+        midpoint = len(param_schedule) // 2
+        assert np.allclose(param_schedule[midpoint:], 1.0, rtol=0.02)
+
+    def test_param_schedule_legacy_mode(self, rng_key):
+        """Legacy mode should also include param_schedule in metadata."""
+        from tipbox.generate import generate
+
+        # Use legacy mode (no schedule, uses param_end_multiplier)
+        full, part, info = generate(
+            rng_key,
+            tipping_type="b_fold",
+            verbose=False,
+        )
+
+        # Check that param_schedule is in metadata for both full and part
+        assert "param_schedule" in full.metadata
+        assert "param_schedule" in part.metadata
+
+        full_schedule = np.array(full.metadata["param_schedule"])
+        part_schedule = np.array(part.metadata["param_schedule"])
+
+        # Full schedule should match full trajectory length
+        assert len(full_schedule) == len(full.trajectory)
+
+        # Part schedule should match part trajectory length
+        assert len(part_schedule) == len(part.trajectory)
+
     def test_dict_schedule_with_generate(self, rng_key):
         """Dict schedule config should work with generate() API."""
         from tipbox.generate import generate
@@ -564,3 +614,17 @@ class TestIntegrationWithGenerate:
 
         # Should have correct trajectory length
         assert full.trajectory.shape[0] == 500
+
+    def test_schedule_must_start_at_zero(self, rng_key):
+        """Schedules that don't start at 0 should raise an error."""
+        from tipbox.generate import generate
+
+        # Schedule starting at 0.3 (non-zero) should fail
+        non_zero_start = jnp.linspace(0.3, 1.0, 500)
+        with pytest.raises(ValueError, match="Schedule must start at 0"):
+            generate(
+                rng_key,
+                tipping_type="b_fold",
+                schedule=non_zero_start,
+                verbose=False,
+            )

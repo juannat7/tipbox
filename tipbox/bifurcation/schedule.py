@@ -3,13 +3,18 @@
 This module provides flexible parameter schedules for bifurcation simulations.
 Schedules define how the bifurcation parameter changes over time, normalized to [0, 1].
 
+IMPORTANT: Schedules must start at 0. This is required because the burn-in phase
+equilibrates the system at param_start (normalized=0). A non-zero start would cause
+a sudden parameter jump at t=0, creating transient artifacts. Future versions may
+support non-zero starts via an extended burn-in that slowly ramps to the schedule start.
+
 Supported schedule types:
 - linear: Linear ramp reaching 1.0 at a specified fraction
 - ramp_and_hold: Ramp from 0 to a level, then hold constant
-- fixed_slope: Ramp with fixed slope to a level, then hold (start value determined by slope)
-- constant: Fixed value (useful for null simulations)
-- piecewise_linear: Concatenated linear segments
-- from_array: Direct array passthrough with interpolation
+- fixed_slope: Ramp with fixed slope to a level, then hold (must start at 0 after clipping)
+- constant: Fixed value (useful for null simulations, but must be 0 for tipping trajectories)
+- piecewise_linear: Concatenated linear segments (first segment must start at 0)
+- from_array: Direct array passthrough with interpolation (must start at 0)
 
 Usage:
     # Factory function (direct)
@@ -127,6 +132,10 @@ def fixed_slope(
     This is useful when you want consistent rate of parameter change regardless
     of where the hold point is.
 
+    NOTE: The schedule must start at 0 after clipping. This means you need
+    slope >= hold_level / hold_at, or clip_min=0.0 (default) to ensure
+    non-zero computed starts are clipped to 0.
+
     Args:
         slope: Rate of change per unit time (in normalized coordinates).
             A slope of 2.0 means the value increases by 2.0 over the full timeline.
@@ -134,7 +143,7 @@ def fixed_slope(
         hold_level: Normalized value (0-1) to ramp to and hold.
             Default 1.0 means ramping to the critical/bifurcation value.
         clip_min: Minimum value to clip the schedule at. Default 0.0.
-            Set to None to allow negative values.
+            Set to None to allow negative values (will fail validation if start > 0).
 
     Returns:
         ParameterSchedule callable.
@@ -144,11 +153,11 @@ def fixed_slope(
         >>> sched = fixed_slope(slope=2.0, hold_at=0.5, hold_level=1.0)
         >>> values = sched(100)
         >>>
-        >>> # Slope of 1.0, hold at 70% -> starts at 0.3, reaches 1.0 at 70%
-        >>> sched = fixed_slope(slope=1.0, hold_at=0.7, hold_level=1.0)
+        >>> # Slope of 1.0, hold at 70% -> computed start 0.3, clipped to 0
+        >>> sched = fixed_slope(slope=1.0, hold_at=0.7, hold_level=1.0)  # OK, clipped
         >>>
-        >>> # Allow negative start values
-        >>> sched = fixed_slope(slope=3.0, hold_at=0.5, hold_level=1.0, clip_min=None)
+        >>> # This would fail validation (start=0.3, no clipping):
+        >>> # sched = fixed_slope(slope=1.0, hold_at=0.7, hold_level=1.0, clip_min=None)
     """
     if not 0 < hold_at <= 1:
         raise ValueError("hold_at must be in (0, 1]")
@@ -356,13 +365,41 @@ def resolve_schedule(schedule: Schedule, n_steps: int) -> jnp.ndarray:
         schedule = create_schedule(schedule)
 
     if callable(schedule):
-        return schedule(n_steps)
+        result = schedule(n_steps)
+    else:
+        arr = jnp.asarray(schedule)
+        if len(arr) == n_steps:
+            result = arr
+        else:
+            # Interpolate to requested length
+            result = jnp.interp(jnp.linspace(0, 1, n_steps), jnp.linspace(0, 1, len(arr)), arr)
 
-    arr = jnp.asarray(schedule)
-    if len(arr) == n_steps:
-        return arr
-    # Interpolate to requested length
-    return jnp.interp(jnp.linspace(0, 1, n_steps), jnp.linspace(0, 1, len(arr)), arr)
+    return result
+
+
+def validate_schedule_start(normalized: jnp.ndarray) -> None:
+    """Validate that a schedule starts at 0.
+
+    This is required for tipping simulations because burn-in runs at param_start
+    (normalized=0) and computes equilibrium there. A non-zero start would cause
+    a sudden parameter jump at t=0, creating transient artifacts.
+
+    Future versions may support non-zero starts by implementing a "slow ramp to
+    schedule start" during an extended burn-in phase.
+
+    Args:
+        normalized: Resolved schedule array.
+
+    Raises:
+        ValueError: If schedule does not start at 0.
+    """
+    start_val = float(normalized[0])
+    if abs(start_val) > 1e-6:
+        raise ValueError(
+            f"Schedule must start at 0, got {start_val:.4f}. "
+            f"This is required because burn-in equilibrates at param_start (normalized=0). "
+            f"Use ramp_and_hold or linear instead of fixed_slope with non-zero start."
+        )
 
 
 def apply_to_params(schedule: jnp.ndarray, param_start: float, bif_value: float) -> jnp.ndarray:

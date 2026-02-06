@@ -98,7 +98,21 @@ def generate(
         - sigma: float noise scale used during simulation
         - attempt: int number of the successful attempt (>=1)
         - transition_index: int detected transition position
+        - param_schedule: array of normalized schedule values in [0,1]
         - Additional fields depend on system type
+
+    Notes
+    -----
+    The `param_schedule` in metadata contains the normalized parameter schedule
+    (values in [0,1]) that was used to drive the bifurcation parameter. This is
+    useful for understanding the forcing profile. Access via:
+    - `full_result.metadata["param_schedule"]` - schedule for full trajectory
+    - `part_result.metadata["param_schedule"]` - schedule for extracted segment
+    - `info["param_schedule"]` - same as full_result (copied to info dict)
+
+    Note: `param_schedule` is currently only available for synthetic bifurcation
+    systems (b_fold, b_hopf, b_transcritical). Rate-induced and real bifurcation
+    systems do not yet include this metadata field.
 
     Raises
     ------
@@ -126,7 +140,9 @@ def generate(
         # Rate-induced tipping
         rate_system = system_spec.rate_system
         if rate_system is None:
-            raise ValueError(f"Rate system '{system_name}' missing rate_system specification")
+            raise ValueError(
+                f"Rate system '{system_name}' missing rate_system specification"
+            )
 
         for attempt in range(max_attempts):
             key, subkey = jax.random.split(key)
