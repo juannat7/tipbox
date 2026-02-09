@@ -72,6 +72,15 @@ def simulate_rate_trajectory(
         - transition_index: detected transition position
         - param_value_transition: parameter value at transition
         - param_normalized: normalized forcing values (0=initial, 1=max forcing)
+
+    Notes
+    -----
+    Rate system trajectories may contain NaN values after the tipping point
+    due to exponential or polynomial divergence in the ODE integration
+    (especially the compost bomb system with its exponential temperature
+    feedback). This is expected physical behavior. Trajectories that diverge
+    to NaN before threshold detection will fail ``is_tipped()`` and cause
+    this function to return None.
     """
 
     key_select, key_sim = jax.random.split(key)

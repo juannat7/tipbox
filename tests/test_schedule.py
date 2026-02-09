@@ -777,3 +777,34 @@ class TestParamNormalizedRateAndReal:
                 break
         else:
             pytest.skip("Could not generate null rate trajectory in 20 attempts")
+
+
+@pytest.mark.skipif(not os.environ.get("AUTO_DIR"), reason="AUTO_DIR not set - requires AUTO-07P")
+class TestScheduleRejection:
+    """Tests that schedule is rejected for non-synthetic systems."""
+
+    def test_schedule_rejected_for_rate_system(self):
+        """Passing schedule to a rate system should raise ValueError."""
+        from tipbox.generate import generate
+
+        key = jax.random.PRNGKey(42)
+        with pytest.raises(ValueError, match="not supported for rate-induced"):
+            generate(
+                key,
+                tipping_type="r_saddle_node",
+                schedule=linear(),
+                verbose=False,
+            )
+
+    def test_schedule_rejected_for_real_bifurcation(self):
+        """Passing schedule to a real bifurcation system should raise ValueError."""
+        from tipbox.generate import generate
+
+        key = jax.random.PRNGKey(42)
+        with pytest.raises(ValueError, match="not supported for real bifurcation"):
+            generate(
+                key,
+                tipping_type="b_harvesting",
+                schedule=linear(),
+                verbose=False,
+            )

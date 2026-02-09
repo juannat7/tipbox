@@ -57,9 +57,15 @@ def generate(
         Length of output trajectory
     steps_before_transition : int, default=1
         Number of samples to stay before the detected transition (>=0).
+        Ignored for synthetic bifurcation systems when ``schedule`` is
+        provided (schedule mode uses exact length with pre-determined
+        transition position).
     buffer_size : int, default=1000
         Extra samples simulated before the transition to guarantee enough
         pre-transition context while keeping the parameter ramp rate constant.
+        Ignored for synthetic bifurcation systems when ``schedule`` is
+        provided (schedule mode simulates exactly ``num_timesteps`` points
+        with no buffer or extraction step).
     dt_sample : float, default=1.0
         Time between samples
     sigma_tilde : float, default=0.01
@@ -76,6 +82,9 @@ def generate(
             Ignored if schedule is provided.
         - schedule: Optional[Schedule], default=None
             Parameter schedule (array, callable, or dict config).
+            **Only supported for synthetic bifurcation systems** (b_fold, b_hopf,
+            b_transcritical). Raises ValueError if used with rate-induced or real
+            bifurcation systems, which use their own internal parameter ramping.
             When provided, uses direct mode (exact length, pre-determined position).
             See tipbox.bifurcation.schedule for available schedule types:
             - linear: Linear ramp reaching 1.0 at critical_at fraction
@@ -114,12 +123,19 @@ def generate(
     - Rate-induced: normalized by max forcing (0 = initial, 1 = max)
     - Real bifurcation: normalized by bifurcation point (0 = param_min, 1 = bif_value)
 
+    Rate-induced system trajectories may contain NaN values in the post-tipping
+    region due to exponential or polynomial divergence (especially compost bomb).
+    This is expected physics, not numerical instability. NaN trajectories fail
+    the ``is_tipped()`` check and are silently retried. If ``max_attempts`` is
+    exhausted, try increasing it or adjusting ``sigma_tilde``.
+
     Raises
     ------
     RuntimeError
         If no suitable model found after max_attempts
     ValueError
-        If system name is not recognized
+        If system name is not recognized, or if ``schedule`` is passed to a
+        rate-induced or real bifurcation system
     """
 
     # Normalize system name
@@ -142,6 +158,14 @@ def generate(
         if rate_system is None:
             raise ValueError(
                 f"Rate system '{system_name}' missing rate_system specification"
+            )
+
+        if "schedule" in generate_kwargs:
+            raise ValueError(
+                f"schedule parameter is not supported for rate-induced system '{system_name}'. "
+                f"Rate systems use their own internal parameter ramping. "
+                f"schedule is only supported for synthetic bifurcation systems "
+                f"(b_fold, b_hopf, b_transcritical)."
             )
 
         for attempt in range(max_attempts):
@@ -229,6 +253,14 @@ def generate(
     else:
         # Real bifurcation system (e.g., May's harvesting)
         real_system_name = system_spec.bifurcation_system
+
+        if "schedule" in generate_kwargs:
+            raise ValueError(
+                f"schedule parameter is not supported for real bifurcation system '{system_name}'. "
+                f"Real bifurcation systems use their own internal parameter ramping. "
+                f"schedule is only supported for synthetic bifurcation systems "
+                f"(b_fold, b_hopf, b_transcritical)."
+            )
 
         for attempt in range(max_attempts):
             key, subkey = jax.random.split(key)
