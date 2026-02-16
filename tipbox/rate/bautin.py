@@ -13,9 +13,9 @@ from ..utils import extract_segment, register_dataclass_pytree
 @dataclass(frozen=True)
 class BautinConfig:
     """Configuration for the stochastic Bautin system.
-    
+
     Based on the equation:
-    dZ_t = (a + iω)[Z_t - Λ(t)]dt - b[Z_t - Λ(t)]²[Z_t - Λ(t)]dt 
+    dZ_t = (a + iω)[Z_t - Λ(t)]dt - b[Z_t - Λ(t)]²[Z_t - Λ(t)]dt
            + [Z_t - Λ(t)]⁴[Z_t - Λ(t)]dt + D₂dW₂t
     where Z_t = X_t + iY_t and Λ(t) = 0.5Λ_max[tanh(0.5Λ_max r t) + 1]
     """
@@ -39,17 +39,16 @@ class BautinConfig:
         return cls()
 
 
-
 class BautinModel(BoxModel):
     """BoxModel abstraction for the stochastic Bautin system.
 
     Implements the Bautin system:
-    dZ_t = (a + iω)[Z_t - Λ(t)]dt - b[Z_t - Λ(t)]²[Z_t - Λ(t)]dt 
+    dZ_t = (a + iω)[Z_t - Λ(t)]dt - b[Z_t - Λ(t)]²[Z_t - Λ(t)]dt
            + [Z_t - Λ(t)]⁴[Z_t - Λ(t)]dt + D₂dW₂t
-    
-    where Z_t = X_t + iY_t (complex state) and 
+
+    where Z_t = X_t + iY_t (complex state) and
     Λ(t) = 0.5Λ_max[tanh(0.5Λ_max r t) + 1] (time-varying forcing).
-    
+
     In Cartesian coordinates (x, y) where w = Z_t - Λ(t) = x + iy:
         dx/dt = ax - ωy - b(x²+y²)x + (x²+y²)²x + D₂ dW_x/dt
         dy/dt = ay + ωx - b(x²+y²)y + (x²+y²)²y + D₂ dW_y/dt
@@ -82,9 +81,7 @@ class BautinModel(BoxModel):
     ):
         """Compute the Λ(t) schedule (time-varying forcing)."""
         # Λ(t) = 0.5Λ_max[tanh(0.5Λ_max r t) + 1]
-        return 0.5 * config.lambda_max * (
-            jnp.tanh(0.5 * config.lambda_max * config.r * t) + 1.0
-        )
+        return 0.5 * config.lambda_max * (jnp.tanh(0.5 * config.lambda_max * config.r * t) + 1.0)
 
     def _sample_initial_state(
         self,
@@ -122,8 +119,8 @@ class BautinModel(BoxModel):
         noise: Optional[jnp.ndarray] = None,
     ):
         """Stochastic integration in Cartesian coordinates.
-        
-        Implements: dZ_t = (a + iω)[Z_t - Λ(t)]dt - b[Z_t - Λ(t)]²[Z_t - Λ(t)]dt 
+
+        Implements: dZ_t = (a + iω)[Z_t - Λ(t)]dt - b[Z_t - Λ(t)]²[Z_t - Λ(t)]dt
                     + [Z_t - Λ(t)]⁴[Z_t - Λ(t)]dt + D₂dW₂t
         where w = Z_t - Λ(t) = x + iy
         """
@@ -139,32 +136,22 @@ class BautinModel(BoxModel):
         def step(state, inputs):
             lambda_val, noise_x_t, noise_y_t = inputs
             x, y = state
-            
+
             # Compute w = Z_t - Λ(t) = (x, y) - (Λ(t), 0) = (x - Λ(t), y)
             w_x = x - lambda_val
             w_y = y
-            
+
             # Compute |w|² = w_x² + w_y²
             w_squared = w_x**2 + w_y**2
             w_fourth = w_squared**2
-            
+
             # dx/dt = ax - ωy - b(x²+y²)x + (x²+y²)²x
             # where (x, y) here refers to w = (w_x, w_y)
-            dx_dt = (
-                self._config.a * w_x
-                - self._config.omega * w_y
-                - self._config.b * w_squared * w_x
-                + w_fourth * w_x
-            )
+            dx_dt = self._config.a * w_x - self._config.omega * w_y - self._config.b * w_squared * w_x + w_fourth * w_x
             x_next = x + dx_dt * dt + noise_scale * noise_x_t
-            
+
             # dy/dt = ay + ωx - b(x²+y²)y + (x²+y²)²y
-            dy_dt = (
-                self._config.a * w_y
-                + self._config.omega * w_x
-                - self._config.b * w_squared * w_y
-                + w_fourth * w_y
-            )
+            dy_dt = self._config.a * w_y + self._config.omega * w_x - self._config.b * w_squared * w_y + w_fourth * w_y
             y_next = y + dy_dt * dt + noise_scale * noise_y_t
 
             return (x_next, y_next), (x_next, y_next)
@@ -183,26 +170,36 @@ class BautinModel(BoxModel):
         key: jax.random.PRNGKey,
         total_len: int,
         sigma_tilde: float = 0.01,
+        schedule=None,
         initial_state: Optional[jnp.ndarray] = None,
         noise: Optional[jnp.ndarray] = None,
         null_simulation: bool = False,
     ):
         """Simulate the Bautin system.
 
-        Time range is fixed to [t_start, t_end] from config (paper: -15 to 15).
-        total_len is ignored. The window length sets the ramp speed: wider (e.g. -20 to 20)
-        → slower ramp → tipping tends to occur later; narrower → earlier tipping.
-        For null_simulation=True, same ramp shape but with r at 50% (slower rate; visible in plot).
+        Time range is fixed to [t_start, t_end] for legacy mode.
+        When ``schedule`` is provided, direct mode is used with ``total_len`` samples.
         """
         key_noise, key_ic = jax.random.split(key)
 
-        # Setup time and lambda schedule (fixed -15 to 15 to match paper; do not use total_len)
-        time = jnp.arange(self._config.t_start, self._config.t_end, self._config.dt)
-        if null_simulation:
-            config_null = replace(self._config, r=0.5 * self._config.r)
-            lambda_t = self._lambda_schedule(time, config_null)
+        if schedule is not None:
+            from ..bifurcation.schedule import resolve_schedule_for_simulation
+
+            lambda_t, _ = resolve_schedule_for_simulation(
+                schedule,
+                total_len,
+                0.0,
+                self._config.lambda_max,
+            )
+            time = jnp.arange(0, total_len * self._config.dt, self._config.dt)
         else:
-            lambda_t = self._lambda_schedule(time, self._config)
+            # Legacy: fixed paper window with optional slower null ramp
+            time = jnp.arange(self._config.t_start, self._config.t_end, self._config.dt)
+            if null_simulation:
+                config_null = replace(self._config, r=0.5 * self._config.r)
+                lambda_t = self._lambda_schedule(time, config_null)
+            else:
+                lambda_t = self._lambda_schedule(time, self._config)
 
         # Randomly sample initial state if not provided
         if initial_state is None:
@@ -281,4 +278,3 @@ class BautinModel(BoxModel):
     def normalize_param_values(self, param_values):
         """Normalize forcing values by max forcing amplitude."""
         return param_values / self._config.lambda_max
-

@@ -339,12 +339,13 @@ class RosenzweigMacArthurModel(BoxModel):
         null_simulation: bool = False,
         dt_sample: float = 1.0,
         param_end_multiplier: float = 1.1,
+        schedule=None,
         initial_state: Optional[jnp.ndarray] = None,
         noise: Optional[jnp.ndarray] = None,
         **kwargs
     ):
         """Simulate Rosenzweig-MacArthur model.
-        
+
         Parameters
         ----------
         key : JAX random key
@@ -358,7 +359,10 @@ class RosenzweigMacArthurModel(BoxModel):
             Sampling interval for output
         param_end_multiplier : float, default=1.1
             Multiplier for extending simulation time beyond transition
-            
+        schedule : optional
+            Parameter schedule (normalized [0,1]). When provided, overrides
+            internal a schedule. Mapped to [a_min, a_bifurcation].
+
         Returns
         -------
         time : (total_len,) array
@@ -372,17 +376,28 @@ class RosenzweigMacArthurModel(BoxModel):
         """
         key_noise, key_ic = jax.random.split(key)
 
-        # Setup time grid
-        total_time = total_len * dt_sample
-        n_steps = int(total_time / self._config.dt) + 1
-        time_fine = jnp.linspace(self._config.t_start, total_time, n_steps)
-        
-        # Compute a schedule
-        a_t = self._a_schedule(
-            time_fine,
-            null_simulation=null_simulation,
-            param_end_multiplier=param_end_multiplier,
-        )
+        sample_every = int(dt_sample / self._config.dt)
+
+        if schedule is not None:
+            from .schedule import resolve_schedule_for_simulation
+
+            _, a_min, _, a_bif = self._get_param_range()
+            a_t, _ = resolve_schedule_for_simulation(
+                schedule, total_len, a_min, a_bif, upsample_factor=sample_every,
+            )
+            n_steps = len(a_t)
+            total_time = total_len * dt_sample
+            time_fine = jnp.linspace(self._config.t_start, total_time, n_steps)
+        else:
+            # Legacy: internal schedule
+            total_time = total_len * dt_sample
+            n_steps = int(total_time / self._config.dt) + 1
+            time_fine = jnp.linspace(self._config.t_start, total_time, n_steps)
+            a_t = self._a_schedule(
+                time_fine,
+                null_simulation=null_simulation,
+                param_end_multiplier=param_end_multiplier,
+            )
 
         # Sample initial state if not provided
         if initial_state is None:
@@ -407,9 +422,8 @@ class RosenzweigMacArthurModel(BoxModel):
         )
 
         # Downsample to output rate
-        sample_every = int(dt_sample / self._config.dt)
         indices = jnp.arange(0, n_steps, sample_every)
-        
+
         time = time_fine[indices]
         trajectory = trajectory_fine[indices]
         param_values = a_t[indices]

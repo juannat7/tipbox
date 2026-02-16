@@ -35,15 +35,15 @@ class CompostBombConfig:
     mu: float = 2.5e6  # Soil heat capacity (J m^-2 degC^-1)
     A: float = 3.9e7  # Specific heat from microbial respiration (J kg^-1)
     lambda_param: float = 5.049e6  # Soil-to-air heat transfer coefficient (J yr^-1 m^-2 degC^-1)
-    
+
     # Simulation parameters
     dt: float = 0.05  # Time step
     t_start: float = 0.0
     t_end: float = 100.0  # Paper specifies time range 0 to 100
-    
+
     initial_state_min: float = 0  # Initial state (carbon and temperature) (paper: starts at 0)
     initial_state_max: float = 0  # Initial state (carbon and temperature) (paper: starts at 0)
-    T_ref: float = 0.0 # Reference temperature (0.0 is the default)
+    T_ref: float = 0.0  # Reference temperature (0.0 is the default)
     tip_threshold: float = 30.0  # Threshold for detecting tipping (temperature)
 
     @classmethod
@@ -52,14 +52,13 @@ class CompostBombConfig:
         return cls()
 
 
-
 class CompostBombModel(BoxModel):
     """BoxModel abstraction for the stochastic compost-bomb dynamic system.
 
     Implements the compost-bomb system from Luke & Cox (2011):
     μ * dT_s/dt = -λ(T_s - T_a) + A * C_s * r(T_s) + D_3 * dW
     dC_s/dt = Π - C_s * r(T_s)
-    
+
     where:
     - r(T_s) = r_0 * e^(alpha(T_s - T_ref)) (temperature-dependent respiration)
     - T_a(t) = v * t (atmospheric temperature forcing)
@@ -86,7 +85,7 @@ class CompostBombModel(BoxModel):
             "initial_state_min": self._config.initial_state_min,
             "initial_state_max": self._config.initial_state_max,
             "T_ref": self._config.T_ref,
-            "tip_threshold": self._config.tip_threshold
+            "tip_threshold": self._config.tip_threshold,
         }
 
     def _T_a_schedule(
@@ -134,11 +133,11 @@ class CompostBombModel(BoxModel):
         noise: Optional[jnp.ndarray] = None,
     ):
         """Stochastic integration of the compost-bomb system.
-        
+
         Implements (Luke & Cox 2011):
         μ * dT_s/dt = -λ(T_s - T_a) + A * C_s * r(T_s) + D_3 * dW
         dC_s/dt = Π - C_s * r(T_s)
-        
+
         where r(T_s) = r_0 * e^(alpha(T_s - T_ref)) (temperature-dependent respiration)
         """
         if noise is None:
@@ -159,8 +158,7 @@ class CompostBombModel(BoxModel):
             C_next = jnp.maximum(C_next, 0.0)
 
             # μ dT/dt = C * r(T) * A - λ (T - T_a(t))
-            dT_dt = (C_next * r_T * self._config.A
-                    - self._config.lambda_param * (T - T_a_val)) / self._config.mu
+            dT_dt = (C_next * r_T * self._config.A - self._config.lambda_param * (T - T_a_val)) / self._config.mu
 
             T_next = T + dT_dt * dt + noise_scale * noise_T_t
             return (C_next, T_next), (C_next, T_next)
@@ -179,23 +177,36 @@ class CompostBombModel(BoxModel):
         key: jax.random.PRNGKey,
         total_len: int,
         sigma_tilde: float = 0.01,
+        schedule=None,
         initial_state: Optional[jnp.ndarray] = None,
         noise: Optional[jnp.ndarray] = None,
         null_simulation: bool = False,
     ):
         """Simulate the compost-bomb system.
-        
+
         For null_simulation=True, same T_a(t)=v*t formula but v at 95% (slightly slower rate).
         """
         key_noise, key_ic = jax.random.split(key)
 
-        # Setup time and T_a schedule
-        time = jnp.arange(self._config.t_start, self._config.t_end, self._config.dt)
-        if null_simulation:
-            config_null = replace(self._config, v=0.95 * self._config.v)
-            T_a_t = self._T_a_schedule(time, config_null)
+        if schedule is not None:
+            from ..bifurcation.schedule import resolve_schedule_for_simulation
+
+            # Max forcing = v * t_end
+            T_a_t, _ = resolve_schedule_for_simulation(
+                schedule,
+                total_len,
+                0.0,
+                self._config.v * self._config.t_end,
+            )
+            time = jnp.arange(self._config.t_start, self._config.t_start + total_len * self._config.dt, self._config.dt)
         else:
-            T_a_t = self._T_a_schedule(time, self._config)
+            # Legacy: internal T_a schedule with optional slower null ramp
+            time = jnp.arange(self._config.t_start, self._config.t_end, self._config.dt)
+            if null_simulation:
+                config_null = replace(self._config, v=0.95 * self._config.v)
+                T_a_t = self._T_a_schedule(time, config_null)
+            else:
+                T_a_t = self._T_a_schedule(time, self._config)
 
         # Randomly sample initial state if not provided
         if initial_state is None:
@@ -275,4 +286,3 @@ class CompostBombModel(BoxModel):
     def normalize_param_values(self, param_values):
         """Normalize atmospheric forcing by max value (v * t_end)."""
         return param_values / (self._config.v * self._config.t_end)
-

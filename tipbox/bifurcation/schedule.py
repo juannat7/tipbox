@@ -412,6 +412,53 @@ def validate_schedule_start(normalized: jnp.ndarray) -> None:
         )
 
 
+def resolve_schedule_for_simulation(
+    schedule: Schedule,
+    n_output: int,
+    param_start: float,
+    param_end: float,
+    upsample_factor: int = 1,
+) -> tuple[jnp.ndarray, jnp.ndarray]:
+    """Resolve schedule and map to model parameter range at integration resolution.
+
+    Combines resolve_schedule() + validate_schedule_start() + apply_to_params()
+    into a single call. Optionally upsamples for models that integrate at finer
+    resolution than output (semi-real models with dt << dt_sample).
+
+    Args:
+        schedule: Schedule specification (dict config, callable, or array).
+        n_output: Number of output time points.
+        param_start: Parameter value at schedule=0 (equilibrium).
+        param_end: Parameter value at schedule=1 (critical/max forcing).
+        upsample_factor: Ratio of fine integration steps to output steps.
+            1 = no upsampling (rate models integrate at output resolution).
+            >1 = upsample via linear interpolation (semi-real models).
+
+    Returns:
+        (param_values, normalized) tuple:
+        - param_values: Parameter values at integration resolution.
+        - normalized: Normalized schedule [0,1] at output resolution (n_output).
+    """
+    normalized = resolve_schedule(schedule, n_output)
+    validate_schedule_start(normalized)
+
+    if upsample_factor <= 1:
+        param_values = apply_to_params(normalized, param_start, param_end)
+        return param_values, normalized
+
+    # Upsample to fine integration resolution
+    # n_fine = n_output * upsample_factor so that downsampling by
+    # upsample_factor yields exactly n_output points.
+    param_coarse = apply_to_params(normalized, param_start, param_end)
+    n_fine = n_output * upsample_factor
+    param_fine = jnp.interp(
+        jnp.linspace(0, 1, n_fine),
+        jnp.linspace(0, 1, n_output),
+        param_coarse,
+    )
+    return param_fine, normalized
+
+
 def apply_to_params(schedule: jnp.ndarray, param_start: float, bif_value: float) -> jnp.ndarray:
     """Convert normalized [0,1] schedule to absolute parameter values.
 

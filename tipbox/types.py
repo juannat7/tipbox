@@ -30,8 +30,21 @@ class BoxModel(ABC):
     """Abstract interface for box models used in trajectory simulation."""
 
     @abstractmethod
-    def simulate(self):
-        """Run a simulation and return the resulting trajectory."""
+    def simulate(self, key, total_len, sigma_tilde=0.01, schedule=None, **kwargs):
+        """Run a simulation and return the resulting trajectory.
+
+        Args:
+            key: JAX random key for stochastic integration.
+            total_len: Number of output time points.
+            sigma_tilde: Base noise amplitude.
+            schedule: Optional parameter schedule (normalized [0,1]).
+                When provided, controls the external forcing/parameter evolution.
+                When None, the model uses its internal parameter schedule.
+            **kwargs: Model-specific parameters.
+
+        Returns:
+            Tuple of (time, trajectory, param_values, sigma).
+        """
 
     @abstractmethod
     def get_parameters(self):

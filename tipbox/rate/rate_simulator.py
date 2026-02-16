@@ -16,9 +16,10 @@ def available_rate_systems():
 def _select_system(key: jax.random.PRNGKey):
     """Randomly select a rate-induced tipping system."""
     from ..registry import SYSTEM_REGISTRY, SystemType
-    
-    rate_systems = [name for name, spec in SYSTEM_REGISTRY.items() 
-                    if spec.system_type == SystemType.RATE and spec.rate_system]
+
+    rate_systems = [
+        name for name, spec in SYSTEM_REGISTRY.items() if spec.system_type == SystemType.RATE and spec.rate_system
+    ]
     idx = int(jax.random.randint(key, (), 0, len(rate_systems)))
     system_name = rate_systems[idx]
     return SYSTEM_REGISTRY[system_name]
@@ -33,7 +34,8 @@ def simulate_rate_trajectory(
     null_simulation: bool = False,
     system_name: str = None,
     param_end_multiplier: float = 1.1,
-    **generate_kwargs
+    schedule=None,
+    **generate_kwargs,
 ):
     """Simulate a single rate-induced tipping trajectory.
 
@@ -56,6 +58,10 @@ def simulate_rate_trajectory(
         Options: 'bautin', 'compost_bomb', 'saddle_node'
     param_end_multiplier : float, default=1.1
         Multiplier for extending simulation time beyond transition
+    schedule : optional
+        Parameter schedule. When provided, uses direct mode (exact length,
+        schedule controls parameter evolution). When None, uses legacy
+        extraction mode.
     **generate_kwargs : additional arguments
         Passed to the model.simulate method (dt_sample, dt_integrate, etc.)
 
@@ -82,17 +88,9 @@ def simulate_rate_trajectory(
     to NaN before threshold detection will fail ``is_tipped()`` and cause
     this function to return None.
     """
+    import jax.numpy as jnp
 
     key_select, key_sim = jax.random.split(key)
-
-    if steps_before_transition > buffer_size:
-        raise ValueError(
-            "steps_before_transition exceeds buffer_size. "
-            "Increase buffer_size to maintain constant parameter rate."
-        )
-
-    # Calculate total simulation length (extended if param_end_multiplier > 1.0)
-    total_len = calculate_total_len(series_len, buffer_size, param_end_multiplier)
 
     # Select, setup and initialize model using unified registry
     if system_name is not None:
@@ -100,11 +98,52 @@ def simulate_rate_trajectory(
     else:
         # Random selection (backward compatibility)
         system_spec = _select_system(key_select)
-    
+
     config = system_spec.default_config()
     model = system_spec.create_model(config)
 
-    # Simulate (saddle_node, bautin, compost_bomb use null_simulation: 50% rate in schedule)
+    state_trajectory = None
+    if schedule is not None:
+        # Direct mode: schedule controls parameter evolution
+        time, trajectory, param_values, sigma = model.simulate(
+            key_sim,
+            total_len=series_len,
+            sigma_tilde=sigma_tilde,
+            schedule=schedule,
+            **generate_kwargs,
+        )
+        normalized = model.normalize_param_values(param_values)
+
+        # Estimate transition from normalized values
+        above = jnp.where(normalized >= 1.0, jnp.arange(len(normalized)), len(normalized) - 1)
+        trans_idx = int(jnp.min(above))
+
+        metadata = {
+            "label": "null" if null_simulation else "rate",
+            "rate_system": system_spec.rate_system,
+            "transition_index": trans_idx,
+            "param_value_transition": float(param_values[min(trans_idx, len(param_values) - 1)]),
+            "param_normalized": normalized,
+            "system_config": asdict(config),
+        }
+        result = TrajectoryResult(
+            time=time,
+            trajectory=trajectory,
+            param_values=param_values,
+            sigma=sigma,
+            metadata=metadata,
+        )
+        return (result, result)  # direct mode: full = part
+
+    # Legacy extraction mode
+    if steps_before_transition > buffer_size:
+        raise ValueError(
+            "steps_before_transition exceeds buffer_size. Increase buffer_size to maintain constant parameter rate."
+        )
+
+    total_len = calculate_total_len(series_len, buffer_size, param_end_multiplier)
+
+    # Simulate legacy mode (with null_simulation for supported systems)
     sim_kwargs = {"total_len": total_len, "sigma_tilde": sigma_tilde}
     if system_spec.rate_system in ("saddle_node", "bautin", "compost_bomb", "amoc"):
         sim_kwargs["null_simulation"] = null_simulation
@@ -170,7 +209,8 @@ def simulate_rate_trajectory(
         "param_normalized": normalized_seg,
     }
     if state_trajectory is not None:
-        metadata["state_trajectory"] = state_trajectory
+        full_metadata["state_trajectory"] = state_trajectory
+        part_metadata["state_trajectory"] = state_trajectory
 
     full_trajectory = TrajectoryResult(
         time=time,

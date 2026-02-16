@@ -82,10 +82,9 @@ def generate(
             Ignored if schedule is provided.
         - schedule: Optional[Schedule], default=None
             Parameter schedule (array, callable, or dict config).
-            **Only supported for synthetic bifurcation systems** (b_fold, b_hopf,
-            b_transcritical). Raises ValueError if used with rate-induced or real
-            bifurcation systems, which use their own internal parameter ramping.
-            When provided, uses direct mode (exact length, pre-determined position).
+            Supported for all system types. When provided, uses direct mode
+            (exact length, schedule controls parameter evolution).
+            When None, uses legacy extraction mode.
             See tipbox.bifurcation.schedule for available schedule types:
             - linear: Linear ramp reaching 1.0 at critical_at fraction
             - ramp_and_hold: Ramp to param_level at hold_at, then hold
@@ -134,8 +133,7 @@ def generate(
     RuntimeError
         If no suitable model found after max_attempts
     ValueError
-        If system name is not recognized, or if ``schedule`` is passed to a
-        rate-induced or real bifurcation system
+        If system name is not recognized
     """
 
     # Normalize system name
@@ -160,13 +158,8 @@ def generate(
                 f"Rate system '{system_name}' missing rate_system specification"
             )
 
-        if "schedule" in generate_kwargs:
-            raise ValueError(
-                f"schedule parameter is not supported for rate-induced system '{system_name}'. "
-                f"Rate systems use their own internal parameter ramping. "
-                f"schedule is only supported for synthetic bifurcation systems "
-                f"(b_fold, b_hopf, b_transcritical)."
-            )
+        # Extract schedule to pass explicitly (not via **generate_kwargs)
+        schedule = generate_kwargs.pop("schedule", None)
 
         for attempt in range(max_attempts):
             key, subkey = jax.random.split(key)
@@ -178,6 +171,7 @@ def generate(
                 null_simulation=null_simulation,
                 sigma_tilde=sigma_tilde,
                 system_name=rate_system,
+                schedule=schedule,
                 **generate_kwargs,
             )
 
@@ -254,13 +248,8 @@ def generate(
         # Real bifurcation system (e.g., May's harvesting)
         real_system_name = system_spec.bifurcation_system
 
-        if "schedule" in generate_kwargs:
-            raise ValueError(
-                f"schedule parameter is not supported for real bifurcation system '{system_name}'. "
-                f"Real bifurcation systems use their own internal parameter ramping. "
-                f"schedule is only supported for synthetic bifurcation systems "
-                f"(b_fold, b_hopf, b_transcritical)."
-            )
+        # Extract schedule to pass explicitly
+        schedule = generate_kwargs.pop("schedule", None)
 
         for attempt in range(max_attempts):
             key, subkey = jax.random.split(key)
@@ -272,6 +261,7 @@ def generate(
                 null_simulation=null_simulation,
                 sigma_tilde=sigma_tilde,
                 system_name=real_system_name,
+                schedule=schedule,
                 **generate_kwargs,
             )
 

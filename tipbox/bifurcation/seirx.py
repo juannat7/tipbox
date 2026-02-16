@@ -278,6 +278,7 @@ class SEIRxModel(BoxModel):
         null_simulation: bool = False,
         dt_sample: float = 1.0,
         param_end_multiplier: float = 1.1,
+        schedule=None,
         initial_state: Optional[jnp.ndarray] = None,
         noise: Optional[jnp.ndarray] = None,
         **kwargs
@@ -297,6 +298,9 @@ class SEIRxModel(BoxModel):
             Sampling interval for output (weeks)
         param_end_multiplier : float, default=1.1
             Multiplier for extending simulation time beyond transition
+        schedule : optional
+            Parameter schedule (normalized [0,1]). When provided, overrides
+            internal ω schedule. Mapped to [omega_min, omega_bifurcation].
 
         Returns
         -------
@@ -311,17 +315,28 @@ class SEIRxModel(BoxModel):
         """
         key_noise, key_ic = jax.random.split(key)
 
-        # Setup time grid
-        total_time = total_len * dt_sample
-        n_steps = int(total_time / self._config.dt) + 1
-        time_fine = jnp.linspace(self._config.t_start, total_time, n_steps)
+        sample_every = int(dt_sample / self._config.dt)
 
-        # Compute ω schedule
-        omega_t = self._omega_schedule(
-            time_fine,
-            null_simulation=null_simulation,
-            param_end_multiplier=param_end_multiplier,
-        )
+        if schedule is not None:
+            from .schedule import resolve_schedule_for_simulation
+
+            _, omega_min, _, omega_bif = self._get_param_range()
+            omega_t, _ = resolve_schedule_for_simulation(
+                schedule, total_len, omega_min, omega_bif, upsample_factor=sample_every,
+            )
+            n_steps = len(omega_t)
+            total_time = total_len * dt_sample
+            time_fine = jnp.linspace(self._config.t_start, total_time, n_steps)
+        else:
+            # Legacy: internal schedule
+            total_time = total_len * dt_sample
+            n_steps = int(total_time / self._config.dt) + 1
+            time_fine = jnp.linspace(self._config.t_start, total_time, n_steps)
+            omega_t = self._omega_schedule(
+                time_fine,
+                null_simulation=null_simulation,
+                param_end_multiplier=param_end_multiplier,
+            )
 
         # Sample initial state if not provided
         if initial_state is None:
@@ -348,7 +363,6 @@ class SEIRxModel(BoxModel):
         )
 
         # Downsample to output rate
-        sample_every = sample_every = int(dt_sample / self._config.dt)
         indices = jnp.arange(0, n_steps, sample_every)
 
         time = time_fine[indices]

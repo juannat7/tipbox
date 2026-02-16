@@ -8,6 +8,7 @@ from jax import lax
 from ..types import BoxModel
 from ..utils import convert_scalar_trajectory, extract_segment, register_dataclass_pytree
 
+
 @register_dataclass_pytree
 @dataclass(frozen=True)
 class SaddleNodeConfig:
@@ -26,8 +27,6 @@ class SaddleNodeConfig:
     def default(cls) -> "SaddleNodeConfig":
         """Return default configuration."""
         return cls()
-
-
 
 
 class SaddleNodeModel(BoxModel):
@@ -50,18 +49,16 @@ class SaddleNodeModel(BoxModel):
         }
 
     def _lambda_schedule(
-        self, 
-        t: jnp.ndarray, 
+        self,
+        t: jnp.ndarray,
         config: SaddleNodeConfig,
     ):
         """Compute the lambda schedule."""
-        return 0.5 * config.lambda_max * (
-            jnp.tanh(0.5 * config.lambda_max * config.epsilon * t) + 1.0
-        )
+        return 0.5 * config.lambda_max * (jnp.tanh(0.5 * config.lambda_max * config.epsilon * t) + 1.0)
 
     def _sample_initial_state(
-        self, 
-        key: jax.random.PRNGKey, 
+        self,
+        key: jax.random.PRNGKey,
         config: SaddleNodeConfig,
     ):
         """Sample an initial state from the uniform distribution."""
@@ -99,31 +96,42 @@ class SaddleNodeModel(BoxModel):
         _, x_tail = lax.scan(step, initial_state, (lambda_t[:-1], noise))
         x0 = jnp.full((1,), initial_state, dtype=lambda_t.dtype)
         return jnp.concatenate([x0, x_tail], axis=0)
-    
 
     def simulate(
         self,
         key: jax.random.PRNGKey,
         total_len: int,
         sigma_tilde: float = 0.01,
+        schedule=None,
         initial_state: Optional[jnp.ndarray] = None,
         noise: Optional[jnp.ndarray] = None,
         null_simulation: bool = False,
     ):
         """Simulate the saddle-node system.
-        
+
         For null_simulation=True, same ramp formula but epsilon at 50% (slower rate).
         """
         key_noise, key_ic = jax.random.split(key)
 
-        # Setup time and lambda schedule
-        self._config = replace(self._config, t_start=-(total_len * self._config.dt))
-        time = jnp.arange(self._config.t_start, self._config.t_end, self._config.dt)
-        if null_simulation:
-            config_null = replace(self._config, epsilon=0.5 * self._config.epsilon)
-            lambda_t = self._lambda_schedule(time, config_null)
+        if schedule is not None:
+            from ..bifurcation.schedule import resolve_schedule_for_simulation
+
+            lambda_t, _ = resolve_schedule_for_simulation(
+                schedule,
+                total_len,
+                0.0,
+                self._config.lambda_max,
+            )
+            time = jnp.arange(0, total_len * self._config.dt, self._config.dt)
         else:
-            lambda_t = self._lambda_schedule(time, self._config)
+            # Legacy: internal tanh forcing with optional slower null ramp
+            self._config = replace(self._config, t_start=-(total_len * self._config.dt))
+            time = jnp.arange(self._config.t_start, self._config.t_end, self._config.dt)
+            if null_simulation:
+                config_null = replace(self._config, epsilon=0.5 * self._config.epsilon)
+                lambda_t = self._lambda_schedule(time, config_null)
+            else:
+                lambda_t = self._lambda_schedule(time, self._config)
 
         # Randomly sample initial state if not provided
         if initial_state is None:

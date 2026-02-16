@@ -845,3 +845,167 @@ class TestNormalizeParamValues:
 
         assert np.isclose(float(normalized[0]), 0.0, atol=1e-6)
         assert np.isclose(float(normalized[1]), 1.0, atol=1e-6)
+
+
+class TestScheduleDirectMode:
+    """Tests that schedule direct mode works for all system types."""
+
+    def test_harvesting_with_schedule(self):
+        """May's harvesting should accept schedule and return exact length."""
+        from tipbox.bifurcation.bifurcation_simulator import simulate_real_bifurcation_trajectory
+
+        key = jax.random.PRNGKey(42)
+        schedule_cfg = {"mode": "ramp_and_hold", "ramp_and_hold": {"hold_at": 0.5}}
+        result = simulate_real_bifurcation_trajectory(
+            key, series_len=100, system_name="may_harvesting",
+            schedule=schedule_cfg,
+        )
+        assert result is not None
+        full, part = result
+        assert full.trajectory.shape[0] == 100
+        assert "param_normalized" in full.metadata
+
+    def test_rosenzweig_macarthur_tc_with_schedule(self):
+        """Rosenzweig-MacArthur TC should accept schedule."""
+        from tipbox.bifurcation.bifurcation_simulator import simulate_real_bifurcation_trajectory
+
+        key = jax.random.PRNGKey(42)
+        schedule_cfg = {"mode": "ramp_and_hold", "ramp_and_hold": {"hold_at": 0.6}}
+        result = simulate_real_bifurcation_trajectory(
+            key, series_len=100,
+            system_name="rosenzweig_macarthur_transcritical",
+            schedule=schedule_cfg,
+        )
+        assert result is not None
+        full, part = result
+        assert full.trajectory.shape[0] == 100
+        assert "param_normalized" in full.metadata
+
+    def test_rosenzweig_macarthur_hopf_with_schedule(self):
+        """Rosenzweig-MacArthur Hopf should accept schedule."""
+        from tipbox.bifurcation.bifurcation_simulator import simulate_real_bifurcation_trajectory
+
+        key = jax.random.PRNGKey(42)
+        schedule_cfg = {"mode": "ramp_and_hold", "ramp_and_hold": {"hold_at": 0.6}}
+        result = simulate_real_bifurcation_trajectory(
+            key, series_len=100,
+            system_name="rosenzweig_macarthur_hopf",
+            schedule=schedule_cfg,
+        )
+        assert result is not None
+        full, part = result
+        assert full.trajectory.shape[0] == 100
+
+    def test_seirx_with_schedule(self):
+        """SEIRx should accept schedule."""
+        from tipbox.bifurcation.bifurcation_simulator import simulate_real_bifurcation_trajectory
+
+        key = jax.random.PRNGKey(42)
+        schedule_cfg = {"mode": "ramp_and_hold", "ramp_and_hold": {"hold_at": 0.6}}
+        result = simulate_real_bifurcation_trajectory(
+            key, series_len=100,
+            system_name="seirx_transcritical",
+            schedule=schedule_cfg,
+        )
+        assert result is not None
+        full, part = result
+        assert full.trajectory.shape[0] == 100
+
+    def test_bautin_with_schedule(self):
+        """Bautin rate system should accept schedule."""
+        from tipbox.rate.rate_simulator import simulate_rate_trajectory
+
+        key = jax.random.PRNGKey(42)
+        schedule_cfg = {"mode": "ramp_and_hold", "ramp_and_hold": {"hold_at": 0.5}}
+        result = simulate_rate_trajectory(
+            key, series_len=100, system_name="bautin",
+            schedule=schedule_cfg,
+        )
+        assert result is not None
+        full, part = result
+        assert full.trajectory.shape[0] == 100
+        assert "param_normalized" in full.metadata
+
+    def test_compost_bomb_with_schedule(self):
+        """Compost bomb should accept schedule."""
+        from tipbox.rate.rate_simulator import simulate_rate_trajectory
+
+        key = jax.random.PRNGKey(42)
+        schedule_cfg = {"mode": "ramp_and_hold", "ramp_and_hold": {"hold_at": 0.5}}
+        result = simulate_rate_trajectory(
+            key, series_len=100, system_name="compost_bomb",
+            schedule=schedule_cfg,
+        )
+        assert result is not None
+        full, part = result
+        assert full.trajectory.shape[0] == 100
+
+    def test_saddle_node_with_schedule(self):
+        """Saddle-node should accept schedule."""
+        from tipbox.rate.rate_simulator import simulate_rate_trajectory
+
+        key = jax.random.PRNGKey(42)
+        schedule_cfg = {"mode": "ramp_and_hold", "ramp_and_hold": {"hold_at": 0.5}}
+        result = simulate_rate_trajectory(
+            key, series_len=100, system_name="saddle_node",
+            schedule=schedule_cfg,
+        )
+        assert result is not None
+        full, part = result
+        assert full.trajectory.shape[0] == 100
+
+    def test_direct_mode_full_equals_part(self):
+        """In direct mode, full and part results should be identical."""
+        from tipbox.bifurcation.bifurcation_simulator import simulate_real_bifurcation_trajectory
+
+        key = jax.random.PRNGKey(42)
+        schedule_cfg = {"mode": "ramp_and_hold", "ramp_and_hold": {"hold_at": 0.5}}
+        result = simulate_real_bifurcation_trajectory(
+            key, series_len=100, system_name="may_harvesting",
+            schedule=schedule_cfg,
+        )
+        assert result is not None
+        full, part = result
+        assert np.array_equal(np.array(full.trajectory), np.array(part.trajectory))
+
+    def test_constant_schedule_null_behavior(self):
+        """Constant(0) schedule should produce stable trajectory (no tipping)."""
+        from tipbox.bifurcation.bifurcation_simulator import simulate_real_bifurcation_trajectory
+
+        key = jax.random.PRNGKey(42)
+        schedule_cfg = {"mode": "constant", "constant": {"value": 0.0}}
+        result = simulate_real_bifurcation_trajectory(
+            key, series_len=100, system_name="may_harvesting",
+            schedule=schedule_cfg,
+        )
+        assert result is not None
+        full, _ = result
+        # With constant(0), param should stay at h_min
+        normalized = np.array(full.metadata["param_normalized"])
+        assert np.allclose(normalized, 0.0, atol=0.01)
+
+    def test_generate_api_with_schedule_for_rate(self):
+        """tipbox.generate() should accept schedule for rate systems."""
+        from tipbox.generate import generate
+
+        key = jax.random.PRNGKey(42)
+        schedule_cfg = {"mode": "ramp_and_hold", "ramp_and_hold": {"hold_at": 0.5}}
+        full, part, info = generate(
+            key, tipping_type="r_saddle_node",
+            schedule=schedule_cfg, num_timesteps=100,
+        )
+        assert full.trajectory.shape[0] == 100
+        assert "param_normalized" in full.metadata
+
+    def test_generate_api_with_schedule_for_real_bifurcation(self):
+        """tipbox.generate() should accept schedule for real bifurcation systems."""
+        from tipbox.generate import generate
+
+        key = jax.random.PRNGKey(42)
+        schedule_cfg = {"mode": "ramp_and_hold", "ramp_and_hold": {"hold_at": 0.5}}
+        full, part, info = generate(
+            key, tipping_type="b_harvesting",
+            schedule=schedule_cfg, num_timesteps=100,
+        )
+        assert full.trajectory.shape[0] == 100
+        assert "param_normalized" in full.metadata

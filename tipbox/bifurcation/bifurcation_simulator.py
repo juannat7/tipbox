@@ -50,6 +50,7 @@ def simulate_real_bifurcation_trajectory(
     null_simulation: bool = False,
     system_name: str = None,
     param_end_multiplier: float = 1.1,
+    schedule=None,
     **generate_kwargs
 ):
     """Simulate a single real system bifurcation trajectory.
@@ -72,6 +73,10 @@ def simulate_real_bifurcation_trajectory(
         If provided, use this specific system. Otherwise, randomly select.
     param_end_multiplier : float, default=1.1
         Multiplier for the end parameter value
+    schedule : optional
+        Parameter schedule. When provided, uses direct mode (exact length,
+        schedule controls parameter evolution). When None, uses legacy
+        extraction mode.
     **generate_kwargs : additional arguments
         Passed to the model.simulate method (dt_sample, dt_integrate, etc.)
 
@@ -89,22 +94,49 @@ def simulate_real_bifurcation_trajectory(
         - param_value_transition: parameter value at transition
         - param_normalized: normalized param values (0=param_min, 1=bif_value)
     """
+    import jax.numpy as jnp
 
     key_select, key_sim = jax.random.split(key)
-
-    if steps_before_transition > buffer_size:
-        raise ValueError(
-            "steps_before_transition exceeds buffer_size. "
-            "Increase buffer_size to maintain constant parameter rate."
-        )
-    
-    # Calculate total simulation length (extended if param_end_multiplier > 1.0)
-    total_len = calculate_total_len(series_len, buffer_size, param_end_multiplier)
 
     # Select, setup and initialize model using unified registry
     system_spec = _select_system(key_select, system_name=system_name)
     config = system_spec.default_config()
     model = system_spec.create_model(config)
+
+    if schedule is not None:
+        # Direct mode: schedule controls parameter evolution
+        time, trajectory, param_values, sigma = model.simulate(
+            key_sim, total_len=series_len, sigma_tilde=sigma_tilde,
+            schedule=schedule, **generate_kwargs,
+        )
+        normalized = model.normalize_param_values(param_values)
+
+        # Estimate transition from normalized values
+        above = jnp.where(normalized >= 1.0, jnp.arange(len(normalized)), len(normalized) - 1)
+        trans_idx = int(jnp.min(above))
+
+        metadata = {
+            "label": "null" if null_simulation else system_spec.bifurcation_system,
+            "bifurcation_real_system": system_spec.bifurcation_system,
+            "transition_index": trans_idx,
+            "param_value_transition": float(param_values[min(trans_idx, len(param_values) - 1)]),
+            "param_normalized": normalized,
+            "system_config": asdict(config),
+        }
+        result = TrajectoryResult(
+            time=time, trajectory=trajectory,
+            param_values=param_values, sigma=sigma, metadata=metadata,
+        )
+        return (result, result)  # direct mode: full = part
+
+    # Legacy extraction mode
+    if steps_before_transition > buffer_size:
+        raise ValueError(
+            "steps_before_transition exceeds buffer_size. "
+            "Increase buffer_size to maintain constant parameter rate."
+        )
+
+    total_len = calculate_total_len(series_len, buffer_size, param_end_multiplier)
 
     # Simulate
     time, trajectory, param_values, sigma = model.simulate(
