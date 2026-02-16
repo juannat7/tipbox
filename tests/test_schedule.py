@@ -779,32 +779,69 @@ class TestParamNormalizedRateAndReal:
             pytest.skip("Could not generate null rate trajectory in 20 attempts")
 
 
-@pytest.mark.skipif(not os.environ.get("AUTO_DIR"), reason="AUTO_DIR not set - requires AUTO-07P")
-class TestScheduleRejection:
-    """Tests that schedule is rejected for non-synthetic systems."""
+class TestNormalizeParamValues:
+    """Tests for normalize_param_values on semi-real bifurcation models."""
 
-    def test_schedule_rejected_for_rate_system(self):
-        """Passing schedule to a rate system should raise ValueError."""
-        from tipbox.generate import generate
+    def test_rosenzweig_macarthur_tc_normalize(self):
+        """Rosenzweig-MacArthur TC: 0 at a_min, 1 at a_bif."""
+        from tipbox.bifurcation.rosenzweig_macarthur import (
+            RosenzweigMacArthurConfig,
+            RosenzweigMacArthurModel,
+        )
 
-        key = jax.random.PRNGKey(42)
-        with pytest.raises(ValueError, match="not supported for rate-induced"):
-            generate(
-                key,
-                tipping_type="r_saddle_node",
-                schedule=linear(),
-                verbose=False,
-            )
+        config = RosenzweigMacArthurConfig.transcritical()
+        model = RosenzweigMacArthurModel(config)
 
-    def test_schedule_rejected_for_real_bifurcation(self):
-        """Passing schedule to a real bifurcation system should raise ValueError."""
-        from tipbox.generate import generate
+        a_min = config.a_transcritical_min
+        a_bif = config.a_transcritical_bifurcation
+        params = jnp.array([a_min, (a_min + a_bif) / 2, a_bif])
+        normalized = model.normalize_param_values(params)
 
-        key = jax.random.PRNGKey(42)
-        with pytest.raises(ValueError, match="not supported for real bifurcation"):
-            generate(
-                key,
-                tipping_type="b_harvesting",
-                schedule=linear(),
-                verbose=False,
-            )
+        assert np.isclose(float(normalized[0]), 0.0, atol=1e-6)
+        assert np.isclose(float(normalized[1]), 0.5, atol=1e-6)
+        assert np.isclose(float(normalized[2]), 1.0, atol=1e-6)
+
+    def test_rosenzweig_macarthur_hopf_normalize(self):
+        """Rosenzweig-MacArthur Hopf: 0 at a_min, 1 at a_bif."""
+        from tipbox.bifurcation.rosenzweig_macarthur import (
+            RosenzweigMacArthurConfig,
+            RosenzweigMacArthurModel,
+        )
+
+        config = RosenzweigMacArthurConfig.hopf()
+        model = RosenzweigMacArthurModel(config)
+
+        a_min = config.a_hopf_min
+        a_bif = config.a_hopf_bifurcation
+        params = jnp.array([a_min, a_bif])
+        normalized = model.normalize_param_values(params)
+
+        assert np.isclose(float(normalized[0]), 0.0, atol=1e-6)
+        assert np.isclose(float(normalized[1]), 1.0, atol=1e-6)
+
+    def test_seirx_normalize(self):
+        """SEIRx: 0 at omega_min, 1 at omega_bif."""
+        from tipbox.bifurcation.seirx import SEIRxConfig, SEIRxModel
+
+        config = SEIRxConfig()
+        model = SEIRxModel(config)
+
+        _, omega_min, _, omega_bif = model._get_param_range()
+        params = jnp.array([omega_min, omega_bif])
+        normalized = model.normalize_param_values(params)
+
+        assert np.isclose(float(normalized[0]), 0.0, atol=1e-6)
+        assert np.isclose(float(normalized[1]), 1.0, atol=1e-6)
+
+    def test_may_harvesting_normalize(self):
+        """May's harvesting: 0 at h_min, 1 at h_bifurcation."""
+        from tipbox.bifurcation.may_harvesting import MayHarvestingConfig, MayHarvestingModel
+
+        config = MayHarvestingConfig()
+        model = MayHarvestingModel(config)
+
+        params = jnp.array([config.h_min, config.h_bifurcation])
+        normalized = model.normalize_param_values(params)
+
+        assert np.isclose(float(normalized[0]), 0.0, atol=1e-6)
+        assert np.isclose(float(normalized[1]), 1.0, atol=1e-6)

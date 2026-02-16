@@ -466,3 +466,8 @@ class RosenzweigMacArthurModel(BoxModel):
         )
 
         return time_seg, traj_seg, param_seg, trans_idx_out, success
+
+    def normalize_param_values(self, param_values):
+        """Normalize attack rate: 0 = a_min, 1 = a_bifurcation."""
+        _, a_min, _, a_bif = self._get_param_range()
+        return (param_values - a_min) / (a_bif - a_min)

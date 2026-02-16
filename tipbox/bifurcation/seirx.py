@@ -412,3 +412,8 @@ class SEIRxModel(BoxModel):
         )
 
         return time_seg, traj_seg, param_seg, trans_idx_out, success
+
+    def normalize_param_values(self, param_values):
+        """Normalize perceived vaccination risk: 0 = omega_min, 1 = omega_bifurcation."""
+        _, omega_min, _, omega_bif = self._get_param_range()
+        return (param_values - omega_min) / (omega_bif - omega_min)
