@@ -27,6 +27,7 @@ pip install -e .
 | `b_rosenzweig_macarthur_tc` | Semi-real | Consumer-resource model (transcritical) | Bury et al. 2021 |
 | `b_rosenzweig_macarthur_hopf` | Semi-real | Consumer-resource model (Hopf) | Bury et al. 2021 |
 | `b_seirx_tc` | Semi-real | SEIRx disease–vaccination behaviour (transcritical) | Bury et al. 2021 |
+| `b_amoc` | Semi-real | AMOC 2-box model (bifurcation-induced) | Ritchie et al. 2023; Alkhayuon et al. 2019 |
 
 ### Rate-Induced Tipping
 
@@ -35,6 +36,7 @@ pip install -e .
 | `r_bautin` | Bautin normal form | Ritchie et al. 2023 |
 | `r_compost_bomb` | Compost bomb instability | Wieczorek et al. 2011 |
 | `r_saddle_node` | Saddle-node normal form | Ashwin et al. 2012 |
+| `r_amoc` | AMOC 2-box model (rate-induced) | Ritchie et al. 2023; Alkhayuon et al. 2019 |
 
 ## Quickstart
 
