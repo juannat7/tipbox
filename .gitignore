@@ -5,6 +5,7 @@ __pycache__/
 *.sh
 *.out
 *.tsv
+scripts/
 
 # C extensions
 *.so

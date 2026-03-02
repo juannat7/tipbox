@@ -1,5 +1,5 @@
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Optional
 
 import jax
@@ -181,15 +181,21 @@ class CompostBombModel(BoxModel):
         sigma_tilde: float = 0.01,
         initial_state: Optional[jnp.ndarray] = None,
         noise: Optional[jnp.ndarray] = None,
+        null_simulation: bool = False,
     ):
-        """Simulate the compost-bomb system."""
+        """Simulate the compost-bomb system.
+        
+        For null_simulation=True, same T_a(t)=v*t formula but v at 95% (slightly slower rate).
+        """
         key_noise, key_ic = jax.random.split(key)
 
         # Setup time and T_a schedule
-        # For compost-bomb, time goes from 0 to 100 as specified in the paper
-        # Don't override t_start like other systems that need negative time
         time = jnp.arange(self._config.t_start, self._config.t_end, self._config.dt)
-        T_a_t = self._T_a_schedule(time, self._config)
+        if null_simulation:
+            config_null = replace(self._config, v=0.95 * self._config.v)
+            T_a_t = self._T_a_schedule(time, config_null)
+        else:
+            T_a_t = self._T_a_schedule(time, self._config)
 
         # Randomly sample initial state if not provided
         if initial_state is None:
@@ -220,6 +226,7 @@ class CompostBombModel(BoxModel):
     def is_tipped(
         self,
         trajectory: jnp.ndarray,
+        **kwargs,
     ):
         """Check if the trajectory is tipped (temperature exceeds threshold)."""
         # Check if temperature (second component) exceeds threshold
@@ -230,6 +237,7 @@ class CompostBombModel(BoxModel):
         self,
         trajectory: jnp.ndarray,
         null_simulation: bool,
+        **kwargs,
     ):
         """Locate the transition index."""
         if null_simulation:

@@ -138,33 +138,29 @@ class SEIRxModel(BoxModel):
     ) -> jnp.ndarray:
         """Compute the ω(t) schedule (perceived vaccination risk).
 
-        For null simulations: ω is fixed at omega_null.
+        For null simulations: same linear ramp as forced but clipped so the range from
+        null_cap to critical equals the range from critical to omega_max (symmetric about critical).
         For forced simulations:
           - ω increases linearly from omega_min to omega_max
           - param_end_multiplier extends the time series beyond the bifurcation point
         """
-        omega_null, omega_min, omega_max, _ = self._get_param_range()
+        omega_null, omega_min, omega_max, omega_bif = self._get_param_range()
+        t_total = t[-1] - t[0]
+        t_to_bifurcation = t_total / param_end_multiplier
+        t_rel = t - t[0]
+        ramp = omega_min + (t_rel / t_to_bifurcation) * (omega_max - omega_min)
 
         if null_simulation:
-            return jnp.full_like(t, omega_null)
+            range_past = omega_max - omega_bif
+            cap = omega_bif - range_past
+            cap = jnp.maximum(cap, omega_min)
+            return jnp.minimum(ramp, cap)
         else:
-            # Total time range
-            t_total = t[-1] - t[0]
-
-            # Time to reach omega_max (proportional to 1/param_end_multiplier of total time)
-            t_to_bifurcation = t_total / param_end_multiplier
-
-            # Normalize time relative to start
-            t_rel = t - t[0]
-
-            # For times before reaching bifurcation: linear increase
-            # For times after: constant at omega_max
             omega_values = jnp.where(
                 t_rel <= t_to_bifurcation,
-                omega_min + (t_rel / t_to_bifurcation) * (omega_max - omega_min),
+                ramp,
                 omega_max,
             )
-
             return omega_values
 
     def _sample_initial_state(
@@ -296,7 +292,7 @@ class SEIRxModel(BoxModel):
         sigma_tilde : float, default=1.0
             Noise scaling factor (multiplies config sigma values)
         null_simulation : bool, default=False
-            If True, keep ω fixed at omega_null (null trajectory)
+            If True, same linear ramp as forced but ω capped so range to critical equals (omega_max - critical) (null trajectory)
         dt_sample : float, default=1.0
             Sampling interval for output (weeks)
         param_end_multiplier : float, default=1.1

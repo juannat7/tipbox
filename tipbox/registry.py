@@ -22,6 +22,8 @@ from .rate.saddle_node import SaddleNodeConfig, SaddleNodeModel
 from .bifurcation.may_harvesting import MayHarvestingConfig, MayHarvestingModel
 from .bifurcation.rosenzweig_macarthur import RosenzweigMacArthurConfig, RosenzweigMacArthurModel
 from .bifurcation.seirx import SEIRxConfig, SEIRxModel
+from .bifurcation.amoc import AMOCConfig, AMOCModel
+from .rate.amoc import AMOCRateConfig, AMOCRateModel
 
 
 class SystemType(Enum):
@@ -121,7 +123,15 @@ SYSTEM_REGISTRY: Dict[str, SystemSpec] = {
         model_cls=SaddleNodeModel,
         description="Saddle-node rate-induced tipping",
     ),
-    
+    "r_amoc": SystemSpec(
+        name="r_amoc",
+        system_type=SystemType.RATE,
+        rate_system="amoc",
+        config_cls=AMOCRateConfig,
+        model_cls=AMOCRateModel,
+        description="AMOC 2-box model (rate-induced)",
+    ),
+
     # Semi-real bifurcation systems (for validation)
     "b_harvesting": SystemSpec(
         name="b_harvesting",
@@ -161,6 +171,16 @@ SYSTEM_REGISTRY: Dict[str, SystemSpec] = {
         config_cls=SEIRxConfig,
         model_cls=SEIRxModel,
         description="SEIRx disease dynamics with vaccinator behaviour (transcritical bifurcatio)",
+    ),
+
+    # AMOC 2-box model (Ritchie et al. 2023; Alkhayuon et al. 2019) — bifurcation-induced
+    "b_amoc": SystemSpec(
+        name="b_amoc",
+        system_type=SystemType.BIFURCATION,
+        bifurcation_system="amoc",
+        config_cls=AMOCConfig,
+        model_cls=AMOCModel,
+        description="AMOC 2-box model (bifurcation-induced)",
     ),
 }
 

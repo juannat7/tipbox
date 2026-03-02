@@ -59,7 +59,7 @@ class RosenzweigMacArthurConfig:
     # Hopf: null at a=12, forced a ∈ [12, 16], bifurcation at a=15.69
     a_hopf_null: float = 12.0
     a_hopf_min: float = 12.0
-    a_hopf_max: float = 16.0
+    a_hopf_max: float = 17.0
     a_hopf_bifurcation: float = 15.69
     
     # Simulation parameters
@@ -154,33 +154,29 @@ class RosenzweigMacArthurModel(BoxModel):
     ):
         """Compute the a(t) schedule (attack rate).
         
-        For null simulations: a is fixed at a_null
+        For null simulations: same linear ramp as forced but clipped so the range from
+        null_cap to critical equals the range from critical to a_max (symmetric about critical).
         For forced simulations:
           - a increases linearly from a_min to a_max
           - param_end_multiplier extends the time series beyond the bifurcation point
         """
-        a_null, a_min, a_max, _ = self._get_param_range()
-        
+        a_null, a_min, a_max, a_bif = self._get_param_range()
+        t_total = t[-1] - t[0]
+        t_to_bifurcation = t_total / param_end_multiplier
+        t_rel = t - t[0]
+        ramp = a_min + (t_rel / t_to_bifurcation) * (a_max - a_min)
+
         if null_simulation:
-            return jnp.full_like(t, a_null)
+            range_past = a_max - a_bif
+            cap = a_bif - range_past
+            cap = jnp.maximum(cap, a_min)
+            return jnp.minimum(ramp, cap)
         else:
-            # Total time range
-            t_total = t[-1] - t[0]
-            
-            # Time to reach a_max (proportional to 1/param_end_multiplier of total time)
-            t_to_bifurcation = t_total / param_end_multiplier
-            
-            # Normalize time relative to start
-            t_rel = t - t[0]
-            
-            # For times before reaching bifurcation: linear increase
-            # For times after: constant at a_max
             a_values = jnp.where(
                 t_rel <= t_to_bifurcation,
-                a_min + (t_rel / t_to_bifurcation) * (a_max - a_min),
+                ramp,
                 a_max
             )
-            
             return a_values
 
     def _compute_equilibrium(self, a: float) -> tuple:
@@ -245,8 +241,8 @@ class RosenzweigMacArthurModel(BoxModel):
             # Start with ~5% of resource as consumer
             y = float(jax.random.uniform(key2, (), minval=0.02, maxval=0.08))
         else:
-            # For Hopf: we're starting past transcritical, so use coexistence equilibrium
-            a_init = a_null if null_simulation else a_min
+            # For Hopf: use coexistence equilibrium at ramp start (a_min; null now ramps from a_min too)
+            a_init = a_min
             x_eq, y_eq = self._compute_equilibrium(a_init)
             
             # Add small noise around equilibrium
@@ -357,7 +353,7 @@ class RosenzweigMacArthurModel(BoxModel):
         sigma_tilde : float, default=0.01
             Base noise amplitude
         null_simulation : bool, default=False
-            If True, keep a fixed at a_null (null trajectory)
+            If True, same linear ramp as forced but a capped so range to critical equals (a_max - critical) (null trajectory)
         dt_sample : float, default=1.0
             Sampling interval for output
         param_end_multiplier : float, default=1.1

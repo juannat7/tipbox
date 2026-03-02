@@ -108,14 +108,22 @@ class SaddleNodeModel(BoxModel):
         sigma_tilde: float = 0.01,
         initial_state: Optional[jnp.ndarray] = None,
         noise: Optional[jnp.ndarray] = None,
+        null_simulation: bool = False,
     ):
-        """Simulate the saddle-node system."""
+        """Simulate the saddle-node system.
+        
+        For null_simulation=True, same ramp formula but epsilon at 50% (slower rate).
+        """
         key_noise, key_ic = jax.random.split(key)
 
         # Setup time and lambda schedule
         self._config = replace(self._config, t_start=-(total_len * self._config.dt))
         time = jnp.arange(self._config.t_start, self._config.t_end, self._config.dt)
-        lambda_t = self._lambda_schedule(time, self._config)
+        if null_simulation:
+            config_null = replace(self._config, epsilon=0.5 * self._config.epsilon)
+            lambda_t = self._lambda_schedule(time, config_null)
+        else:
+            lambda_t = self._lambda_schedule(time, self._config)
 
         # Randomly sample initial state if not provided
         if initial_state is None:
@@ -144,6 +152,7 @@ class SaddleNodeModel(BoxModel):
     def is_tipped(
         self,
         trajectory: jnp.ndarray,
+        **kwargs,
     ):
         """Check if the trajectory is tipped."""
         scalar_view = trajectory[:, 0] if trajectory.ndim > 1 else trajectory
@@ -153,6 +162,7 @@ class SaddleNodeModel(BoxModel):
         self,
         trajectory: jnp.ndarray,
         null_simulation: bool,
+        **kwargs,
     ):
         """Locate the transition index."""
         scalar_view = trajectory[:, 0] if trajectory.ndim > 1 else trajectory

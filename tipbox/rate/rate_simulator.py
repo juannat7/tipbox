@@ -91,22 +91,29 @@ def simulate_rate_trajectory(
     config = system_spec.default_config()
     model = system_spec.create_model(config)
 
-    # Simulate
-    time, trajectory, param_values, sigma = model.simulate(
-        key_sim,
-        total_len=total_len,
-        sigma_tilde=sigma_tilde,
-    )
+    # Simulate (saddle_node, bautin, compost_bomb use null_simulation: 50% rate in schedule)
+    sim_kwargs = {"total_len": total_len, "sigma_tilde": sigma_tilde}
+    if system_spec.rate_system in ("saddle_node", "bautin", "compost_bomb", "amoc"):
+        sim_kwargs["null_simulation"] = null_simulation
+    sim_ret = model.simulate(key_sim, **sim_kwargs)
+    time, trajectory, param_values, sigma = sim_ret[0], sim_ret[1], sim_ret[2], sim_ret[3]
+    state_trajectory = sim_ret[4] if len(sim_ret) > 4 else None
 
-    # Check if the trajectory is tipped
-    is_tipped = model.is_tipped(trajectory)
+    # Check if the trajectory is tipped (pass time/param_values for models that need them, e.g. AMOC)
+    is_tipped = model.is_tipped(
+        trajectory,
+        time=time,
+        param_values=param_values,
+    )
     if is_tipped == null_simulation:
         return None
 
-    # Locate transition index
+    # Locate transition index (transition = when t crosses 0 for rate-induced AMOC)
     trans_idx = model.locate_transition(
         trajectory,
         null_simulation=null_simulation,
+        time=time,
+        param_values=param_values,
     )
 
     if trans_idx is None:
@@ -134,6 +141,8 @@ def simulate_rate_trajectory(
         "transition_index": int(trans_idx_out),
         "param_value_transition": float(param_values[min(trans_idx_out, param_values.shape[0] - 1)])
     }
+    if state_trajectory is not None:
+        metadata["state_trajectory"] = state_trajectory
 
     full_trajectory = TrajectoryResult(
         time=time,

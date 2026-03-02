@@ -96,40 +96,33 @@ class MayHarvestingModel(BoxModel):
     ):
         """Compute the h(t) schedule (harvesting rate).
         
-        For null simulations: h fixed at h_min (lower bound)
+        For null simulations: same linear ramp as forced but clipped so the range from
+        null_cap to critical equals the range from critical to h_max (symmetric about critical).
         For forced simulations: 
           - h increases linearly from h_min to h_max (up to bifurcation point)
           - Beyond the bifurcation point, h stays constant at h_max
           - param_end_multiplier extends the time series, keeping h constant beyond critical point
         """
+        # Total time range
+        t_total = t[-1] - t[0]
+        t_to_bifurcation = t_total / param_end_multiplier
+        t_rel = t - t[0]
+        # Same linear ramp as forced (from h_min to h_max over t_to_bifurcation)
+        ramp = self._config.h_min + (t_rel / t_to_bifurcation) * (self._config.h_max - self._config.h_min)
+
         if null_simulation:
-            return jnp.full_like(t, self._config.h_min)
+            # Cap so distance (null_cap → critical) = (critical → h_max); clamp to h_min
+            range_past = self._config.h_max - self._config.h_bifurcation
+            cap = self._config.h_bifurcation - range_past
+            cap = jnp.maximum(cap, self._config.h_min)
+            return jnp.minimum(ramp, cap)
         else:
-            # Calculate the time point where we reach h_max (bifurcation point)
-            # The first portion goes from h_min to h_max linearly
-            # The extended portion (due to param_end_multiplier) keeps h constant at h_max
-            
-            # Total time range
-            t_total = t[-1] - t[0]
-            
-            # Time to reach h_max (proportional to 1/param_end_multiplier of total time)
-            # When param_end_multiplier=1.0, we use all time to reach h_max
-            # When param_end_multiplier>1.0, we reach h_max faster, then stay constant
-            t_to_bifurcation = t_total / param_end_multiplier
-            
-            # Normalize time relative to start
-            t_rel = t - t[0]
-            
-            # For times before reaching bifurcation: linear increase
-            # For times after: constant at h_max
+            # For times before reaching bifurcation: linear increase; after: constant at h_max
             h_values = jnp.where(
                 t_rel <= t_to_bifurcation,
-                # Linear increase from h_min to h_max
-                self._config.h_min + (t_rel / t_to_bifurcation) * (self._config.h_max - self._config.h_min),
-                # Constant at h_max beyond bifurcation
+                ramp,
                 self._config.h_max
             )
-            
             return h_values
 
     def _sample_initial_state(
@@ -247,7 +240,7 @@ class MayHarvestingModel(BoxModel):
         sigma_tilde : float, default=0.01
             Base noise amplitude
         null_simulation : bool, default=False
-            If True, keep h fixed at h_min (null trajectory)
+            If True, same linear ramp as forced but h capped so range to critical equals (h_max - critical) (null trajectory)
         dt_sample : float, default=1.0
             Sampling interval for output
         param_end_multiplier : float, default=1.1
@@ -274,7 +267,7 @@ class MayHarvestingModel(BoxModel):
         time_fine = jnp.linspace(self._config.t_start, total_time, n_steps)
         
         # Compute h schedule
-        # For null simulations: h fixed at h_min
+        # For null simulations: same linear ramp as forced, cap = critical - (h_max - critical)
         # For forced simulations: h increases linearly from h_min to h_bifurcation * param_end_multiplier
         # param_end_multiplier extends beyond the bifurcation point to allow simulation past tipping
         h_t = self._h_schedule(time_fine, null_simulation=null_simulation, param_end_multiplier=param_end_multiplier)

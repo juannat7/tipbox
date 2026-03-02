@@ -27,8 +27,8 @@ class BautinConfig:
     b: float = 1.0  # Cubic coefficient (paper default: 1)
     D2: float = 20  # Noise magnitude (paper default: 0.2, so 20 * 0.01 following default sigma_tilde)
     dt: float = 0.01  # Time step
-    t_start: float = -16.0
-    t_end: float = 8.0
+    t_start: float = -15.0  # Paper (Huang et al. Nat. Mach. Intell. 2024): time range -15 to 15
+    t_end: float = 15.0  # Wider window → slower ramp → tipping later; narrower → earlier tipping
     initial_state_min: float = -1.0  # Minimum initial x/y
     initial_state_max: float = 1.0  # Maximum initial x/y
     tip_threshold: float = 10.0  # Threshold for detecting tipping (radius from origin)
@@ -185,15 +185,24 @@ class BautinModel(BoxModel):
         sigma_tilde: float = 0.01,
         initial_state: Optional[jnp.ndarray] = None,
         noise: Optional[jnp.ndarray] = None,
+        null_simulation: bool = False,
     ):
         """Simulate the Bautin system.
+
+        Time range is fixed to [t_start, t_end] from config (paper: -15 to 15).
+        total_len is ignored. The window length sets the ramp speed: wider (e.g. -20 to 20)
+        → slower ramp → tipping tends to occur later; narrower → earlier tipping.
+        For null_simulation=True, same ramp shape but with r at 50% (slower rate; visible in plot).
         """
         key_noise, key_ic = jax.random.split(key)
 
-        # Setup time and lambda schedule
-        self._config = replace(self._config, t_start=-(total_len * self._config.dt))
+        # Setup time and lambda schedule (fixed -15 to 15 to match paper; do not use total_len)
         time = jnp.arange(self._config.t_start, self._config.t_end, self._config.dt)
-        lambda_t = self._lambda_schedule(time, self._config)
+        if null_simulation:
+            config_null = replace(self._config, r=0.5 * self._config.r)
+            lambda_t = self._lambda_schedule(time, config_null)
+        else:
+            lambda_t = self._lambda_schedule(time, self._config)
 
         # Randomly sample initial state if not provided
         if initial_state is None:
@@ -223,6 +232,7 @@ class BautinModel(BoxModel):
     def is_tipped(
         self,
         trajectory: jnp.ndarray,
+        **kwargs,
     ):
         """Check if the trajectory is tipped (radius exceeds threshold)."""
         # Compute radius from Cartesian coordinates
@@ -233,6 +243,7 @@ class BautinModel(BoxModel):
         self,
         trajectory: jnp.ndarray,
         null_simulation: bool,
+        **kwargs,
     ):
         """Locate the transition index."""
         if null_simulation:
