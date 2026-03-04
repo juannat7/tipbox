@@ -105,13 +105,15 @@ def simulate_rate_trajectory(
     state_trajectory = None
     if schedule is not None:
         # Direct mode: schedule controls parameter evolution
-        time, trajectory, param_values, sigma = model.simulate(
+        sim_ret = model.simulate(
             key_sim,
             total_len=series_len,
             sigma_tilde=sigma_tilde,
             schedule=schedule,
             **generate_kwargs,
         )
+        time, trajectory, param_values, sigma = sim_ret[0], sim_ret[1], sim_ret[2], sim_ret[3]
+        state_trajectory = sim_ret[4] if len(sim_ret) > 4 else None
         normalized = model.normalize_param_values(param_values)
 
         # Estimate transition from normalized values
@@ -126,6 +128,8 @@ def simulate_rate_trajectory(
             "param_normalized": normalized,
             "system_config": asdict(config),
         }
+        if state_trajectory is not None:
+            metadata["state_trajectory"] = state_trajectory
         result = TrajectoryResult(
             time=time,
             trajectory=trajectory,

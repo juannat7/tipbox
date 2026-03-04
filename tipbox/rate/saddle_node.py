@@ -109,7 +109,7 @@ class SaddleNodeModel(BoxModel):
     ):
         """Simulate the saddle-node system.
 
-        For null_simulation=True, same ramp formula but epsilon at 50% (slower rate).
+        For null_simulation=True (legacy mode), keep forcing constant at 0.
         """
         key_noise, key_ic = jax.random.split(key)
 
@@ -124,12 +124,11 @@ class SaddleNodeModel(BoxModel):
             )
             time = jnp.arange(0, total_len * self._config.dt, self._config.dt)
         else:
-            # Legacy: internal tanh forcing with optional slower null ramp
+            # Legacy: internal tanh forcing
             self._config = replace(self._config, t_start=-(total_len * self._config.dt))
             time = jnp.arange(self._config.t_start, self._config.t_end, self._config.dt)
             if null_simulation:
-                config_null = replace(self._config, epsilon=0.5 * self._config.epsilon)
-                lambda_t = self._lambda_schedule(time, config_null)
+                lambda_t = jnp.zeros_like(time)
             else:
                 lambda_t = self._lambda_schedule(time, self._config)
 

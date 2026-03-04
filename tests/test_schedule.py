@@ -9,6 +9,7 @@ import pytest
 from tipbox.bifurcation import schedule
 from tipbox.bifurcation.schedule import (
     apply_to_params,
+    bezier_and_hold,
     constant,
     create_schedule,
     fixed_slope,
@@ -272,6 +273,60 @@ class TestPiecewiseLinearSchedule:
         ]
         with pytest.raises(ValueError, match=r"sum to 1\.0"):
             piecewise_linear(segments)
+
+
+class TestBezierAndHoldSchedule:
+    """Tests for bezier_and_hold() factory function."""
+
+    def test_bezier_and_hold_basic(self):
+        """Bezier-and-hold starts at start, ends at final_level, then holds."""
+        sched = bezier_and_hold(
+            hold_at=0.7,
+            final_level=1.0,
+            start=0.0,
+            control_levels=[0.2, 0.85, 0.55],
+        )
+        values = sched(1000)
+
+        hold_idx = int(1000 * 0.7)
+        assert np.isclose(values[0], 0.0, atol=1e-6)
+        assert np.isclose(values[-1], 1.0, atol=1e-6)
+        assert np.all(values >= -1e-6)
+        assert np.all(values <= 1.0 + 1e-6)
+        assert np.allclose(values[hold_idx:], 1.0, atol=1e-6)
+
+    def test_bezier_and_hold_allows_down_ramps(self):
+        """Non-monotonic control levels can create local downward ramps."""
+        sched = bezier_and_hold(
+            hold_at=0.8,
+            final_level=1.0,
+            start=0.0,
+            control_levels=[0.85, 0.76, 0.42, 0.26],
+        )
+        values = np.array(sched(1000))
+        hold_idx = int(1000 * 0.8)
+        diffs = np.diff(values[:hold_idx])
+        assert np.any(diffs < -1e-4)
+
+    def test_bezier_and_hold_respects_slope_cap(self):
+        """Slope cap bounds the realized schedule slope."""
+        max_abs_slope = 1.5
+        sched = bezier_and_hold(
+            hold_at=0.9,
+            final_level=1.0,
+            start=0.0,
+            control_levels=[1.0, 0.0, 1.0, 0.0, 1.0],
+            max_abs_slope=max_abs_slope,
+        )
+        values = np.array(sched(4000))
+        dt = 1.0 / (len(values) - 1)
+        slope = np.abs(np.diff(values) / dt)
+        assert slope.max() <= max_abs_slope * 1.05
+
+    def test_bezier_and_hold_impossible_slope_raises(self):
+        """Should raise when slope cap cannot reach final level in time."""
+        with pytest.raises(ValueError, match="too small"):
+            bezier_and_hold(hold_at=0.5, final_level=1.0, start=0.0, max_abs_slope=1.0)
 
 
 class TestFromArraySchedule:
@@ -857,7 +912,9 @@ class TestScheduleDirectMode:
         key = jax.random.PRNGKey(42)
         schedule_cfg = {"mode": "ramp_and_hold", "ramp_and_hold": {"hold_at": 0.5}}
         result = simulate_real_bifurcation_trajectory(
-            key, series_len=100, system_name="may_harvesting",
+            key,
+            series_len=100,
+            system_name="may_harvesting",
             schedule=schedule_cfg,
         )
         assert result is not None
@@ -872,7 +929,8 @@ class TestScheduleDirectMode:
         key = jax.random.PRNGKey(42)
         schedule_cfg = {"mode": "ramp_and_hold", "ramp_and_hold": {"hold_at": 0.6}}
         result = simulate_real_bifurcation_trajectory(
-            key, series_len=100,
+            key,
+            series_len=100,
             system_name="rosenzweig_macarthur_transcritical",
             schedule=schedule_cfg,
         )
@@ -888,7 +946,8 @@ class TestScheduleDirectMode:
         key = jax.random.PRNGKey(42)
         schedule_cfg = {"mode": "ramp_and_hold", "ramp_and_hold": {"hold_at": 0.6}}
         result = simulate_real_bifurcation_trajectory(
-            key, series_len=100,
+            key,
+            series_len=100,
             system_name="rosenzweig_macarthur_hopf",
             schedule=schedule_cfg,
         )
@@ -903,13 +962,31 @@ class TestScheduleDirectMode:
         key = jax.random.PRNGKey(42)
         schedule_cfg = {"mode": "ramp_and_hold", "ramp_and_hold": {"hold_at": 0.6}}
         result = simulate_real_bifurcation_trajectory(
-            key, series_len=100,
+            key,
+            series_len=100,
             system_name="seirx_transcritical",
             schedule=schedule_cfg,
         )
         assert result is not None
         full, part = result
         assert full.trajectory.shape[0] == 100
+
+    def test_bifurcation_amoc_with_schedule(self):
+        """AMOC bifurcation system should accept schedule."""
+        from tipbox.bifurcation.bifurcation_simulator import simulate_real_bifurcation_trajectory
+
+        key = jax.random.PRNGKey(42)
+        schedule_cfg = {"mode": "ramp_and_hold", "ramp_and_hold": {"hold_at": 0.6}}
+        result = simulate_real_bifurcation_trajectory(
+            key,
+            series_len=100,
+            system_name="amoc",
+            schedule=schedule_cfg,
+        )
+        assert result is not None
+        full, part = result
+        assert full.trajectory.shape[0] == 100
+        assert "param_normalized" in full.metadata
 
     def test_bautin_with_schedule(self):
         """Bautin rate system should accept schedule."""
@@ -918,7 +995,9 @@ class TestScheduleDirectMode:
         key = jax.random.PRNGKey(42)
         schedule_cfg = {"mode": "ramp_and_hold", "ramp_and_hold": {"hold_at": 0.5}}
         result = simulate_rate_trajectory(
-            key, series_len=100, system_name="bautin",
+            key,
+            series_len=100,
+            system_name="bautin",
             schedule=schedule_cfg,
         )
         assert result is not None
@@ -933,7 +1012,9 @@ class TestScheduleDirectMode:
         key = jax.random.PRNGKey(42)
         schedule_cfg = {"mode": "ramp_and_hold", "ramp_and_hold": {"hold_at": 0.5}}
         result = simulate_rate_trajectory(
-            key, series_len=100, system_name="compost_bomb",
+            key,
+            series_len=100,
+            system_name="compost_bomb",
             schedule=schedule_cfg,
         )
         assert result is not None
@@ -947,12 +1028,31 @@ class TestScheduleDirectMode:
         key = jax.random.PRNGKey(42)
         schedule_cfg = {"mode": "ramp_and_hold", "ramp_and_hold": {"hold_at": 0.5}}
         result = simulate_rate_trajectory(
-            key, series_len=100, system_name="saddle_node",
+            key,
+            series_len=100,
+            system_name="saddle_node",
             schedule=schedule_cfg,
         )
         assert result is not None
         full, part = result
         assert full.trajectory.shape[0] == 100
+
+    def test_rate_amoc_with_schedule(self):
+        """AMOC rate system should accept schedule."""
+        from tipbox.rate.rate_simulator import simulate_rate_trajectory
+
+        key = jax.random.PRNGKey(42)
+        schedule_cfg = {"mode": "ramp_and_hold", "ramp_and_hold": {"hold_at": 0.5}}
+        result = simulate_rate_trajectory(
+            key,
+            series_len=100,
+            system_name="amoc",
+            schedule=schedule_cfg,
+        )
+        assert result is not None
+        full, part = result
+        assert full.trajectory.shape[0] == 100
+        assert "param_normalized" in full.metadata
 
     def test_direct_mode_full_equals_part(self):
         """In direct mode, full and part results should be identical."""
@@ -961,7 +1061,9 @@ class TestScheduleDirectMode:
         key = jax.random.PRNGKey(42)
         schedule_cfg = {"mode": "ramp_and_hold", "ramp_and_hold": {"hold_at": 0.5}}
         result = simulate_real_bifurcation_trajectory(
-            key, series_len=100, system_name="may_harvesting",
+            key,
+            series_len=100,
+            system_name="may_harvesting",
             schedule=schedule_cfg,
         )
         assert result is not None
@@ -975,7 +1077,9 @@ class TestScheduleDirectMode:
         key = jax.random.PRNGKey(42)
         schedule_cfg = {"mode": "constant", "constant": {"value": 0.0}}
         result = simulate_real_bifurcation_trajectory(
-            key, series_len=100, system_name="may_harvesting",
+            key,
+            series_len=100,
+            system_name="may_harvesting",
             schedule=schedule_cfg,
         )
         assert result is not None
@@ -991,8 +1095,10 @@ class TestScheduleDirectMode:
         key = jax.random.PRNGKey(42)
         schedule_cfg = {"mode": "ramp_and_hold", "ramp_and_hold": {"hold_at": 0.5}}
         full, part, info = generate(
-            key, tipping_type="r_saddle_node",
-            schedule=schedule_cfg, num_timesteps=100,
+            key,
+            tipping_type="r_saddle_node",
+            schedule=schedule_cfg,
+            num_timesteps=100,
         )
         assert full.trajectory.shape[0] == 100
         assert "param_normalized" in full.metadata
@@ -1004,8 +1110,10 @@ class TestScheduleDirectMode:
         key = jax.random.PRNGKey(42)
         schedule_cfg = {"mode": "ramp_and_hold", "ramp_and_hold": {"hold_at": 0.5}}
         full, part, info = generate(
-            key, tipping_type="b_harvesting",
-            schedule=schedule_cfg, num_timesteps=100,
+            key,
+            tipping_type="b_harvesting",
+            schedule=schedule_cfg,
+            num_timesteps=100,
         )
         assert full.trajectory.shape[0] == 100
         assert "param_normalized" in full.metadata

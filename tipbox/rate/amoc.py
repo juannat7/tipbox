@@ -4,6 +4,7 @@ AMOC 2-box model, rate-induced tipping (Ritchie et al. 2023; Alkhayuon et al. 20
 Port from dews/experiments/amoc_boxmodel.py. H(t) = ramp then plateau (forcing_ramp).
 Tip threshold: transition during ramp phase (t < 0).
 """
+
 from dataclasses import dataclass
 from typing import Optional
 
@@ -47,49 +48,33 @@ def _fn_ft(H):
 
 def _amoc_strength_sv(SN):
     """AMOC strength Q in Sv."""
-    return (
-        _lambda
-        * (_alpha * (_Ts - _T0) + _beta * (SN / 100.0 - _SS / 100.0))
-        / (1.0 + _lambda * _alpha * _mu)
-        * 1e-6
-    )
+    return _lambda * (_alpha * (_Ts - _T0) + _beta * (SN / 100.0 - _SS / 100.0)) / (1.0 + _lambda * _alpha * _mu) * 1e-6
 
 
 def _boxmodel_drift(state: jnp.ndarray, H_val) -> jnp.ndarray:
     """Drift (RHS) of 2D AMOC box model. state = [SN, ST], H_val = freshwater hosing (Sv), can be JAX scalar."""
     SN, ST = state[0], state[1]
-    SIP = 100.0 * (
-        _C
-        - (_VN * SN + _VT * ST + _VS * _SS + _VB * _SB) / 100.0
-        - _S0 * (_VB + _VN + _VT + _VIP + _VS)
-    ) / _VIP
+    SIP = (
+        100.0
+        * (_C - (_VN * SN + _VT * ST + _VS * _SS + _VB * _SB) / 100.0 - _S0 * (_VB + _VN + _VT + _VIP + _VS))
+        / _VIP
+    )
 
     q_sv = _amoc_strength_sv(SN)
     q = q_sv * 1e6
     aq = jnp.abs(q)
     FN, FT = _fn_ft(H_val)
 
-    z1_pos = (_Y / _VN) * (
-        q * (ST / 100.0 - SN / 100.0)
-        + _KN * (ST / 100.0 - SN / 100.0)
-        - FN * _S0
-    )
+    z1_pos = (_Y / _VN) * (q * (ST / 100.0 - SN / 100.0) + _KN * (ST / 100.0 - SN / 100.0) - FN * _S0)
     z2_pos = (_Y / _VT) * (
         q * (_gamma * _SS / 100.0 + (1.0 - _gamma) * SIP / 100.0 - ST / 100.0)
         + _KS * (_SS / 100.0 - ST / 100.0)
         + _KN * (SN / 100.0 - ST / 100.0)
         - FT * _S0
     )
-    z1_neg = (_Y / _VN) * (
-        aq * (_SB / 100.0 - SN / 100.0)
-        + _KN * (ST / 100.0 - SN / 100.0)
-        - FN * _S0
-    )
+    z1_neg = (_Y / _VN) * (aq * (_SB / 100.0 - SN / 100.0) + _KN * (ST / 100.0 - SN / 100.0) - FN * _S0)
     z2_neg = (_Y / _VT) * (
-        aq * (SN / 100.0 - ST / 100.0)
-        + _KS * (_SS / 100.0 - ST / 100.0)
-        + _KN * (SN / 100.0 - ST / 100.0)
-        - FT * _S0
+        aq * (SN / 100.0 - ST / 100.0) + _KS * (_SS / 100.0 - ST / 100.0) + _KN * (SN / 100.0 - ST / 100.0) - FT * _S0
     )
     z1 = jnp.where(q >= 0, z1_pos, z1_neg)
     z2 = jnp.where(q >= 0, z2_pos, z2_neg)
@@ -125,7 +110,9 @@ class AMOCRateConfig:
     sigma_ST: float = 1e-4
     sigma_ic: float = 0.01
     dt: float = 5.0  # Output time step (years); we subsample to this from the integration grid
-    dt_inner: float = 0.2  # Fixed-step RK4 integration step (years). Not adaptive RK45; small fixed step then subsample is standard.
+    dt_inner: float = (
+        0.2  # Fixed-step RK4 integration step (years). Not adaptive RK45; small fixed step then subsample is standard.
+    )
     t_start: float = -2505.0  # Need ≥501 points before t=0 for extract_segment(series_len=500, steps_before=1)
     t_end: float = 3200.0
     # Tipped when Q (AMOC strength in Sv) < 0 (collapsed / reversed).
@@ -179,14 +166,13 @@ class AMOCRateModel(BoxModel):
         noise: jnp.ndarray,
     ) -> jnp.ndarray:
         """Single RK4 integrator: state_next = rk4_step(...) + noise_scale * noise_t. Use noise_scale=0 for deterministic."""
+
         def step(state, inputs):
             h_cur, h_mid, h_next, noise_t = inputs
             state_next = _rk4_step(state, h_cur, h_mid, h_next, dt) + noise_scale * noise_t
             return state_next, state_next
 
-        _, states = lax.scan(
-            step, initial_state, (H_cur, H_mid, H_next, noise)
-        )
+        _, states = lax.scan(step, initial_state, (H_cur, H_mid, H_next, noise))
         return jnp.concatenate([initial_state[None, :], states], axis=0)
 
     def simulate(
@@ -194,20 +180,42 @@ class AMOCRateModel(BoxModel):
         key: jax.random.PRNGKey,
         total_len: int,
         sigma_tilde: float = 0.01,
+        schedule=None,
         initial_state: Optional[jnp.ndarray] = None,
         noise: Optional[jnp.ndarray] = None,
         null_simulation: bool = False,
     ):
-        """Simulate rate-induced AMOC. Fixed time range [t_start, t_end]; total_len ignored. Both branches use RK4."""
+        """Simulate rate-induced AMOC.
+
+        If ``schedule`` is provided, uses direct mode with exact ``total_len`` output points.
+        Otherwise uses legacy internal forcing over fixed time range [t_start, t_end].
+        """
         key_noise, _ = jax.random.split(key)
 
         dt_out = self._config.dt
         dt_inner = self._config.dt_inner
-        time_inner = jnp.arange(self._config.t_start, self._config.t_end, dt_inner)
-        H_inner = self._H_schedule(time_inner, null_simulation)
-        t_mid = time_inner[:-1] + 0.5 * dt_inner
-        r = self._config.r_slow if null_simulation else self._config.r_fast
-        H_mid = _forcing_ramp(t_mid, r, self._config.dH, self._config.H0)
+        step = max(1, int(dt_out / dt_inner))
+
+        if schedule is not None:
+            from ..bifurcation.schedule import resolve_schedule_for_simulation
+
+            H_inner, _ = resolve_schedule_for_simulation(
+                schedule,
+                total_len,
+                self._config.H0,
+                self._config.H0 + self._config.dH,
+                upsample_factor=step,
+            )
+            total_time = total_len * dt_out
+            time_inner = jnp.linspace(self._config.t_start, self._config.t_start + total_time, len(H_inner))
+            H_mid = (H_inner[:-1] + H_inner[1:]) / 2.0
+        else:
+            time_inner = jnp.arange(self._config.t_start, self._config.t_end, dt_inner)
+            H_inner = self._H_schedule(time_inner, null_simulation)
+            t_mid = time_inner[:-1] + 0.5 * dt_inner
+            r = self._config.r_slow if null_simulation else self._config.r_fast
+            H_mid = _forcing_ramp(t_mid, r, self._config.dH, self._config.H0)
+
         H_cur, H_next = H_inner[:-1], H_inner[1:]
 
         if initial_state is None:
@@ -221,24 +229,33 @@ class AMOCRateModel(BoxModel):
             noise_scale = jnp.zeros(2)
             noise_arr = jnp.zeros((n_steps, 2))
         else:
-            noise_scale = jnp.array([
-                self._config.sigma_SN * jnp.sqrt(dt_inner) * sigma_tilde,
-                self._config.sigma_ST * jnp.sqrt(dt_inner) * sigma_tilde,
-            ])
+            noise_scale = jnp.array(
+                [
+                    self._config.sigma_SN * jnp.sqrt(dt_inner) * sigma_tilde,
+                    self._config.sigma_ST * jnp.sqrt(dt_inner) * sigma_tilde,
+                ]
+            )
             noise_arr = jax.random.normal(key_noise, (n_steps, 2)) if noise is None else jnp.asarray(noise)
-        path_inner = self._simulate_path(
-            H_cur, H_mid, H_next, dt_inner, initial_state, noise_scale, noise_arr
-        )
+        path_inner = self._simulate_path(H_cur, H_mid, H_next, dt_inner, initial_state, noise_scale, noise_arr)
 
-        step = max(1, int(dt_out / dt_inner))
-        time = time_inner[::step]
-        path = path_inner[::step]
-        H_t = H_inner[::step]
+        if schedule is not None:
+            indices = jnp.arange(0, path_inner.shape[0], step)
+            time = time_inner[indices]
+            path = path_inner[indices]
+            H_t = H_inner[indices]
+        else:
+            time = time_inner[::step]
+            path = path_inner[::step]
+            H_t = H_inner[::step]
 
         Q_t = _amoc_strength_sv(path[:, 0])
         trajectory = Q_t  # (T,)
         sigma_float = float(jnp.max(noise_scale))
         return time, trajectory, H_t, sigma_float, path
+
+    def normalize_param_values(self, param_values):
+        """Normalize hosing values: 0 at H0, 1 at H0 + dH."""
+        return (param_values - self._config.H0) / self._config.dH
 
     def is_tipped(
         self,
