@@ -24,6 +24,7 @@ Supported schedule types:
 - fixed_slope: Ramp with fixed slope to a level, then hold (must start at 0 after clipping)
 - constant: Fixed value (useful for null simulations, but must be 0 for tipping trajectories)
 - piecewise_linear: Concatenated linear segments (first segment must start at 0)
+- bezier_and_hold: Bezier ramp to a level, then hold constant
 - from_array: Direct array passthrough with interpolation (must start at 0)
 
 Usage:
@@ -39,6 +40,7 @@ Usage:
 """
 
 from collections.abc import Callable
+from math import comb
 from typing import Any, Protocol
 
 import jax.numpy as jnp
@@ -277,6 +279,93 @@ def piecewise_linear(segments: list[dict[str, float]]) -> ParameterSchedule:
     return schedule
 
 
+def _bezier_curve(levels: list[float], t_values: jnp.ndarray) -> jnp.ndarray:
+    """Evaluate a 1D Bezier curve at t_values."""
+    degree = len(levels) - 1
+    if degree < 1:
+        raise ValueError("Bezier curve requires at least 2 control points")
+
+    result = jnp.zeros_like(t_values)
+    for i, level in enumerate(levels):
+        basis = comb(degree, i) * (1.0 - t_values) ** (degree - i) * (t_values**i)
+        result = result + level * basis
+    return result
+
+
+def bezier_and_hold(
+    hold_at: float,
+    final_level: float = 1.0,
+    control_levels: list[float] | None = None,
+    start: float = 0.0,
+    max_abs_slope: float | None = None,
+) -> ParameterSchedule:
+    """Create a Bezier ramp to final_level at hold_at, then hold.
+
+    Control points are equally spaced in time over [0, hold_at]. Values are
+    constrained to [0, final_level] to avoid negative forcing and overshoot.
+    """
+    if not 0 < hold_at <= 1:
+        raise ValueError("hold_at must be in (0, 1]")
+    if final_level < 0:
+        raise ValueError("final_level must be non-negative")
+    if start < 0:
+        raise ValueError("start must be non-negative")
+    if start > final_level:
+        raise ValueError("start must be <= final_level")
+    if max_abs_slope is not None and max_abs_slope <= 0:
+        raise ValueError("max_abs_slope must be positive")
+
+    interior = list(control_levels) if control_levels is not None else [0.5 * (start + final_level)]
+    levels = [float(start), *[float(v) for v in interior], float(final_level)]
+
+    # Prevent overshoot and negative values.
+    levels = [float(min(max(v, 0.0), final_level)) for v in levels]
+    levels[0] = float(start)
+    levels[-1] = float(final_level)
+
+    n_points = len(levels)
+    if n_points < 2:
+        raise ValueError("Need at least 2 Bezier points")
+
+    if max_abs_slope is not None:
+        if abs(final_level - start) > max_abs_slope * hold_at:
+            raise ValueError("max_abs_slope is too small to connect start to final_level within hold_at")
+
+        dt_cp = hold_at / float(n_points - 1)
+        max_delta = max_abs_slope * dt_cp
+
+        for i in range(1, n_points - 1):
+            remaining = n_points - 1 - i
+            lower = max(
+                0.0,
+                levels[i - 1] - max_delta,
+                final_level - remaining * max_delta,
+            )
+            upper = min(
+                final_level,
+                levels[i - 1] + max_delta,
+                final_level + remaining * max_delta,
+            )
+            if lower > upper:
+                midpoint = 0.5 * (lower + upper)
+                lower = midpoint
+                upper = midpoint
+            levels[i] = float(min(max(levels[i], lower), upper))
+
+    def schedule(n_steps: int) -> jnp.ndarray:
+        ramp_steps = max(int(n_steps * hold_at), 1)
+        hold_steps = n_steps - ramp_steps
+
+        t = jnp.linspace(0.0, 1.0, ramp_steps)
+        ramp = _bezier_curve(levels, t)
+        ramp = jnp.clip(ramp, 0.0, final_level)
+
+        hold = jnp.full(hold_steps, final_level)
+        return jnp.concatenate([ramp, hold])
+
+    return schedule
+
+
 def from_array(values: jnp.ndarray) -> ParameterSchedule:
     """Create a schedule from a pre-computed array.
 
@@ -310,6 +399,7 @@ SCHEDULES: dict[str, Callable[..., ParameterSchedule]] = {
     "fixed_slope": fixed_slope,
     "constant": constant,
     "piecewise_linear": piecewise_linear,
+    "bezier_and_hold": bezier_and_hold,
     "from_array": from_array,
 }
 

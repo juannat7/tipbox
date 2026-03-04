@@ -90,6 +90,7 @@ def generate(
             - ramp_and_hold: Ramp to param_level at hold_at, then hold
             - constant: Fixed value (useful for null simulations)
             - piecewise_linear: Concatenated linear segments
+            - bezier_and_hold: Bezier ramp to final level at hold_at, then hold
             - from_array: Direct array passthrough
 
     Returns
@@ -154,9 +155,7 @@ def generate(
         # Rate-induced tipping
         rate_system = system_spec.rate_system
         if rate_system is None:
-            raise ValueError(
-                f"Rate system '{system_name}' missing rate_system specification"
-            )
+            raise ValueError(f"Rate system '{system_name}' missing rate_system specification")
 
         # Extract schedule to pass explicitly (not via **generate_kwargs)
         schedule = generate_kwargs.pop("schedule", None)
