@@ -39,6 +39,7 @@ Usage:
     })
 """
 
+import random
 from collections.abc import Callable
 from math import comb
 from typing import Any, Protocol
@@ -292,17 +293,88 @@ def _bezier_curve(levels: list[float], t_values: jnp.ndarray) -> jnp.ndarray:
     return result
 
 
+def _resolve_control_levels(
+    control_levels: "list[float] | dict[str, Any] | None",
+    start: float,
+    final_level: float,
+) -> list[float]:
+    """Resolve control_levels to a concrete list of floats.
+
+    Accepts:
+    - ``None``: single midpoint default.
+    - ``list[float]``: used as-is.
+    - ``dict``: sample ``num_levels`` values uniformly from ``value_range``.
+      Keys:
+        num_levels (int, required): number of interior control levels (>= 1).
+        value_range ([lo, hi], required): sampling bounds.
+        relative_to_final (bool, default False): if True, multiply
+            value_range entries by ``final_level`` before sampling.
+        seed (int | None, default None): RNG seed for reproducibility.
+            When None, a fresh random sample is drawn each call.
+    """
+    if control_levels is None:
+        return [0.5 * (start + final_level)]
+
+    if isinstance(control_levels, list):
+        return list(control_levels)
+
+    if not isinstance(control_levels, dict):
+        raise TypeError(f"control_levels must be list, dict, or None, got {type(control_levels).__name__}")
+
+    # Dict-based sampling path
+    if "num_levels" not in control_levels:
+        raise ValueError("control_levels dict must contain 'num_levels'")
+    if "value_range" not in control_levels:
+        raise ValueError("control_levels dict must contain 'value_range'")
+
+    num = control_levels["num_levels"]
+    if not isinstance(num, int) or num < 1:
+        raise ValueError(f"num_levels must be an integer >= 1, got {num}")
+
+    vr = control_levels["value_range"]
+    if not (isinstance(vr, (list, tuple)) and len(vr) == 2):
+        raise ValueError(f"value_range must be [lo, hi], got {vr}")
+
+    lo, hi = float(vr[0]), float(vr[1])
+    if lo > hi:
+        raise ValueError(f"value_range[0] must be <= value_range[1], got [{lo}, {hi}]")
+
+    if control_levels.get("relative_to_final", False):
+        lo *= final_level
+        hi *= final_level
+
+    seed = control_levels.get("seed", None)
+    rng = random.Random(seed)
+    return [rng.uniform(lo, hi) for _ in range(num)]
+
+
 def bezier_and_hold(
     hold_at: float,
     final_level: float = 1.0,
-    control_levels: list[float] | None = None,
+    control_levels: "list[float] | dict[str, Any] | None" = None,
     start: float = 0.0,
     max_abs_slope: float | None = None,
+    smooth_hold: bool = True,
 ) -> ParameterSchedule:
     """Create a Bezier ramp to final_level at hold_at, then hold.
 
     Control points are equally spaced in time over [0, hold_at]. Values are
     constrained to [0, final_level] to avoid negative forcing and overshoot.
+
+    Args:
+        hold_at: Fraction of timeline (0, 1] when hold begins.
+        final_level: Value to ramp to and hold.
+        control_levels: Interior Bezier control levels. Accepts:
+            - list[float]: explicit values.
+            - dict: sampled controls with keys ``num_levels``, ``value_range``,
+              optional ``relative_to_final`` (bool, default False),
+              optional ``seed`` (int | None, default None for stochastic).
+            - None: single midpoint default.
+        start: Starting value (must be <= final_level).
+        max_abs_slope: Optional cap on realized slope magnitude.
+        smooth_hold: If True (default), duplicate the final control point so
+            the Bezier tangent is ~zero at the hold boundary (C1-smooth join).
+            If False, the ramp may have non-zero slope entering the hold.
     """
     if not 0 < hold_at <= 1:
         raise ValueError("hold_at must be in (0, 1]")
@@ -315,13 +387,19 @@ def bezier_and_hold(
     if max_abs_slope is not None and max_abs_slope <= 0:
         raise ValueError("max_abs_slope must be positive")
 
-    interior = list(control_levels) if control_levels is not None else [0.5 * (start + final_level)]
+    interior = _resolve_control_levels(control_levels, start, final_level)
     levels = [float(start), *[float(v) for v in interior], float(final_level)]
 
     # Prevent overshoot and negative values.
     levels = [float(min(max(v, 0.0), final_level)) for v in levels]
     levels[0] = float(start)
     levels[-1] = float(final_level)
+
+    # Optionally add an extra terminal control point equal to final_level.
+    # This forces the Bezier derivative to zero at t=1, creating a smooth
+    # (C1) transition into the constant hold regime.
+    if smooth_hold:
+        levels = levels + [float(final_level)]
 
     n_points = len(levels)
     if n_points < 2:

@@ -328,6 +328,63 @@ class TestBezierAndHoldSchedule:
         with pytest.raises(ValueError, match="too small"):
             bezier_and_hold(hold_at=0.5, final_level=1.0, start=0.0, max_abs_slope=1.0)
 
+    def test_smooth_hold_near_zero_terminal_slope(self):
+        """With smooth_hold=True (default), ramp slope near hold_at should be ~zero."""
+        sched = bezier_and_hold(
+            hold_at=0.7,
+            final_level=1.0,
+            start=0.0,
+            control_levels=[0.3, 0.8],
+            smooth_hold=True,
+        )
+        values = np.array(sched(2000))
+        hold_idx = int(2000 * 0.7)
+        ramp_end = values[max(hold_idx - 10, 0) : hold_idx]
+        dt = 1.0 / (len(values) - 1)
+        slopes = np.abs(np.diff(ramp_end) / dt)
+        mid_idx = hold_idx // 2
+        mid_slopes = np.abs(np.diff(values[mid_idx : mid_idx + 10]) / dt)
+        assert slopes.mean() < mid_slopes.mean() * 0.3
+
+    def test_smooth_hold_false_preserves_old_behavior(self):
+        """smooth_hold=False should still produce valid schedule."""
+        sched = bezier_and_hold(
+            hold_at=0.7,
+            final_level=1.0,
+            start=0.0,
+            control_levels=[0.2, 0.85, 0.55],
+            smooth_hold=False,
+        )
+        values = np.array(sched(1000))
+        hold_idx = int(1000 * 0.7)
+        assert np.isclose(values[0], 0.0, atol=1e-6)
+        assert np.isclose(values[-1], 1.0, atol=1e-6)
+        assert np.allclose(values[hold_idx:], 1.0, atol=1e-6)
+
+    def test_dict_control_levels_with_seed(self):
+        """Dict control_levels with seed produces deterministic schedule."""
+        kwargs = dict(
+            hold_at=0.7,
+            final_level=1.0,
+            start=0.0,
+            control_levels={"num_levels": 4, "value_range": [0.1, 0.9], "seed": 42},
+        )
+        v1 = np.array(bezier_and_hold(**kwargs)(1000))
+        v2 = np.array(bezier_and_hold(**kwargs)(1000))
+        assert np.allclose(v1, v2)
+
+    def test_dict_control_levels_no_seed_varies(self):
+        """Dict control_levels without seed produces different schedules."""
+        kwargs = dict(
+            hold_at=0.7,
+            final_level=1.0,
+            start=0.0,
+            control_levels={"num_levels": 5, "value_range": [0.0, 1.0]},
+        )
+        results = [np.array(bezier_and_hold(**kwargs)(1000)) for _ in range(5)]
+        all_same = all(np.allclose(results[0], r) for r in results[1:])
+        assert not all_same
+
 
 class TestFromArraySchedule:
     """Tests for from_array() factory function."""
