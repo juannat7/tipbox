@@ -284,7 +284,7 @@ class TestBezierAndHoldSchedule:
             hold_at=0.7,
             final_level=1.0,
             start=0.0,
-            control_levels=[0.2, 0.85, 0.55],
+            control_points=[0.2, 0.85, 0.55],
         )
         values = sched(1000)
 
@@ -301,7 +301,7 @@ class TestBezierAndHoldSchedule:
             hold_at=0.8,
             final_level=1.0,
             start=0.0,
-            control_levels=[0.85, 0.76, 0.42, 0.26],
+            control_points=[0.85, 0.76, 0.42, 0.26],
         )
         values = np.array(sched(1000))
         hold_idx = int(1000 * 0.8)
@@ -315,7 +315,7 @@ class TestBezierAndHoldSchedule:
             hold_at=0.9,
             final_level=1.0,
             start=0.0,
-            control_levels=[1.0, 0.0, 1.0, 0.0, 1.0],
+            control_points=[1.0, 0.0, 1.0, 0.0, 1.0],
             max_abs_slope=max_abs_slope,
         )
         values = np.array(sched(4000))
@@ -334,7 +334,7 @@ class TestBezierAndHoldSchedule:
             hold_at=0.7,
             final_level=1.0,
             start=0.0,
-            control_levels=[0.3, 0.8],
+            control_points=[0.3, 0.8],
             smooth_hold=True,
         )
         values = np.array(sched(2000))
@@ -352,7 +352,7 @@ class TestBezierAndHoldSchedule:
             hold_at=0.7,
             final_level=1.0,
             start=0.0,
-            control_levels=[0.2, 0.85, 0.55],
+            control_points=[0.2, 0.85, 0.55],
             smooth_hold=False,
         )
         values = np.array(sched(1000))
@@ -361,25 +361,25 @@ class TestBezierAndHoldSchedule:
         assert np.isclose(values[-1], 1.0, atol=1e-6)
         assert np.allclose(values[hold_idx:], 1.0, atol=1e-6)
 
-    def test_dict_control_levels_with_seed(self):
-        """Dict control_levels with seed produces deterministic schedule."""
+    def test_dict_control_points_with_seed(self):
+        """Dict control_points with seed produces deterministic schedule."""
         kwargs = dict(
             hold_at=0.7,
             final_level=1.0,
             start=0.0,
-            control_levels={"num_levels": 4, "value_range": [0.1, 0.9], "seed": 42},
+            control_points={"num_points": 4, "value_range": [0.1, 0.9], "seed": 42},
         )
         v1 = np.array(bezier_and_hold(**kwargs)(1000))
         v2 = np.array(bezier_and_hold(**kwargs)(1000))
         assert np.allclose(v1, v2)
 
-    def test_dict_control_levels_no_seed_varies(self):
-        """Dict control_levels without seed produces different schedules."""
+    def test_dict_control_points_no_seed_varies(self):
+        """Dict control_points without seed produces different schedules."""
         kwargs = dict(
             hold_at=0.7,
             final_level=1.0,
             start=0.0,
-            control_levels={"num_levels": 5, "value_range": [0.0, 1.0]},
+            control_points={"num_points": 5, "value_range": [0.0, 1.0]},
         )
         results = [np.array(bezier_and_hold(**kwargs)(1000)) for _ in range(5)]
         all_same = all(np.allclose(results[0], r) for r in results[1:])

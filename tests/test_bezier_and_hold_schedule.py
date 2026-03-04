@@ -15,7 +15,7 @@ class TestBezierAndHoldSchedule:
             hold_at=0.7,
             final_level=1.0,
             start=0.0,
-            control_levels=[0.2, 0.85, 0.55],
+            control_points=[0.2, 0.85, 0.55],
         )
         values = sched(1000)
 
@@ -32,7 +32,7 @@ class TestBezierAndHoldSchedule:
             hold_at=0.8,
             final_level=1.0,
             start=0.0,
-            control_levels=[0.85, 0.76, 0.42, 0.26],
+            control_points=[0.85, 0.76, 0.42, 0.26],
         )
         values = np.array(sched(1000))
         hold_idx = int(1000 * 0.8)
@@ -46,7 +46,7 @@ class TestBezierAndHoldSchedule:
             hold_at=0.9,
             final_level=1.0,
             start=0.0,
-            control_levels=[1.0, 0.0, 1.0, 0.0, 1.0],
+            control_points=[1.0, 0.0, 1.0, 0.0, 1.0],
             max_abs_slope=max_abs_slope,
         )
         values = np.array(sched(4000))
@@ -69,7 +69,7 @@ class TestSmoothHold:
             hold_at=0.7,
             final_level=1.0,
             start=0.0,
-            control_levels=[0.3, 0.8],
+            control_points=[0.3, 0.8],
             smooth_hold=True,
         )
         values = np.array(sched(2000))
@@ -89,7 +89,7 @@ class TestSmoothHold:
             hold_at=0.8,
             final_level=1.0,
             start=0.0,
-            control_levels=[0.9, 0.95],
+            control_points=[0.9, 0.95],
             smooth_hold=True,
         )
         values = np.array(sched(2000))
@@ -103,7 +103,7 @@ class TestSmoothHold:
             hold_at=0.7,
             final_level=1.0,
             start=0.0,
-            control_levels=levels,
+            control_points=levels,
             smooth_hold=False,
         )
         values = np.array(sched_old_style(1000))
@@ -118,7 +118,7 @@ class TestSmoothHold:
             hold_at=0.7,
             final_level=1.0,
             start=0.0,
-            control_levels=[0.3, 0.8],
+            control_points=[0.3, 0.8],
         )
         values = np.array(sched(2000))
         hold_idx = int(2000 * 0.7)
@@ -138,7 +138,7 @@ class TestDictControlLevels:
             hold_at=0.7,
             final_level=1.0,
             start=0.0,
-            control_levels={"num_levels": 4, "value_range": [0.1, 0.9], "seed": 42},
+            control_points={"num_points": 4, "value_range": [0.1, 0.9], "seed": 42},
         )
         values = np.array(sched(1000))
         hold_idx = int(1000 * 0.7)
@@ -155,8 +155,8 @@ class TestDictControlLevels:
             hold_at=0.7,
             final_level=final,
             start=0.0,
-            control_levels={
-                "num_levels": 3,
+            control_points={
+                "num_points": 3,
                 "value_range": [0.1, 0.9],
                 "relative_to_final": True,
                 "seed": 123,
@@ -176,7 +176,7 @@ class TestDictControlLevels:
             hold_at=0.7,
             final_level=1.0,
             start=0.0,
-            control_levels={"num_levels": 5, "value_range": [0.0, 1.0], "seed": 99},
+            control_points={"num_points": 5, "value_range": [0.0, 1.0], "seed": 99},
         )
         v1 = np.array(bezier_and_hold(**kwargs)(1000))
         v2 = np.array(bezier_and_hold(**kwargs)(1000))
@@ -188,19 +188,19 @@ class TestDictControlLevels:
             hold_at=0.7,
             final_level=1.0,
             start=0.0,
-            control_levels={"num_levels": 5, "value_range": [0.0, 1.0]},
+            control_points={"num_points": 5, "value_range": [0.0, 1.0]},
         )
         # Generate several and check they're not all identical
         results = [np.array(bezier_and_hold(**kwargs)(1000)) for _ in range(5)]
         all_same = all(np.allclose(results[0], r) for r in results[1:])
         assert not all_same, "Expected different schedules without seed"
 
-    def test_dict_missing_num_levels_raises(self):
-        """Missing num_levels in dict should raise ValueError."""
-        with pytest.raises(ValueError, match="num_levels"):
+    def test_dict_missing_num_points_raises(self):
+        """Missing num_points in dict should raise ValueError."""
+        with pytest.raises(ValueError, match="num_points"):
             bezier_and_hold(
                 hold_at=0.7,
-                control_levels={"value_range": [0.0, 1.0]},
+                control_points={"value_range": [0.0, 1.0]},
             )
 
     def test_dict_missing_value_range_raises(self):
@@ -208,15 +208,15 @@ class TestDictControlLevels:
         with pytest.raises(ValueError, match="value_range"):
             bezier_and_hold(
                 hold_at=0.7,
-                control_levels={"num_levels": 3},
+                control_points={"num_points": 3},
             )
 
-    def test_dict_invalid_num_levels_raises(self):
-        """num_levels < 1 should raise ValueError."""
-        with pytest.raises(ValueError, match="num_levels"):
+    def test_dict_invalid_num_points_raises(self):
+        """num_points < 1 should raise ValueError."""
+        with pytest.raises(ValueError, match="num_points"):
             bezier_and_hold(
                 hold_at=0.7,
-                control_levels={"num_levels": 0, "value_range": [0.0, 1.0]},
+                control_points={"num_points": 0, "value_range": [0.0, 1.0]},
             )
 
     def test_dict_invalid_value_range_order_raises(self):
@@ -224,10 +224,10 @@ class TestDictControlLevels:
         with pytest.raises(ValueError, match="value_range"):
             bezier_and_hold(
                 hold_at=0.7,
-                control_levels={"num_levels": 3, "value_range": [0.9, 0.1]},
+                control_points={"num_points": 3, "value_range": [0.9, 0.1]},
             )
 
     def test_dict_invalid_type_raises(self):
-        """Non-list/dict/None control_levels should raise TypeError."""
-        with pytest.raises(TypeError, match="control_levels"):
-            bezier_and_hold(hold_at=0.7, control_levels="bad")
+        """Non-list/dict/None control_points should raise TypeError."""
+        with pytest.raises(TypeError, match="control_points"):
+            bezier_and_hold(hold_at=0.7, control_points="bad")

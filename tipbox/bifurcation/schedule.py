@@ -280,58 +280,58 @@ def piecewise_linear(segments: list[dict[str, float]]) -> ParameterSchedule:
     return schedule
 
 
-def _bezier_curve(levels: list[float], t_values: jnp.ndarray) -> jnp.ndarray:
+def _bezier_curve(points: list[float], t_values: jnp.ndarray) -> jnp.ndarray:
     """Evaluate a 1D Bezier curve at t_values."""
-    degree = len(levels) - 1
+    degree = len(points) - 1
     if degree < 1:
         raise ValueError("Bezier curve requires at least 2 control points")
 
     result = jnp.zeros_like(t_values)
-    for i, level in enumerate(levels):
+    for i, pt in enumerate(points):
         basis = comb(degree, i) * (1.0 - t_values) ** (degree - i) * (t_values**i)
-        result = result + level * basis
+        result = result + pt * basis
     return result
 
 
-def _resolve_control_levels(
-    control_levels: "list[float] | dict[str, Any] | None",
+def _resolve_control_points(
+    control_points: "list[float] | dict[str, Any] | None",
     start: float,
     final_level: float,
 ) -> list[float]:
-    """Resolve control_levels to a concrete list of floats.
+    """Resolve control_points to a concrete list of floats.
 
     Accepts:
     - ``None``: single midpoint default.
     - ``list[float]``: used as-is.
-    - ``dict``: sample ``num_levels`` values uniformly from ``value_range``.
+    - ``dict``: sample ``num_points`` values uniformly from ``value_range``.
       Keys:
-        num_levels (int, required): number of interior control levels (>= 1).
+        num_points (int, required): number of interior control points (>= 1).
         value_range ([lo, hi], required): sampling bounds.
         relative_to_final (bool, default False): if True, multiply
             value_range entries by ``final_level`` before sampling.
         seed (int | None, default None): RNG seed for reproducibility.
             When None, a fresh random sample is drawn each call.
     """
-    if control_levels is None:
+    if control_points is None:
         return [0.5 * (start + final_level)]
 
-    if isinstance(control_levels, list):
-        return list(control_levels)
+    if isinstance(control_points, list):
+        return list(control_points)
 
-    if not isinstance(control_levels, dict):
-        raise TypeError(f"control_levels must be list, dict, or None, got {type(control_levels).__name__}")
+    if not isinstance(control_points, dict):
+        raise TypeError(f"control_points must be list, dict, or None, got {type(control_points).__name__}")
 
     # Dict-based sampling path
-    if "num_levels" not in control_levels:
-        raise ValueError("control_levels dict must contain 'num_levels'")
-    if "value_range" not in control_levels:
-        raise ValueError("control_levels dict must contain 'value_range'")
+    if "num_points" not in control_points:
+        raise ValueError("control_points dict must contain 'num_points'")
+    if "value_range" not in control_points:
+        raise ValueError("control_points dict must contain 'value_range'")
 
-    num = control_levels["num_levels"]
+    num = control_points["num_points"]
     if not isinstance(num, int) or num < 1:
-        raise ValueError(f"num_levels must be an integer >= 1, got {num}")
+        raise ValueError(f"num_points must be an integer >= 1, got {num}")
 
-    vr = control_levels["value_range"]
+    vr = control_points["value_range"]
     if not (isinstance(vr, (list, tuple)) and len(vr) == 2):
         raise ValueError(f"value_range must be [lo, hi], got {vr}")
 
@@ -339,11 +339,11 @@ def _resolve_control_levels(
     if lo > hi:
         raise ValueError(f"value_range[0] must be <= value_range[1], got [{lo}, {hi}]")
 
-    if control_levels.get("relative_to_final", False):
+    if control_points.get("relative_to_final", False):
         lo *= final_level
         hi *= final_level
 
-    seed = control_levels.get("seed", None)
+    seed = control_points.get("seed", None)
     rng = random.Random(seed)
     return [rng.uniform(lo, hi) for _ in range(num)]
 
@@ -351,7 +351,7 @@ def _resolve_control_levels(
 def bezier_and_hold(
     hold_at: float,
     final_level: float = 1.0,
-    control_levels: "list[float] | dict[str, Any] | None" = None,
+    control_points: "list[float] | dict[str, Any] | None" = None,
     start: float = 0.0,
     max_abs_slope: float | None = None,
     smooth_hold: bool = True,
@@ -364,9 +364,9 @@ def bezier_and_hold(
     Args:
         hold_at: Fraction of timeline (0, 1] when hold begins.
         final_level: Value to ramp to and hold.
-        control_levels: Interior Bezier control levels. Accepts:
+        control_points: Interior Bezier control points. Accepts:
             - list[float]: explicit values.
-            - dict: sampled controls with keys ``num_levels``, ``value_range``,
+            - dict: sampled controls with keys ``num_points``, ``value_range``,
               optional ``relative_to_final`` (bool, default False),
               optional ``seed`` (int | None, default None for stochastic).
             - None: single midpoint default.
@@ -387,55 +387,55 @@ def bezier_and_hold(
     if max_abs_slope is not None and max_abs_slope <= 0:
         raise ValueError("max_abs_slope must be positive")
 
-    interior = _resolve_control_levels(control_levels, start, final_level)
-    levels = [float(start), *[float(v) for v in interior], float(final_level)]
+    interior = _resolve_control_points(control_points, start, final_level)
+    pts = [float(start), *[float(v) for v in interior], float(final_level)]
 
     # Prevent overshoot and negative values.
-    levels = [float(min(max(v, 0.0), final_level)) for v in levels]
-    levels[0] = float(start)
-    levels[-1] = float(final_level)
+    pts = [float(min(max(v, 0.0), final_level)) for v in pts]
+    pts[0] = float(start)
+    pts[-1] = float(final_level)
 
     # Optionally add an extra terminal control point equal to final_level.
     # This forces the Bezier derivative to zero at t=1, creating a smooth
     # (C1) transition into the constant hold regime.
     if smooth_hold:
-        levels = levels + [float(final_level)]
+        pts = pts + [float(final_level)]
 
-    n_points = len(levels)
-    if n_points < 2:
+    n_pts = len(pts)
+    if n_pts < 2:
         raise ValueError("Need at least 2 Bezier points")
 
     if max_abs_slope is not None:
         if abs(final_level - start) > max_abs_slope * hold_at:
             raise ValueError("max_abs_slope is too small to connect start to final_level within hold_at")
 
-        dt_cp = hold_at / float(n_points - 1)
+        dt_cp = hold_at / float(n_pts - 1)
         max_delta = max_abs_slope * dt_cp
 
-        for i in range(1, n_points - 1):
-            remaining = n_points - 1 - i
+        for i in range(1, n_pts - 1):
+            remaining = n_pts - 1 - i
             lower = max(
                 0.0,
-                levels[i - 1] - max_delta,
+                pts[i - 1] - max_delta,
                 final_level - remaining * max_delta,
             )
             upper = min(
                 final_level,
-                levels[i - 1] + max_delta,
+                pts[i - 1] + max_delta,
                 final_level + remaining * max_delta,
             )
             if lower > upper:
                 midpoint = 0.5 * (lower + upper)
                 lower = midpoint
                 upper = midpoint
-            levels[i] = float(min(max(levels[i], lower), upper))
+            pts[i] = float(min(max(pts[i], lower), upper))
 
     def schedule(n_steps: int) -> jnp.ndarray:
         ramp_steps = max(int(n_steps * hold_at), 1)
         hold_steps = n_steps - ramp_steps
 
         t = jnp.linspace(0.0, 1.0, ramp_steps)
-        ramp = _bezier_curve(levels, t)
+        ramp = _bezier_curve(pts, t)
         ramp = jnp.clip(ramp, 0.0, final_level)
 
         hold = jnp.full(hold_steps, final_level)
