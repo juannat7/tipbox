@@ -425,10 +425,11 @@ class TestCreateSchedule:
     def test_create_linear(self):
         """Create linear schedule from dict."""
         config = {"mode": "linear", "linear": {"critical_at": 0.5}}
-        sched = create_schedule(config)
+        sched, meta = create_schedule(config)
         values = sched(100)
 
         assert np.isclose(values[50], 1.0, rtol=0.05)
+        assert meta == {}
 
     def test_create_ramp_and_hold(self):
         """Create ramp_and_hold schedule from dict."""
@@ -436,10 +437,11 @@ class TestCreateSchedule:
             "mode": "ramp_and_hold",
             "ramp_and_hold": {"hold_at": 0.5, "hold_level": 1.0},
         }
-        sched = create_schedule(config)
+        sched, meta = create_schedule(config)
         values = sched(100)
 
         assert np.allclose(values[50:], 1.0, rtol=0.02)
+        assert meta == {}
 
     def test_create_fixed_slope(self):
         """Create fixed_slope schedule from dict."""
@@ -447,7 +449,7 @@ class TestCreateSchedule:
             "mode": "fixed_slope",
             "fixed_slope": {"slope": 1.0, "hold_at": 0.7, "hold_level": 1.0},
         }
-        sched = create_schedule(config)
+        sched, meta = create_schedule(config)
         values = sched(1000)
 
         # start = 1.0 - 1.0 * 0.7 = 0.3
@@ -457,7 +459,7 @@ class TestCreateSchedule:
     def test_create_constant(self):
         """Create constant schedule from dict."""
         config = {"mode": "constant", "constant": {"value": 0.5}}
-        sched = create_schedule(config)
+        sched, meta = create_schedule(config)
         values = sched(100)
 
         assert np.allclose(values, 0.5)
@@ -465,7 +467,7 @@ class TestCreateSchedule:
     def test_create_default_mode(self):
         """Default mode should be linear."""
         config = {}
-        sched = create_schedule(config)
+        sched, meta = create_schedule(config)
         values = sched(100)
 
         # Default linear goes 0 to 1
@@ -485,7 +487,7 @@ class TestCreateSchedule:
             "linear": {"critical_at": 0.7},
             "ramp_and_hold": {"hold_at": 0.5, "hold_level": 1.0},
         }
-        sched = create_schedule(config)
+        sched, meta = create_schedule(config)
         values = sched(100)
 
         # Should use ramp_and_hold, not linear
@@ -498,25 +500,27 @@ class TestResolveSchedule:
     def test_resolve_array(self):
         """Should handle array input."""
         arr = jnp.linspace(0, 1, 100)
-        result = resolve_schedule(arr, 100)
+        result, meta = resolve_schedule(arr, 100)
         assert np.allclose(result, arr)
+        assert meta == {}
 
     def test_resolve_callable(self):
         """Should handle callable input."""
         sched = linear(critical_at=0.5)
-        result = resolve_schedule(sched, 100)
+        result, meta = resolve_schedule(sched, 100)
         assert np.isclose(result[50], 1.0, rtol=0.05)
+        assert meta == {}
 
     def test_resolve_dict(self):
         """Should handle dict input."""
         config = {"mode": "constant", "constant": {"value": 0.5}}
-        result = resolve_schedule(config, 100)
+        result, meta = resolve_schedule(config, 100)
         assert np.allclose(result, 0.5)
 
     def test_resolve_interpolation(self):
         """Should interpolate arrays to correct length."""
         arr = jnp.array([0.0, 1.0])
-        result = resolve_schedule(arr, 100)
+        result, meta = resolve_schedule(arr, 100)
         assert len(result) == 100
         assert np.isclose(result[0], 0.0)
         assert np.isclose(result[-1], 1.0)
@@ -733,7 +737,7 @@ class TestIntegrationWithGenerate:
 
         # Schedule starting at 0.3 (non-zero) should fail
         non_zero_start = jnp.linspace(0.3, 1.0, 500)
-        with pytest.raises(ValueError, match="Schedule must start at 0"):
+        with pytest.raises(ValueError, match="Schedule must start at"):
             generate(
                 rng_key,
                 tipping_type="b_fold",
@@ -1174,3 +1178,341 @@ class TestScheduleDirectMode:
         )
         assert full.trajectory.shape[0] == 100
         assert "param_normalized" in full.metadata
+
+
+# === Tests for new schedule features (v3 warmup support) ===
+
+
+class TestLinearRampSchedule:
+    """Tests for linear_ramp() factory function."""
+
+    def test_default_linear_ramp(self):
+        """Default linear_ramp should go from 0 to 1."""
+        from tipbox.bifurcation.schedule import linear_ramp
+
+        sched = linear_ramp()
+        values = sched(100)
+        assert np.isclose(values[0], 0.0)
+        assert np.isclose(values[-1], 1.0)
+        assert len(values) == 100
+
+    def test_linear_ramp_custom(self):
+        """linear_ramp with custom start/end."""
+        from tipbox.bifurcation.schedule import linear_ramp
+
+        sched = linear_ramp(start=0.3, end=0.7)
+        values = sched(100)
+        assert np.isclose(values[0], 0.3)
+        assert np.isclose(values[-1], 0.7)
+        assert len(values) == 100
+
+    def test_linear_ramp_receding(self):
+        """linear_ramp with end < start (receding from bifurcation)."""
+        from tipbox.bifurcation.schedule import linear_ramp
+
+        sched = linear_ramp(start=0.6, end=0.2)
+        values = sched(200)
+        assert np.isclose(values[0], 0.6)
+        assert np.isclose(values[-1], 0.2)
+        # Should be monotonically decreasing
+        assert np.all(np.diff(np.array(values)) <= 0)
+
+    def test_linear_ramp_via_create_schedule(self):
+        """linear_ramp should be accessible via create_schedule."""
+        cfg = {"mode": "linear_ramp", "linear_ramp": {"start": 0.5, "end": 0.8}}
+        sched, meta = create_schedule(cfg)
+        values = sched(50)
+        assert np.isclose(values[0], 0.5)
+        assert np.isclose(values[-1], 0.8)
+
+    def test_linear_ramp_registered(self):
+        """linear_ramp should be in the SCHEDULES registry."""
+        assert "linear_ramp" in schedule.SCHEDULES
+
+
+class TestValidateScheduleStartExpected:
+    """Tests for validate_schedule_start with expected_start parameter."""
+
+    def test_default_rejects_nonzero(self):
+        """Default (expected_start=0) should reject non-zero starts."""
+        from tipbox.bifurcation.schedule import validate_schedule_start
+
+        arr = jnp.linspace(0.3, 1.0, 100)
+        with pytest.raises(ValueError, match="Schedule must start at"):
+            validate_schedule_start(arr)
+
+    def test_default_accepts_zero(self):
+        """Default should accept start=0."""
+        from tipbox.bifurcation.schedule import validate_schedule_start
+
+        arr = jnp.linspace(0.0, 1.0, 100)
+        validate_schedule_start(arr)  # should not raise
+
+    def test_expected_start_nonzero(self):
+        """Should accept schedule matching expected_start."""
+        from tipbox.bifurcation.schedule import validate_schedule_start
+
+        arr = jnp.linspace(0.5, 1.0, 100)
+        validate_schedule_start(arr, expected_start=0.5)  # should not raise
+
+    def test_expected_start_mismatch(self):
+        """Should reject schedule not matching expected_start."""
+        from tipbox.bifurcation.schedule import validate_schedule_start
+
+        arr = jnp.linspace(0.3, 1.0, 100)
+        with pytest.raises(ValueError, match="Schedule must start at"):
+            validate_schedule_start(arr, expected_start=0.5)
+
+
+class TestPrepareScheduleWithWarmup:
+    """Tests for prepare_schedule_with_warmup."""
+
+    def test_no_warmup_for_zero_start(self):
+        """Schedule starting at 0 should not trigger warmup."""
+        from tipbox.bifurcation.schedule import prepare_schedule_with_warmup
+
+        cfg = {"mode": "ramp_and_hold", "ramp_and_hold": {"hold_at": 0.5}}
+        prepared = prepare_schedule_with_warmup(cfg, n_output=100)
+        assert prepared.warmup_output_steps == 0
+        assert prepared.total_output_steps == 100
+
+    def test_warmup_for_nonzero_start(self):
+        """Schedule starting at non-zero should trigger warmup."""
+        from tipbox.bifurcation.schedule import prepare_schedule_with_warmup
+
+        cfg = {
+            "mode": "linear_ramp",
+            "linear_ramp": {"start": 0.5, "end": 0.8},
+            "schedule_warmup_time": 100.0,
+        }
+        prepared = prepare_schedule_with_warmup(cfg, n_output=200, dt_sample=1.0)
+        assert prepared.warmup_output_steps == 100
+        assert prepared.total_output_steps == 300
+
+    def test_warmup_schedule_starts_at_zero(self):
+        """Preprocessed schedule should always start at 0."""
+        from tipbox.bifurcation.schedule import prepare_schedule_with_warmup
+
+        cfg = {
+            "mode": "linear_ramp",
+            "linear_ramp": {"start": 0.5, "end": 0.8},
+        }
+        prepared = prepare_schedule_with_warmup(cfg, n_output=100)
+        values = prepared.schedule(prepared.total_output_steps)
+        assert np.isclose(values[0], 0.0, atol=1e-5)
+
+    def test_warmup_ramp_approaches_start(self):
+        """Warmup ramp should approach the schedule's start value."""
+        from tipbox.bifurcation.schedule import prepare_schedule_with_warmup
+
+        target_start = 0.6
+        cfg = {
+            "mode": "linear_ramp",
+            "linear_ramp": {"start": target_start, "end": 0.8},
+            "schedule_warmup_time": 100.0,
+        }
+        prepared = prepare_schedule_with_warmup(cfg, n_output=200, dt_sample=1.0)
+        values = prepared.schedule(prepared.total_output_steps)
+        # Value at end of warmup should be close to target_start
+        ramp_end = values[prepared.warmup_output_steps - 1]
+        assert np.isclose(ramp_end, target_start, atol=0.01)
+
+    def test_warmup_disabled_when_time_zero(self):
+        """schedule_warmup_time=0 should disable warmup."""
+        from tipbox.bifurcation.schedule import prepare_schedule_with_warmup
+
+        cfg = {
+            "mode": "linear_ramp",
+            "linear_ramp": {"start": 0.5, "end": 0.8},
+            "schedule_warmup_time": 0.0,
+        }
+        prepared = prepare_schedule_with_warmup(cfg, n_output=100)
+        assert prepared.warmup_output_steps == 0
+        assert prepared.total_output_steps == 100
+
+    def test_warmup_custom_time(self):
+        """Custom schedule_warmup_time should change ramp length."""
+        from tipbox.bifurcation.schedule import prepare_schedule_with_warmup
+
+        cfg = {
+            "mode": "linear_ramp",
+            "linear_ramp": {"start": 0.3, "end": 0.7},
+            "schedule_warmup_time": 200.0,
+        }
+        prepared = prepare_schedule_with_warmup(cfg, n_output=100, dt_sample=1.0)
+        assert prepared.warmup_output_steps == 200
+        assert prepared.total_output_steps == 300
+
+    def test_warmup_dt_sample_affects_steps(self):
+        """dt_sample should scale warmup steps correctly."""
+        from tipbox.bifurcation.schedule import prepare_schedule_with_warmup
+
+        cfg = {
+            "mode": "linear_ramp",
+            "linear_ramp": {"start": 0.5, "end": 0.8},
+            "schedule_warmup_time": 100.0,
+        }
+        # dt_sample=2.0 → 50 steps for 100 time units
+        prepared = prepare_schedule_with_warmup(cfg, n_output=100, dt_sample=2.0)
+        assert prepared.warmup_output_steps == 50
+
+    def test_constant_nonzero_triggers_warmup(self):
+        """constant(0.5) for non-null should trigger warmup."""
+        from tipbox.bifurcation.schedule import prepare_schedule_with_warmup
+
+        cfg = {"mode": "constant", "constant": {"value": 0.5}}
+        prepared = prepare_schedule_with_warmup(cfg, n_output=100)
+        assert prepared.warmup_output_steps > 0
+        values = prepared.schedule(prepared.total_output_steps)
+        assert np.isclose(values[0], 0.0, atol=1e-5)
+
+
+class TestScheduleWithWarmupTrim:
+    """Tests for ScheduleWithWarmup.trim method."""
+
+    def test_trim_no_warmup(self):
+        """Trim with warmup_output_steps=0 should return input unchanged."""
+        from tipbox.bifurcation.schedule import ScheduleWithWarmup
+
+        swu = ScheduleWithWarmup(schedule=None, total_output_steps=100, warmup_output_steps=0, metadata={})
+        arr = jnp.arange(100)
+        result = swu.trim(arr)
+        assert len(result) == 100
+
+    def test_trim_single_array(self):
+        """Trim single array should return single array (not tuple)."""
+        from tipbox.bifurcation.schedule import ScheduleWithWarmup
+
+        swu = ScheduleWithWarmup(schedule=None, total_output_steps=150, warmup_output_steps=50, metadata={})
+        arr = jnp.arange(150)
+        result = swu.trim(arr)
+        assert isinstance(result, jnp.ndarray)
+        assert len(result) == 100
+        assert np.isclose(result[0], 50)
+
+    def test_trim_multiple_arrays(self):
+        """Trim multiple arrays should return tuple."""
+        from tipbox.bifurcation.schedule import ScheduleWithWarmup
+
+        swu = ScheduleWithWarmup(schedule=None, total_output_steps=200, warmup_output_steps=50, metadata={})
+        a = jnp.arange(200)
+        b = jnp.ones(200)
+        ra, rb = swu.trim(a, b)
+        assert len(ra) == 150
+        assert len(rb) == 150
+        assert np.isclose(ra[0], 50)
+
+
+class TestLinearClassified:
+    """Tests for the linear_classified schedule factory."""
+
+    def test_critical_reaches_threshold(self):
+        """Critical schedules should reach critical_threshold by the end."""
+        from tipbox.bifurcation.schedule import linear_classified
+
+        sched, meta = linear_classified(group="critical", seed=42)
+        values = sched(256)
+        assert meta["schedule_group"] == "critical"
+        assert float(values[-1]) >= 0.99  # clipped at 1.0
+
+    def test_nc_constant_stays_flat(self):
+        """NC-constant schedules should have near-zero slope."""
+        from tipbox.bifurcation.schedule import linear_classified
+
+        sched, meta = linear_classified(group="nc_constant", seed=42)
+        values = sched(256)
+        assert meta["schedule_group"] == "nc_constant"
+        assert abs(meta["schedule_angle_deg"]) <= 5.0
+        assert abs(float(values[-1]) - float(values[0])) < 0.1
+
+    def test_nc_approaching_positive_slope(self):
+        """NC-approaching should have positive slope, stay below ceiling."""
+        from tipbox.bifurcation.schedule import linear_classified
+
+        sched, meta = linear_classified(group="nc_approaching", seed=42, noncritical_ceil=0.9)
+        values = sched(256)
+        assert meta["schedule_group"] == "nc_approaching"
+        assert meta["schedule_slope"] > 0
+        assert float(values.max()) <= 0.9 + 1e-6
+
+    def test_nc_receding_negative_slope(self):
+        """NC-receding should have negative slope."""
+        from tipbox.bifurcation.schedule import linear_classified
+
+        sched, meta = linear_classified(group="nc_receding", seed=42)
+        values = sched(256)
+        assert meta["schedule_group"] == "nc_receding"
+        assert meta["schedule_slope"] < 0
+
+    def test_noncritical_umbrella(self):
+        """Noncritical should resolve to one of the nc sub-types."""
+        from tipbox.bifurcation.schedule import linear_classified
+
+        groups_seen = set()
+        for seed in range(50):
+            _, meta = linear_classified(group="noncritical", seed=seed)
+            groups_seen.add(meta["schedule_group"])
+        assert groups_seen == {"nc_constant", "nc_approaching", "nc_receding"}
+
+    def test_metadata_keys(self):
+        """Metadata should contain all expected keys."""
+        from tipbox.bifurcation.schedule import linear_classified
+
+        _, meta = linear_classified(group="critical", seed=42)
+        expected_keys = {
+            "schedule_group", "schedule_group_requested", "schedule_start",
+            "schedule_slope", "schedule_angle_deg", "schedule_end_unclipped",
+        }
+        assert expected_keys == set(meta.keys())
+
+    def test_start_min_respected(self):
+        """start_min should be respected."""
+        from tipbox.bifurcation.schedule import linear_classified
+
+        for seed in range(20):
+            _, meta = linear_classified(group="critical", start_min=0.3, seed=seed)
+            assert meta["schedule_start"] >= 0.3 - 1e-9
+
+    def test_earliest_cross_respected(self):
+        """Critical schedule should not cross 1.0 before earliest_cross_frac."""
+        from tipbox.bifurcation.schedule import linear_classified
+
+        for seed in range(20):
+            sched, meta = linear_classified(
+                group="critical", earliest_cross_frac=0.65, seed=seed,
+            )
+            values = np.array(sched(256))
+            cross_indices = np.where(values >= 1.0 - 1e-6)[0]
+            if len(cross_indices) > 0:
+                earliest_cross = cross_indices[0] / 255
+                assert earliest_cross >= 0.65 - 0.02, (
+                    f"Crossed at {earliest_cross:.2%}, expected >= 65%"
+                )
+
+    def test_via_create_schedule(self):
+        """linear_classified should work via create_schedule."""
+        cfg = {
+            "mode": "linear_classified",
+            "linear_classified": {"group": "critical", "seed": 42},
+        }
+        sched, meta = create_schedule(cfg)
+        values = sched(256)
+        assert meta["schedule_group"] == "critical"
+        assert float(values[-1]) >= 0.99
+
+    def test_invalid_group_raises(self):
+        """Unknown group should raise ValueError."""
+        from tipbox.bifurcation.schedule import linear_classified
+
+        with pytest.raises(ValueError, match="Unknown group"):
+            linear_classified(group="invalid")
+
+    def test_clipped_to_01(self):
+        """All values should be in [0, 1]."""
+        from tipbox.bifurcation.schedule import linear_classified
+
+        for group in ["critical", "nc_constant", "nc_approaching", "nc_receding"]:
+            sched, _ = linear_classified(group=group, seed=42)
+            values = sched(256)
+            assert float(values.min()) >= 0.0 - 1e-9
+            assert float(values.max()) <= 1.0 + 1e-9

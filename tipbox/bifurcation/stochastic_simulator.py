@@ -184,7 +184,7 @@ def simulate_to_bifurcation(
     n_output_samples = len(range(0, n_steps, sample_every))
 
     # Resolve schedule to array at output resolution
-    normalized = resolve_schedule(effective_schedule, n_output_samples)
+    normalized, _sched_meta = resolve_schedule(effective_schedule, n_output_samples)
 
     # Validate that non-null schedules start at 0 (null simulations use constant schedules)
     if not null_simulation:
@@ -359,22 +359,30 @@ def simulate_synthetic_bifurcation_trajectory(
     """
 
     if schedule is not None:
-        # Direct mode: simulate exact length, transition at known position
+        from .schedule import prepare_schedule_with_warmup
+
+        # Prepare schedule: prepend warmup ramp if non-zero start
+        dt_sample = simulate_kwargs.get("dt_sample", 1.0)
+        prepared = prepare_schedule_with_warmup(schedule, series_len, dt_sample=dt_sample)
+
+        # Direct mode: simulate (including warmup prefix)
         time, trajectory, param_values, sigma, normalized = simulate_to_bifurcation(
             model,
             bifurcation,
             key,
-            series_len=series_len,  # exact length, no buffer
+            series_len=prepared.total_output_steps,
             null_simulation=null_simulation,
-            schedule=schedule,
+            schedule=prepared.schedule,
             param_end_multiplier=None,  # schedule takes precedence
             **simulate_kwargs,
         )
 
+        # Trim warmup prefix from outputs
+        time, trajectory, param_values, normalized = prepared.trim(
+            time, trajectory, param_values, normalized
+        )
+
         # Estimate transition index from schedule
-        # For ramp_and_hold at 0.5, transition is at 50%
-        # For linear, we estimate based on when value reaches ~1.0
-        # This is metadata for user info, not critical for simulation
         # Find first index where normalized >= 1.0 (reaching bif_value)
         above_threshold = jnp.where(normalized >= 1.0, size=series_len, fill_value=series_len - 1)
         trans_idx = int(above_threshold[0][0]) if len(above_threshold[0]) > 0 else series_len - 1
@@ -385,6 +393,7 @@ def simulate_synthetic_bifurcation_trajectory(
             "transition_index": trans_idx,
             "param_value_transition": float(param_values[min(trans_idx, len(param_values) - 1)]),
             "param_normalized": normalized,
+            "schedule_metadata": prepared.metadata,
         }
 
         result = TrajectoryResult(

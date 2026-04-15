@@ -13,19 +13,21 @@ Normalization semantics differ by system type:
 - **Real bifurcation** (b_harvesting): normalized by bifurcation point
   (0 = param_min, 1 = bif_value). Values > 1 are possible past bifurcation.
 
-IMPORTANT: Schedules must start at 0. This is required because the burn-in phase
-equilibrates the system at param_start (normalized=0). A non-zero start would cause
-a sudden parameter jump at t=0, creating transient artifacts. Future versions may
-support non-zero starts via an extended burn-in that slowly ramps to the schedule start.
+Schedules may start at any value in [0, 1].  When a schedule starts at a non-zero
+value, use ``prepare_schedule_with_warmup`` to prepend an exponential ramp from 0.
+This lets the system equilibrate at the desired parameter level before the recorded
+trajectory begins.  The ``schedule_warmup_time`` key in the schedule dict controls
+the ramp duration (default 100.0 time-units).
 
 Supported schedule types:
-- linear: Linear ramp reaching 1.0 at a specified fraction
+- linear: Linear ramp from 0, reaching 1.0 at a specified fraction
+- linear_ramp: Linear interpolation between arbitrary start and end values
 - ramp_and_hold: Ramp from 0 to a level, then hold constant
-- fixed_slope: Ramp with fixed slope to a level, then hold (must start at 0 after clipping)
-- constant: Fixed value (useful for null simulations, but must be 0 for tipping trajectories)
-- piecewise_linear: Concatenated linear segments (first segment must start at 0)
+- fixed_slope: Ramp with fixed slope to a level, then hold
+- constant: Fixed value (useful for null simulations or stationary forcing)
+- piecewise_linear: Concatenated linear segments
 - bezier_and_hold: Bezier ramp to a level, then hold constant
-- from_array: Direct array passthrough with interpolation (must start at 0)
+- from_array: Direct array passthrough with interpolation
 
 Usage:
     # Factory function (direct)
@@ -41,6 +43,7 @@ Usage:
 
 import random
 from collections.abc import Callable
+from dataclasses import dataclass
 from math import comb
 from typing import Any, Protocol
 
@@ -96,6 +99,31 @@ def linear(critical_at: float = 1.0) -> ParameterSchedule:
     def schedule(n_steps: int) -> jnp.ndarray:
         end_value = 1.0 / critical_at
         return jnp.linspace(0.0, end_value, n_steps)
+
+    return schedule
+
+
+def linear_ramp(start: float = 0.0, end: float = 1.0) -> ParameterSchedule:
+    """Create a linear ramp schedule from start to end.
+
+    Unlike ``linear()`` which always starts at 0, this schedule supports
+    arbitrary start and end values.  Useful for validation datasets with
+    non-zero ``param_normalized_start``.
+
+    Args:
+        start: Starting normalized value.
+        end: Ending normalized value.
+
+    Returns:
+        ParameterSchedule callable.
+
+    Example:
+        >>> sched = linear_ramp(start=0.3, end=0.7)
+        >>> values = sched(100)  # linearly from 0.3 to 0.7
+    """
+
+    def schedule(n_steps: int) -> jnp.ndarray:
+        return jnp.linspace(start, end, n_steps)
 
     return schedule
 
@@ -469,10 +497,258 @@ def from_array(values: jnp.ndarray) -> ParameterSchedule:
     return schedule
 
 
+# === Schedule Warmup ===
+
+
+@dataclass
+class ScheduleWithWarmup:
+    """Preprocessed schedule with warmup metadata.
+
+    When a schedule starts at a non-zero ``param_normalized`` value, the system
+    needs time to equilibrate at that parameter level before the recorded
+    trajectory begins.  ``prepare_schedule_with_warmup`` creates this object by
+    prepending an exponential ramp from 0 to the schedule's start value.
+
+    The ``schedule`` attribute always starts at 0 and can be passed directly to
+    any simulator.  After simulation, call ``trim`` on the output arrays to
+    remove the warmup prefix.
+    """
+
+    schedule: "ParameterSchedule"
+    """Schedule callable that starts at 0 (warmup prepended if needed)."""
+
+    total_output_steps: int
+    """Total output steps including warmup."""
+
+    warmup_output_steps: int
+    """Number of output steps consumed by warmup (0 if no warmup)."""
+
+    metadata: "dict[str, Any]"
+    """Schedule metadata from the factory (e.g. ``linear_classified`` group info)."""
+
+    def trim(self, *arrays: jnp.ndarray) -> "jnp.ndarray | tuple[jnp.ndarray, ...]":
+        """Remove warmup prefix from downsampled output arrays.
+
+        Args:
+            *arrays: One or more arrays whose first axis corresponds to output
+                time steps (including warmup).
+
+        Returns:
+            Single trimmed array if one argument is given, otherwise a tuple of
+            trimmed arrays.
+        """
+        if self.warmup_output_steps == 0:
+            return arrays[0] if len(arrays) == 1 else arrays
+        result = tuple(a[self.warmup_output_steps :] for a in arrays)
+        return result[0] if len(result) == 1 else result
+
+
+def prepare_schedule_with_warmup(
+    schedule: "Schedule",
+    n_output: int,
+    dt_sample: float = 1.0,
+) -> ScheduleWithWarmup:
+    """Preprocess a schedule for simulation, adding warmup if needed.
+
+    If the resolved schedule starts at a non-zero value **and**
+    ``schedule_warmup_time > 0``, an exponential ramp from 0 to the schedule's
+    start value is prepended.  The returned schedule always starts at 0 and can
+    be passed to any simulator without triggering the start-at-zero validation.
+
+    ``schedule_warmup_time`` is read from the schedule dict config (key
+    ``"schedule_warmup_time"``, default ``100.0`` time-units).  The warmup
+    triggers iff ``schedule_warmup_time > 0`` AND the schedule start is not 0.
+
+    Args:
+        schedule: Schedule specification (dict config, callable, or array).
+            If a dict, it may contain a ``"schedule_warmup_time"`` key (float,
+            in time units matching ``dt_sample``).
+        n_output: Number of output steps for the user's schedule (excluding
+            any warmup).
+        dt_sample: Sampling interval used to convert ``schedule_warmup_time``
+            (time units) into output steps.
+
+    Returns:
+        ``ScheduleWithWarmup`` containing the preprocessed schedule, the total
+        output step count (including warmup), and the number of warmup steps
+        to trim from the output.
+    """
+    # Extract schedule_warmup_time from dict config (if present)
+    warmup_time: float = 0.0
+    if isinstance(schedule, dict):
+        warmup_time = float(schedule.get("schedule_warmup_time", 100.0))
+
+    # Resolve the user's schedule to a concrete array
+    resolved, metadata = resolve_schedule(schedule, n_output)
+    start_val = float(resolved[0])
+
+    # No warmup needed: schedule starts at 0 or warmup disabled
+    if abs(start_val) < 1e-6 or warmup_time <= 0:
+        # Wrap the original schedule as-is
+        if callable(schedule) and not isinstance(schedule, dict):
+            sched_callable = schedule
+        else:
+            sched_callable = from_array(resolved)
+        return ScheduleWithWarmup(
+            schedule=sched_callable,
+            total_output_steps=n_output,
+            warmup_output_steps=0,
+            metadata=metadata,
+        )
+
+    # Build exponential ramp from 0 → start_val
+    ramp_steps = max(int(warmup_time / dt_sample), 1)
+    tau = ramp_steps / 8.0  # reaches 99% at ~58% of ramp; ~42% spent settled at target
+    t = jnp.arange(ramp_steps, dtype=jnp.float32)
+    ramp = start_val * (1.0 - jnp.exp(-t / tau))
+
+    # Concatenate ramp + original schedule
+    combined = jnp.concatenate([ramp, resolved])
+    wrapped = from_array(combined)
+
+    return ScheduleWithWarmup(
+        schedule=wrapped,
+        total_output_steps=n_output + ramp_steps,
+        warmup_output_steps=ramp_steps,
+        metadata=metadata,
+    )
+
+
+# === Classified Linear Schedule ===
+
+_LC_GROUPS = ("critical", "nc_constant", "nc_approaching", "nc_receding", "noncritical")
+
+
+def linear_classified(
+    group: str = "noncritical",
+    start_min: float = 0.0,
+    start_max: float = 0.8,
+    earliest_cross_frac: float = 0.65,
+    critical_threshold: float = 1.0,
+    noncritical_ceil: float = 0.9,
+    constant_angle_deg: float = 5.0,
+    seed: int | None = None,
+) -> tuple[ParameterSchedule, dict[str, Any]]:
+    """Create a classified linear forcing schedule.
+
+    Samples ``(start, angle)`` uniformly in angle space within the feasible
+    region for the requested group, then returns a clipped ``[0, 1]`` linear
+    schedule together with classification metadata.
+
+    Groups:
+        ``critical``: schedule reaches ``critical_threshold`` by ``t=1`` but not
+        before ``earliest_cross_frac``.
+
+        ``nc_constant``: near-zero slope (``|angle| < constant_angle_deg``),
+        stays below ``noncritical_ceil``.
+
+        ``nc_approaching``: positive slope, stays below ``noncritical_ceil``.
+
+        ``nc_receding``: negative slope, doesn't cross 0 before
+        ``earliest_cross_frac``.
+
+        ``noncritical``: umbrella — picks one of the three ``nc_*`` sub-types
+        with uniform probability.
+
+    Args:
+        group: One of ``critical``, ``nc_constant``, ``nc_approaching``,
+            ``nc_receding``, or ``noncritical``.
+        start_min: Minimum start value (param_normalized at t=0).
+        start_max: Maximum start value.
+        earliest_cross_frac: Earliest fraction of the trajectory at which the
+            schedule may cross 0 or ``critical_threshold``.
+        critical_threshold: Value that defines "reaching bifurcation".
+        noncritical_ceil: Non-critical schedules stay below this.
+        constant_angle_deg: Angle threshold (degrees) for the constant regime.
+        seed: RNG seed.  ``None`` for stochastic sampling.
+
+    Returns:
+        ``(schedule, metadata)`` tuple.
+    """
+    import math
+
+    if group not in _LC_GROUPS:
+        raise ValueError(f"Unknown group: {group!r}. Must be one of {_LC_GROUPS}")
+
+    rng = random.Random(seed)
+    const_slope = math.tan(math.radians(constant_angle_deg))
+
+    # Resolve umbrella group
+    resolved_group = group
+    if group == "noncritical":
+        resolved_group = rng.choice(["nc_constant", "nc_approaching", "nc_receding"])
+
+    def _sample_slope_uniform_angle(slope_lo: float, slope_hi: float) -> tuple[float, float]:
+        """Sample slope uniformly in angle space. Returns (slope, angle_deg)."""
+        a_lo = math.atan(slope_lo)
+        a_hi = math.atan(slope_hi)
+        angle = rng.uniform(a_lo, a_hi)
+        return math.tan(angle), math.degrees(angle)
+
+    # Retry loop: sample start, compute feasible slopes, sample angle
+    for _ in range(200):
+        start = rng.uniform(start_min, start_max)
+
+        if resolved_group == "critical":
+            if start >= critical_threshold:
+                continue
+            slope_lo = critical_threshold - start
+            slope_hi = (critical_threshold - start) / earliest_cross_frac
+            if slope_lo > slope_hi:
+                continue
+
+        elif resolved_group == "nc_constant":
+            slope_lo = max(-start / earliest_cross_frac if start > 1e-9 else 0.0, -const_slope)
+            slope_hi = min(noncritical_ceil - start, const_slope)
+            if slope_lo >= slope_hi:
+                continue
+
+        elif resolved_group == "nc_approaching":
+            slope_lo = const_slope
+            slope_hi = noncritical_ceil - start
+            if slope_lo >= slope_hi:
+                continue
+
+        elif resolved_group == "nc_receding":
+            slope_lo = -start / earliest_cross_frac if start > 1e-9 else 0.0
+            slope_hi = -const_slope
+            if slope_lo >= slope_hi:
+                continue
+
+        else:
+            raise RuntimeError(f"Unexpected resolved group: {resolved_group}")
+
+        slope, angle_deg = _sample_slope_uniform_angle(slope_lo, slope_hi)
+        break
+    else:
+        raise RuntimeError(
+            f"Could not find feasible (start, slope) for group={resolved_group!r} "
+            f"after 200 attempts. Check constraint parameters."
+        )
+
+    end = start + slope
+
+    def schedule(n_steps: int) -> jnp.ndarray:
+        return jnp.clip(jnp.linspace(start, end, n_steps), 0.0, 1.0)
+
+    metadata = {
+        "schedule_group": resolved_group,
+        "schedule_group_requested": group,
+        "schedule_start": start,
+        "schedule_slope": slope,
+        "schedule_angle_deg": angle_deg,
+        "schedule_end_unclipped": end,
+    }
+
+    return schedule, metadata
+
+
 # === Registry & Config-Driven Creation ===
 
 SCHEDULES: dict[str, Callable[..., ParameterSchedule]] = {
     "linear": linear,
+    "linear_ramp": linear_ramp,
+    "linear_classified": linear_classified,
     "ramp_and_hold": ramp_and_hold,
     "fixed_slope": fixed_slope,
     "constant": constant,
@@ -482,20 +758,24 @@ SCHEDULES: dict[str, Callable[..., ParameterSchedule]] = {
 }
 
 
-def create_schedule(config: dict[str, Any]) -> ParameterSchedule:
+def create_schedule(config: dict[str, Any]) -> tuple[ParameterSchedule, dict[str, Any]]:
     """Create a schedule from a dict config.
 
     The 'mode' key selects the factory; mode-specific args are in a nested dict.
+
+    Factories may return either a bare ``ParameterSchedule`` or a
+    ``(ParameterSchedule, metadata_dict)`` tuple.  This function normalizes
+    the return to always be a ``(schedule, metadata)`` pair.
 
     Args:
         config: Dict with 'mode' key and mode-specific parameters.
 
     Returns:
-        ParameterSchedule callable.
+        ``(schedule, metadata)`` tuple.  ``metadata`` is an empty dict for
+        factories that don't produce metadata.
 
     Examples:
         >>> create_schedule({'mode': 'linear', 'linear': {'critical_at': 0.5}})
-        >>> create_schedule({'mode': 'ramp_and_hold', 'ramp_and_hold': {'hold_at': 0.5}})
         >>> create_schedule({'mode': 'constant', 'constant': {'value': 0.5}})
     """
     mode = config.get("mode", "linear")
@@ -503,7 +783,10 @@ def create_schedule(config: dict[str, Any]) -> ParameterSchedule:
         raise ValueError(f"Unknown schedule mode: {mode}. Available: {list(SCHEDULES.keys())}")
     factory = SCHEDULES[mode]
     mode_args = config.get(mode, {})
-    return factory(**mode_args)
+    result = factory(**mode_args)
+    if isinstance(result, tuple):
+        return result  # (schedule, metadata)
+    return result, {}  # bare schedule → empty metadata
 
 
 def legacy_multiplier_schedule(param_end_multiplier: float) -> ParameterSchedule:
@@ -529,7 +812,7 @@ def legacy_multiplier_schedule(param_end_multiplier: float) -> ParameterSchedule
 # === Resolution Handling ===
 
 
-def resolve_schedule(schedule: Schedule, n_steps: int) -> jnp.ndarray:
+def resolve_schedule(schedule: Schedule, n_steps: int) -> tuple[jnp.ndarray, dict[str, Any]]:
     """Resolve any schedule type to a concrete array.
 
     Args:
@@ -537,10 +820,14 @@ def resolve_schedule(schedule: Schedule, n_steps: int) -> jnp.ndarray:
         n_steps: Output length.
 
     Returns:
-        Array of shape (n_steps,) with values in [0, 1].
+        ``(values, metadata)`` tuple.  ``values`` has shape ``(n_steps,)``.
+        ``metadata`` is populated by factories that produce it (e.g.
+        ``linear_classified``), empty dict otherwise.
     """
+    metadata: dict[str, Any] = {}
+
     if isinstance(schedule, dict):
-        schedule = create_schedule(schedule)
+        schedule, metadata = create_schedule(schedule)
 
     if callable(schedule):
         result = schedule(n_steps)
@@ -552,31 +839,33 @@ def resolve_schedule(schedule: Schedule, n_steps: int) -> jnp.ndarray:
             # Interpolate to requested length
             result = jnp.interp(jnp.linspace(0, 1, n_steps), jnp.linspace(0, 1, len(arr)), arr)
 
-    return result
+    return result, metadata
 
 
-def validate_schedule_start(normalized: jnp.ndarray) -> None:
-    """Validate that a schedule starts at 0.
+def validate_schedule_start(normalized: jnp.ndarray, expected_start: float = 0.0) -> None:
+    """Validate that a schedule starts at the expected value.
 
-    This is required for tipping simulations because burn-in runs at param_start
-    (normalized=0) and computes equilibrium there. A non-zero start would cause
-    a sudden parameter jump at t=0, creating transient artifacts.
+    By default, schedules must start at 0 because the burn-in phase equilibrates
+    the system at ``param_start`` (normalized=0).  When using
+    ``prepare_schedule_with_warmup``, the preprocessed schedule always starts at
+    0, so this validation passes automatically.
 
-    Future versions may support non-zero starts by implementing a "slow ramp to
-    schedule start" during an extended burn-in phase.
+    The ``expected_start`` parameter allows callers to verify a specific start
+    value when needed (e.g. after warmup trimming).
 
     Args:
         normalized: Resolved schedule array.
+        expected_start: Expected value of ``normalized[0]``.  Default ``0.0``.
 
     Raises:
-        ValueError: If schedule does not start at 0.
+        ValueError: If ``normalized[0]`` differs from ``expected_start`` by more
+            than ``1e-6``.
     """
     start_val = float(normalized[0])
-    if abs(start_val) > 1e-6:
+    if abs(start_val - expected_start) > 1e-6:
         raise ValueError(
-            f"Schedule must start at 0, got {start_val:.4f}. "
-            f"This is required because burn-in equilibrates at param_start (normalized=0). "
-            f"Use ramp_and_hold or linear instead of fixed_slope with non-zero start."
+            f"Schedule must start at {expected_start:.4f}, got {start_val:.4f}. "
+            f"Use prepare_schedule_with_warmup() to handle non-zero starts."
         )
 
 
@@ -586,7 +875,8 @@ def resolve_schedule_for_simulation(
     param_start: float,
     param_end: float,
     upsample_factor: int = 1,
-) -> tuple[jnp.ndarray, jnp.ndarray]:
+    expected_start: float = 0.0,
+) -> tuple[jnp.ndarray, jnp.ndarray, dict[str, Any]]:
     """Resolve schedule and map to model parameter range at integration resolution.
 
     Combines resolve_schedule() + validate_schedule_start() + apply_to_params()
@@ -601,18 +891,21 @@ def resolve_schedule_for_simulation(
         upsample_factor: Ratio of fine integration steps to output steps.
             1 = no upsampling (rate models integrate at output resolution).
             >1 = upsample via linear interpolation (semi-real models).
+        expected_start: Expected normalized value at t=0.  Default ``0.0``.
+            Passed to ``validate_schedule_start``.
 
     Returns:
-        (param_values, normalized) tuple:
+        ``(param_values, normalized, metadata)`` tuple:
         - param_values: Parameter values at integration resolution.
         - normalized: Normalized schedule [0,1] at output resolution (n_output).
+        - metadata: Schedule metadata dict (empty for most schedule types).
     """
-    normalized = resolve_schedule(schedule, n_output)
-    validate_schedule_start(normalized)
+    normalized, metadata = resolve_schedule(schedule, n_output)
+    validate_schedule_start(normalized, expected_start=expected_start)
 
     if upsample_factor <= 1:
         param_values = apply_to_params(normalized, param_start, param_end)
-        return param_values, normalized
+        return param_values, normalized, metadata
 
     # Upsample to fine integration resolution
     # n_fine = n_output * upsample_factor so that downsampling by
@@ -624,7 +917,7 @@ def resolve_schedule_for_simulation(
         jnp.linspace(0, 1, n_output),
         param_coarse,
     )
-    return param_fine, normalized
+    return param_fine, normalized, metadata
 
 
 def apply_to_params(schedule: jnp.ndarray, param_start: float, bif_value: float) -> jnp.ndarray:

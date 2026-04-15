@@ -185,7 +185,7 @@ class BautinModel(BoxModel):
         if schedule is not None:
             from ..bifurcation.schedule import resolve_schedule_for_simulation
 
-            lambda_t, _ = resolve_schedule_for_simulation(
+            lambda_t, _, _sched_meta = resolve_schedule_for_simulation(
                 schedule,
                 total_len,
                 0.0,

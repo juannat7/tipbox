@@ -105,6 +105,11 @@ def simulate_rate_trajectory(
     state_trajectory = None
     if schedule is not None:
         # Direct mode: schedule controls parameter evolution
+        # NOTE: Rate systems do not support prepare_schedule_with_warmup yet.
+        # Non-zero schedule starts (e.g. linear_classified with warmup) will
+        # fail validation inside the model's simulate(). This is intentional —
+        # rate systems are out of scope for v3 linear_classified schedules.
+        # To add support, follow the pattern in bifurcation_simulator.py.
         sim_ret = model.simulate(
             key_sim,
             total_len=series_len,

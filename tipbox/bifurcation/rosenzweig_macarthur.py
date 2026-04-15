@@ -382,7 +382,7 @@ class RosenzweigMacArthurModel(BoxModel):
             from .schedule import resolve_schedule_for_simulation
 
             _, a_min, _, a_bif = self._get_param_range()
-            a_t, _ = resolve_schedule_for_simulation(
+            a_t, _, _sched_meta = resolve_schedule_for_simulation(
                 schedule, total_len, a_min, a_bif, upsample_factor=sample_every,
             )
             n_steps = len(a_t)

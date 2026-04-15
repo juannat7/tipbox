@@ -104,11 +104,20 @@ def simulate_real_bifurcation_trajectory(
     model = system_spec.create_model(config)
 
     if schedule is not None:
-        # Direct mode: schedule controls parameter evolution
+        from .schedule import prepare_schedule_with_warmup
+
+        # Prepare schedule: prepend warmup ramp if non-zero start
+        dt_sample = generate_kwargs.get("dt_sample", 1.0)
+        prepared = prepare_schedule_with_warmup(schedule, series_len, dt_sample=dt_sample)
+
+        # Direct mode: simulate (including warmup prefix)
         time, trajectory, param_values, sigma = model.simulate(
-            key_sim, total_len=series_len, sigma_tilde=sigma_tilde,
-            schedule=schedule, **generate_kwargs,
+            key_sim, total_len=prepared.total_output_steps, sigma_tilde=sigma_tilde,
+            schedule=prepared.schedule, **generate_kwargs,
         )
+
+        # Trim warmup prefix from outputs
+        time, trajectory, param_values = prepared.trim(time, trajectory, param_values)
         normalized = model.normalize_param_values(param_values)
 
         # Estimate transition from normalized values
@@ -122,6 +131,7 @@ def simulate_real_bifurcation_trajectory(
             "param_value_transition": float(param_values[min(trans_idx, len(param_values) - 1)]),
             "param_normalized": normalized,
             "system_config": asdict(config),
+            "schedule_metadata": prepared.metadata,
         }
         result = TrajectoryResult(
             time=time, trajectory=trajectory,

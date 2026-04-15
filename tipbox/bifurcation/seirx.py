@@ -321,7 +321,7 @@ class SEIRxModel(BoxModel):
             from .schedule import resolve_schedule_for_simulation
 
             _, omega_min, _, omega_bif = self._get_param_range()
-            omega_t, _ = resolve_schedule_for_simulation(
+            omega_t, _, _sched_meta = resolve_schedule_for_simulation(
                 schedule, total_len, omega_min, omega_bif, upsample_factor=sample_every,
             )
             n_steps = len(omega_t)

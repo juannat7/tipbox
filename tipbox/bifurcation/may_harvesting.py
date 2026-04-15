@@ -258,7 +258,7 @@ class MayHarvestingModel(BoxModel):
         if schedule is not None:
             from .schedule import resolve_schedule_for_simulation
 
-            h_t, _ = resolve_schedule_for_simulation(
+            h_t, _, _sched_meta = resolve_schedule_for_simulation(
                 schedule,
                 total_len,
                 self._config.h_min,

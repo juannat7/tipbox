@@ -199,7 +199,7 @@ class AMOCRateModel(BoxModel):
         if schedule is not None:
             from ..bifurcation.schedule import resolve_schedule_for_simulation
 
-            H_inner, _ = resolve_schedule_for_simulation(
+            H_inner, _, _sched_meta = resolve_schedule_for_simulation(
                 schedule,
                 total_len,
                 self._config.H0,

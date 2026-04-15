@@ -192,7 +192,7 @@ class CompostBombModel(BoxModel):
             from ..bifurcation.schedule import resolve_schedule_for_simulation
 
             # Max forcing = v * t_end
-            T_a_t, _ = resolve_schedule_for_simulation(
+            T_a_t, _, _sched_meta = resolve_schedule_for_simulation(
                 schedule,
                 total_len,
                 0.0,
