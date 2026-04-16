@@ -1412,7 +1412,7 @@ class TestLinearClassified:
 
         sched, meta = linear_classified(group="critical", seed=42)
         values = sched(256)
-        assert meta["schedule_group"] == "critical"
+        assert meta["group"] == "critical"
         assert float(values[-1]) >= 0.99  # clipped at 1.0
 
     def test_nc_constant_stays_flat(self):
@@ -1421,8 +1421,8 @@ class TestLinearClassified:
 
         sched, meta = linear_classified(group="nc_constant", seed=42)
         values = sched(256)
-        assert meta["schedule_group"] == "nc_constant"
-        assert abs(meta["schedule_angle_deg"]) <= 5.0
+        assert meta["group"] == "nc_constant"
+        assert abs(meta["angle_deg"]) <= 5.0
         assert abs(float(values[-1]) - float(values[0])) < 0.1
 
     def test_nc_approaching_positive_slope(self):
@@ -1431,8 +1431,8 @@ class TestLinearClassified:
 
         sched, meta = linear_classified(group="nc_approaching", seed=42, noncritical_ceil=0.9)
         values = sched(256)
-        assert meta["schedule_group"] == "nc_approaching"
-        assert meta["schedule_slope"] > 0
+        assert meta["group"] == "nc_approaching"
+        assert meta["slope"] > 0
         assert float(values.max()) <= 0.9 + 1e-6
 
     def test_nc_receding_negative_slope(self):
@@ -1441,8 +1441,8 @@ class TestLinearClassified:
 
         sched, meta = linear_classified(group="nc_receding", seed=42)
         values = sched(256)
-        assert meta["schedule_group"] == "nc_receding"
-        assert meta["schedule_slope"] < 0
+        assert meta["group"] == "nc_receding"
+        assert meta["slope"] < 0
 
     def test_noncritical_umbrella(self):
         """Noncritical should resolve to one of the nc sub-types."""
@@ -1451,7 +1451,7 @@ class TestLinearClassified:
         groups_seen = set()
         for seed in range(50):
             _, meta = linear_classified(group="noncritical", seed=seed)
-            groups_seen.add(meta["schedule_group"])
+            groups_seen.add(meta["group"])
         assert groups_seen == {"nc_constant", "nc_approaching", "nc_receding"}
 
     def test_metadata_keys(self):
@@ -1460,8 +1460,9 @@ class TestLinearClassified:
 
         _, meta = linear_classified(group="critical", seed=42)
         expected_keys = {
-            "schedule_group", "schedule_group_requested", "schedule_start",
-            "schedule_slope", "schedule_angle_deg", "schedule_end_unclipped",
+            "group", "group_requested", "start",
+            "slope", "angle_deg", "end_unclipped",
+            "clip_min", "clip_max",
         }
         assert expected_keys == set(meta.keys())
 
@@ -1471,7 +1472,7 @@ class TestLinearClassified:
 
         for seed in range(20):
             _, meta = linear_classified(group="critical", start_min=0.3, seed=seed)
-            assert meta["schedule_start"] >= 0.3 - 1e-9
+            assert meta["start"] >= 0.3 - 1e-9
 
     def test_earliest_cross_respected(self):
         """Critical schedule should not cross 1.0 before earliest_cross_frac."""
@@ -1497,7 +1498,7 @@ class TestLinearClassified:
         }
         sched, meta = create_schedule(cfg)
         values = sched(256)
-        assert meta["schedule_group"] == "critical"
+        assert meta["group"] == "critical"
         assert float(values[-1]) >= 0.99
 
     def test_invalid_group_raises(self):
@@ -1508,7 +1509,7 @@ class TestLinearClassified:
             linear_classified(group="invalid")
 
     def test_clipped_to_01(self):
-        """All values should be in [0, 1]."""
+        """All values should be in [0, 1] with default clip bounds."""
         from tipbox.bifurcation.schedule import linear_classified
 
         for group in ["critical", "nc_constant", "nc_approaching", "nc_receding"]:
@@ -1516,3 +1517,46 @@ class TestLinearClassified:
             values = sched(256)
             assert float(values.min()) >= 0.0 - 1e-9
             assert float(values.max()) <= 1.0 + 1e-9
+
+    def test_no_clip(self):
+        """clip_min=None, clip_max=None should leave values unclipped."""
+        from tipbox.bifurcation.schedule import linear_classified
+
+        # nc_receding with high start can produce negative end values
+        sched, meta = linear_classified(
+            group="nc_receding", seed=7, clip_min=None, clip_max=None,
+        )
+        values = sched(256)
+        # Values should span from start to start+slope without clipping
+        assert float(values[0]) == pytest.approx(meta["start"], abs=1e-5)
+        end = meta["start"] + meta["slope"]
+        assert float(values[-1]) == pytest.approx(end, abs=1e-5)
+        assert meta["clip_min"] is None
+        assert meta["clip_max"] is None
+
+    def test_custom_clip_bounds(self):
+        """Custom clip bounds should be respected."""
+        from tipbox.bifurcation.schedule import linear_classified
+
+        sched, meta = linear_classified(
+            group="critical", seed=42, clip_min=0.1, clip_max=0.95,
+        )
+        values = sched(256)
+        assert float(values.min()) >= 0.1 - 1e-9
+        assert float(values.max()) <= 0.95 + 1e-9
+        assert meta["clip_min"] == 0.1
+        assert meta["clip_max"] == 0.95
+
+    def test_clip_via_create_schedule(self):
+        """Clip bounds should be configurable via create_schedule."""
+        cfg = {
+            "mode": "linear_classified",
+            "linear_classified": {
+                "group": "critical", "seed": 42,
+                "clip_min": None, "clip_max": None,
+            },
+        }
+        sched, meta = create_schedule(cfg)
+        values = sched(256)
+        assert meta["clip_min"] is None
+        assert meta["clip_max"] is None

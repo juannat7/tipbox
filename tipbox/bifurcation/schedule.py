@@ -627,13 +627,18 @@ def linear_classified(
     critical_threshold: float = 1.0,
     noncritical_ceil: float = 0.9,
     constant_angle_deg: float = 5.0,
+    clip_min: float | None = 0.0,
+    clip_max: float | None = 1.0,
     seed: int | None = None,
 ) -> tuple[ParameterSchedule, dict[str, Any]]:
     """Create a classified linear forcing schedule.
 
     Samples ``(start, angle)`` uniformly in angle space within the feasible
-    region for the requested group, then returns a clipped ``[0, 1]`` linear
-    schedule together with classification metadata.
+    region for the requested group, then returns a linear schedule together
+    with classification metadata.
+
+    By default, values are clipped to ``[0, 1]``.  Set ``clip_min`` /
+    ``clip_max`` to ``None`` to disable the respective bound.
 
     Groups:
         ``critical``: schedule reaches ``critical_threshold`` by ``t=1`` but not
@@ -660,6 +665,8 @@ def linear_classified(
         critical_threshold: Value that defines "reaching bifurcation".
         noncritical_ceil: Non-critical schedules stay below this.
         constant_angle_deg: Angle threshold (degrees) for the constant regime.
+        clip_min: Lower clip bound.  ``None`` to disable.
+        clip_max: Upper clip bound.  ``None`` to disable.
         seed: RNG seed.  ``None`` for stochastic sampling.
 
     Returns:
@@ -728,16 +735,27 @@ def linear_classified(
 
     end = start + slope
 
+    # Capture clip bounds for the closure
+    _clip_lo = clip_min
+    _clip_hi = clip_max
+
     def schedule(n_steps: int) -> jnp.ndarray:
-        return jnp.clip(jnp.linspace(start, end, n_steps), 0.0, 1.0)
+        values = jnp.linspace(start, end, n_steps)
+        if _clip_lo is not None:
+            values = jnp.maximum(values, _clip_lo)
+        if _clip_hi is not None:
+            values = jnp.minimum(values, _clip_hi)
+        return values
 
     metadata = {
-        "schedule_group": resolved_group,
-        "schedule_group_requested": group,
-        "schedule_start": start,
-        "schedule_slope": slope,
-        "schedule_angle_deg": angle_deg,
-        "schedule_end_unclipped": end,
+        "group": resolved_group,
+        "group_requested": group,
+        "start": start,
+        "slope": slope,
+        "angle_deg": angle_deg,
+        "end_unclipped": end,
+        "clip_min": clip_min,
+        "clip_max": clip_max,
     }
 
     return schedule, metadata

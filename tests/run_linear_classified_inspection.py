@@ -173,9 +173,9 @@ def print_metadata(system_name, results):
 
         print(f"  {group:20s}: pn=[{pn[0]:.3f} → {pn[-1]:.3f}], "
               f"max={pn.max():.3f}, "
-              f"grp={meta.get('schedule_group', '?'):20s} "
-              f"angle={meta.get('schedule_angle_deg', 0):.1f}° "
-              f"slope={meta.get('schedule_slope', 0):.4f} "
+              f"grp={meta.get('group', '?'):20s} "
+              f"angle={meta.get('angle_deg', 0):.1f}° "
+              f"slope={meta.get('slope', 0):.4f} "
               f"  [{status}]")
         if checks:
             all_ok = False
