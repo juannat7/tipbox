@@ -618,7 +618,7 @@ def prepare_schedule_with_warmup(
 
 _LC_GROUPS = (
     "critical",
-    "nc_constant",
+    "nc_flat",
     "nc_approaching",
     "nc_receding",
     "nc_equilibrium",
@@ -654,7 +654,7 @@ def linear_classified(
         ``critical``: schedule reaches ``critical_threshold`` between
         ``crit_cross_not_before`` and ``crit_cross_not_after``.
 
-        ``nc_constant``: near-zero slope (``|angle| < constant_angle_deg``),
+        ``nc_flat``: near-zero slope (``|angle| < constant_angle_deg``),
         stays below ``noncritical_ceil``.
 
         ``nc_approaching``: positive slope, stays below ``noncritical_ceil``.
@@ -670,7 +670,7 @@ def linear_classified(
         with uniform probability.
 
     Args:
-        group: One of ``critical``, ``nc_constant``, ``nc_approaching``,
+        group: One of ``critical``, ``nc_flat``, ``nc_approaching``,
             ``nc_receding``, ``nc_equilibrium``, or ``noncritical``.
         start_min: Minimum start value (param_normalized at t=0).
         start_max: Maximum start value.
@@ -705,7 +705,7 @@ def linear_classified(
     resolved_group = group
     if group == "noncritical":
         resolved_group = rng.choice(
-            ["nc_constant", "nc_approaching", "nc_receding", "nc_equilibrium"]
+            ["nc_flat", "nc_approaching", "nc_receding", "nc_equilibrium"]
         )
 
     # Equilibrium is deterministic — no sampling needed
@@ -735,7 +735,7 @@ def linear_classified(
                 if slope_lo > slope_hi:
                     continue
 
-            elif resolved_group == "nc_constant":
+            elif resolved_group == "nc_flat":
                 slope_lo = max(
                     -start / zero_cross_not_before if start > 1e-9 else 0.0,
                     -const_slope,

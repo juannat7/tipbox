@@ -1415,13 +1415,13 @@ class TestLinearClassified:
         assert meta["group"] == "critical"
         assert float(values[-1]) >= 0.99  # clipped at 1.0
 
-    def test_nc_constant_stays_flat(self):
+    def test_nc_flat_stays_flat(self):
         """NC-constant schedules should have near-zero slope."""
         from tipbox.bifurcation.schedule import linear_classified
 
-        sched, meta = linear_classified(group="nc_constant", seed=42)
+        sched, meta = linear_classified(group="nc_flat", seed=42)
         values = sched(256)
-        assert meta["group"] == "nc_constant"
+        assert meta["group"] == "nc_flat"
         assert abs(meta["angle_deg"]) <= 5.0
         assert abs(float(values[-1]) - float(values[0])) < 0.1
 
@@ -1466,7 +1466,7 @@ class TestLinearClassified:
             _, meta = linear_classified(group="noncritical", seed=seed)
             groups_seen.add(meta["group"])
         assert groups_seen == {
-            "nc_constant", "nc_approaching", "nc_receding", "nc_equilibrium",
+            "nc_flat", "nc_approaching", "nc_receding", "nc_equilibrium",
         }
 
     def test_metadata_keys(self):
@@ -1567,7 +1567,7 @@ class TestLinearClassified:
         """All values should be in [0, 1] with default clip bounds."""
         from tipbox.bifurcation.schedule import linear_classified
 
-        for group in ["critical", "nc_constant", "nc_approaching", "nc_receding"]:
+        for group in ["critical", "nc_flat", "nc_approaching", "nc_receding"]:
             sched, _ = linear_classified(group=group, seed=42)
             values = sched(256)
             assert float(values.min()) >= 0.0 - 1e-9

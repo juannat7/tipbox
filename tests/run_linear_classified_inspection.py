@@ -24,10 +24,10 @@ from tipbox.generate import generate
 PLOT_DIR = Path(__file__).parent / "linear_classified_plots"
 PLOT_DIR.mkdir(exist_ok=True)
 
-GROUPS = ["critical", "nc_constant", "nc_approaching", "nc_receding"]
+GROUPS = ["critical", "nc_flat", "nc_approaching", "nc_receding"]
 GROUP_COLORS = {
     "critical": "tab:red",
-    "nc_constant": "tab:green",
+    "nc_flat": "tab:green",
     "nc_approaching": "tab:blue",
     "nc_receding": "tab:purple",
 }
@@ -163,7 +163,7 @@ def print_metadata(system_name, results):
         if group == "critical":
             if float(pn.max()) < 0.99:
                 checks.append(f"FAIL: max pn={pn.max():.3f} < 1.0")
-        elif group in ("nc_constant", "nc_approaching", "nc_receding"):
+        elif group in ("nc_flat", "nc_approaching", "nc_receding"):
             if float(pn.max()) > 0.91:
                 checks.append(f"WARN: max pn={pn.max():.3f} > 0.9")
 
