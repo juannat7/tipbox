@@ -1444,15 +1444,30 @@ class TestLinearClassified:
         assert meta["group"] == "nc_receding"
         assert meta["slope"] < 0
 
+    def test_nc_equilibrium_constant_zero(self):
+        """NC-equilibrium should be constant at zero."""
+        from tipbox.bifurcation.schedule import linear_classified
+
+        sched, meta = linear_classified(group="nc_equilibrium", seed=42)
+        values = sched(256)
+        assert meta["group"] == "nc_equilibrium"
+        assert meta["start"] == 0.0
+        assert meta["slope"] == 0.0
+        assert meta["angle_deg"] == 0.0
+        assert float(values.max()) == pytest.approx(0.0, abs=1e-9)
+        assert float(values.min()) == pytest.approx(0.0, abs=1e-9)
+
     def test_noncritical_umbrella(self):
-        """Noncritical should resolve to one of the nc sub-types."""
+        """Noncritical should resolve to one of the four nc sub-types."""
         from tipbox.bifurcation.schedule import linear_classified
 
         groups_seen = set()
-        for seed in range(50):
+        for seed in range(100):
             _, meta = linear_classified(group="noncritical", seed=seed)
             groups_seen.add(meta["group"])
-        assert groups_seen == {"nc_constant", "nc_approaching", "nc_receding"}
+        assert groups_seen == {
+            "nc_constant", "nc_approaching", "nc_receding", "nc_equilibrium",
+        }
 
     def test_metadata_keys(self):
         """Metadata should contain all expected keys."""

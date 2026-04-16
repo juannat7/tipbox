@@ -616,7 +616,14 @@ def prepare_schedule_with_warmup(
 
 # === Classified Linear Schedule ===
 
-_LC_GROUPS = ("critical", "nc_constant", "nc_approaching", "nc_receding", "noncritical")
+_LC_GROUPS = (
+    "critical",
+    "nc_constant",
+    "nc_approaching",
+    "nc_receding",
+    "nc_equilibrium",
+    "noncritical",
+)
 
 
 def linear_classified(
@@ -656,12 +663,15 @@ def linear_classified(
         ``zero_cross_not_before``.  If ``zero_cross_not_after`` is set, must
         cross 0 by that fraction.
 
-        ``noncritical``: umbrella — picks one of the three ``nc_*`` sub-types
+        ``nc_equilibrium``: constant at zero (``start=0, slope=0``).  The
+        system stays at its initial equilibrium throughout.
+
+        ``noncritical``: umbrella — picks one of the four ``nc_*`` sub-types
         with uniform probability.
 
     Args:
         group: One of ``critical``, ``nc_constant``, ``nc_approaching``,
-            ``nc_receding``, or ``noncritical``.
+            ``nc_receding``, ``nc_equilibrium``, or ``noncritical``.
         start_min: Minimum start value (param_normalized at t=0).
         start_max: Maximum start value.
         critical_threshold: Value that defines "reaching bifurcation".
@@ -694,61 +704,70 @@ def linear_classified(
     # Resolve umbrella group
     resolved_group = group
     if group == "noncritical":
-        resolved_group = rng.choice(["nc_constant", "nc_approaching", "nc_receding"])
-
-    def _sample_slope_uniform_angle(slope_lo: float, slope_hi: float) -> tuple[float, float]:
-        """Sample slope uniformly in angle space. Returns (slope, angle_deg)."""
-        a_lo = math.atan(slope_lo)
-        a_hi = math.atan(slope_hi)
-        angle = rng.uniform(a_lo, a_hi)
-        return math.tan(angle), math.degrees(angle)
-
-    # Retry loop: sample start, compute feasible slopes, sample angle
-    for _ in range(200):
-        start = rng.uniform(start_min, start_max)
-
-        if resolved_group == "critical":
-            if start >= critical_threshold:
-                continue
-            gap = critical_threshold - start
-            slope_lo = gap / crit_cross_not_after
-            slope_hi = gap / crit_cross_not_before
-            if slope_lo > slope_hi:
-                continue
-
-        elif resolved_group == "nc_constant":
-            slope_lo = max(
-                -start / zero_cross_not_before if start > 1e-9 else 0.0,
-                -const_slope,
-            )
-            slope_hi = min(noncritical_ceil - start, const_slope)
-            if slope_lo >= slope_hi:
-                continue
-
-        elif resolved_group == "nc_approaching":
-            slope_lo = const_slope
-            slope_hi = noncritical_ceil - start
-            if slope_lo >= slope_hi:
-                continue
-
-        elif resolved_group == "nc_receding":
-            slope_lo = -start / zero_cross_not_before if start > 1e-9 else 0.0
-            slope_hi = -const_slope
-            if zero_cross_not_after is not None and start > 1e-9:
-                slope_hi = min(slope_hi, -start / zero_cross_not_after)
-            if slope_lo >= slope_hi:
-                continue
-
-        else:
-            raise RuntimeError(f"Unexpected resolved group: {resolved_group}")
-
-        slope, angle_deg = _sample_slope_uniform_angle(slope_lo, slope_hi)
-        break
-    else:
-        raise RuntimeError(
-            f"Could not find feasible (start, slope) for group={resolved_group!r} "
-            f"after 200 attempts. Check constraint parameters."
+        resolved_group = rng.choice(
+            ["nc_constant", "nc_approaching", "nc_receding", "nc_equilibrium"]
         )
+
+    # Equilibrium is deterministic — no sampling needed
+    if resolved_group == "nc_equilibrium":
+        start = 0.0
+        slope = 0.0
+        angle_deg = 0.0
+    else:
+
+        def _sample_slope_uniform_angle(slope_lo: float, slope_hi: float) -> tuple[float, float]:
+            """Sample slope uniformly in angle space. Returns (slope, angle_deg)."""
+            a_lo = math.atan(slope_lo)
+            a_hi = math.atan(slope_hi)
+            angle = rng.uniform(a_lo, a_hi)
+            return math.tan(angle), math.degrees(angle)
+
+        # Retry loop: sample start, compute feasible slopes, sample angle
+        for _ in range(200):
+            start = rng.uniform(start_min, start_max)
+
+            if resolved_group == "critical":
+                if start >= critical_threshold:
+                    continue
+                gap = critical_threshold - start
+                slope_lo = gap / crit_cross_not_after
+                slope_hi = gap / crit_cross_not_before
+                if slope_lo > slope_hi:
+                    continue
+
+            elif resolved_group == "nc_constant":
+                slope_lo = max(
+                    -start / zero_cross_not_before if start > 1e-9 else 0.0,
+                    -const_slope,
+                )
+                slope_hi = min(noncritical_ceil - start, const_slope)
+                if slope_lo >= slope_hi:
+                    continue
+
+            elif resolved_group == "nc_approaching":
+                slope_lo = const_slope
+                slope_hi = noncritical_ceil - start
+                if slope_lo >= slope_hi:
+                    continue
+
+            elif resolved_group == "nc_receding":
+                slope_lo = -start / zero_cross_not_before if start > 1e-9 else 0.0
+                slope_hi = -const_slope
+                if zero_cross_not_after is not None and start > 1e-9:
+                    slope_hi = min(slope_hi, -start / zero_cross_not_after)
+                if slope_lo >= slope_hi:
+                    continue
+
+            else:
+                raise RuntimeError(f"Unexpected resolved group: {resolved_group}")
+
+            slope, angle_deg = _sample_slope_uniform_angle(slope_lo, slope_hi)
+            break
+        else:
+            raise RuntimeError(
+                f"Could not find feasible (start, slope) for group={resolved_group!r} "
+                f"after 200 attempts. Check constraint parameters."
+            )
 
     end = start + slope
 
