@@ -1474,21 +1474,61 @@ class TestLinearClassified:
             _, meta = linear_classified(group="critical", start_min=0.3, seed=seed)
             assert meta["start"] >= 0.3 - 1e-9
 
-    def test_earliest_cross_respected(self):
-        """Critical schedule should not cross 1.0 before earliest_cross_frac."""
+    def test_crit_cross_window_respected(self):
+        """Critical schedule should cross threshold within the configured window."""
         from tipbox.bifurcation.schedule import linear_classified
 
         for seed in range(20):
             sched, meta = linear_classified(
-                group="critical", earliest_cross_frac=0.65, seed=seed,
+                group="critical",
+                crit_cross_not_before=0.65,
+                crit_cross_not_after=0.90,
+                seed=seed,
             )
             values = np.array(sched(256))
             cross_indices = np.where(values >= 1.0 - 1e-6)[0]
             if len(cross_indices) > 0:
-                earliest_cross = cross_indices[0] / 255
-                assert earliest_cross >= 0.65 - 0.02, (
-                    f"Crossed at {earliest_cross:.2%}, expected >= 65%"
+                cross_frac = cross_indices[0] / 255
+                assert cross_frac >= 0.65 - 0.02, (
+                    f"Crossed at {cross_frac:.2%}, expected >= 65%"
                 )
+                assert cross_frac <= 0.90 + 0.02, (
+                    f"Crossed at {cross_frac:.2%}, expected <= 90%"
+                )
+
+    def test_receding_does_not_cross_zero_by_default(self):
+        """With default zero_cross_not_before=1.0, receding stays non-negative."""
+        from tipbox.bifurcation.schedule import linear_classified
+
+        for seed in range(20):
+            sched, _ = linear_classified(group="nc_receding", seed=seed)
+            values = np.array(sched(256))
+            assert float(values.min()) >= -1e-6, (
+                f"Receding schedule crossed zero: min={float(values.min()):.4f}"
+            )
+
+    def test_zero_cross_not_after(self):
+        """When zero_cross_not_after is set, receding must cross zero by that frac."""
+        from tipbox.bifurcation.schedule import linear_classified
+
+        for seed in range(30):
+            sched, meta = linear_classified(
+                group="nc_receding",
+                zero_cross_not_before=0.6,
+                zero_cross_not_after=0.9,
+                clip_min=None,
+                seed=seed,
+            )
+            values = np.array(sched(256))
+            cross_indices = np.where(values <= 1e-6)[0]
+            assert len(cross_indices) > 0, "Receding should cross zero"
+            cross_frac = cross_indices[0] / 255
+            assert cross_frac >= 0.6 - 0.02, (
+                f"Crossed zero at {cross_frac:.2%}, expected >= 60%"
+            )
+            assert cross_frac <= 0.9 + 0.02, (
+                f"Crossed zero at {cross_frac:.2%}, expected <= 90%"
+            )
 
     def test_via_create_schedule(self):
         """linear_classified should work via create_schedule."""
@@ -1522,9 +1562,11 @@ class TestLinearClassified:
         """clip_min=None, clip_max=None should leave values unclipped."""
         from tipbox.bifurcation.schedule import linear_classified
 
-        # nc_receding with high start can produce negative end values
+        # nc_receding that crosses zero (lower zero_cross_not_before to allow it)
         sched, meta = linear_classified(
-            group="nc_receding", seed=7, clip_min=None, clip_max=None,
+            group="nc_receding", seed=7,
+            zero_cross_not_before=0.5,
+            clip_min=None, clip_max=None,
         )
         values = sched(256)
         # Values should span from start to start+slope without clipping

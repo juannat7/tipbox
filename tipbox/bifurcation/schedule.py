@@ -623,10 +623,13 @@ def linear_classified(
     group: str = "noncritical",
     start_min: float = 0.0,
     start_max: float = 0.8,
-    earliest_cross_frac: float = 0.65,
     critical_threshold: float = 1.0,
     noncritical_ceil: float = 0.9,
     constant_angle_deg: float = 5.0,
+    crit_cross_not_before: float = 0.65,
+    crit_cross_not_after: float = 0.90,
+    zero_cross_not_before: float = 1.0,
+    zero_cross_not_after: float | None = None,
     clip_min: float | None = 0.0,
     clip_max: float | None = 1.0,
     seed: int | None = None,
@@ -641,8 +644,8 @@ def linear_classified(
     ``clip_max`` to ``None`` to disable the respective bound.
 
     Groups:
-        ``critical``: schedule reaches ``critical_threshold`` by ``t=1`` but not
-        before ``earliest_cross_frac``.
+        ``critical``: schedule reaches ``critical_threshold`` between
+        ``crit_cross_not_before`` and ``crit_cross_not_after``.
 
         ``nc_constant``: near-zero slope (``|angle| < constant_angle_deg``),
         stays below ``noncritical_ceil``.
@@ -650,7 +653,8 @@ def linear_classified(
         ``nc_approaching``: positive slope, stays below ``noncritical_ceil``.
 
         ``nc_receding``: negative slope, doesn't cross 0 before
-        ``earliest_cross_frac``.
+        ``zero_cross_not_before``.  If ``zero_cross_not_after`` is set, must
+        cross 0 by that fraction.
 
         ``noncritical``: umbrella — picks one of the three ``nc_*`` sub-types
         with uniform probability.
@@ -660,11 +664,18 @@ def linear_classified(
             ``nc_receding``, or ``noncritical``.
         start_min: Minimum start value (param_normalized at t=0).
         start_max: Maximum start value.
-        earliest_cross_frac: Earliest fraction of the trajectory at which the
-            schedule may cross 0 or ``critical_threshold``.
         critical_threshold: Value that defines "reaching bifurcation".
         noncritical_ceil: Non-critical schedules stay below this.
         constant_angle_deg: Angle threshold (degrees) for the constant regime.
+        crit_cross_not_before: Earliest fraction at which a critical schedule
+            may cross ``critical_threshold``.
+        crit_cross_not_after: Latest fraction by which a critical schedule must
+            have crossed ``critical_threshold``.
+        zero_cross_not_before: Earliest fraction at which a receding schedule
+            may cross zero.  Default ``1.0`` means never crosses during the
+            trajectory.
+        zero_cross_not_after: Latest fraction by which a receding schedule must
+            cross zero.  ``None`` (default) means no requirement to cross.
         clip_min: Lower clip bound.  ``None`` to disable.
         clip_max: Upper clip bound.  ``None`` to disable.
         seed: RNG seed.  ``None`` for stochastic sampling.
@@ -699,13 +710,17 @@ def linear_classified(
         if resolved_group == "critical":
             if start >= critical_threshold:
                 continue
-            slope_lo = critical_threshold - start
-            slope_hi = (critical_threshold - start) / earliest_cross_frac
+            gap = critical_threshold - start
+            slope_lo = gap / crit_cross_not_after
+            slope_hi = gap / crit_cross_not_before
             if slope_lo > slope_hi:
                 continue
 
         elif resolved_group == "nc_constant":
-            slope_lo = max(-start / earliest_cross_frac if start > 1e-9 else 0.0, -const_slope)
+            slope_lo = max(
+                -start / zero_cross_not_before if start > 1e-9 else 0.0,
+                -const_slope,
+            )
             slope_hi = min(noncritical_ceil - start, const_slope)
             if slope_lo >= slope_hi:
                 continue
@@ -717,8 +732,10 @@ def linear_classified(
                 continue
 
         elif resolved_group == "nc_receding":
-            slope_lo = -start / earliest_cross_frac if start > 1e-9 else 0.0
+            slope_lo = -start / zero_cross_not_before if start > 1e-9 else 0.0
             slope_hi = -const_slope
+            if zero_cross_not_after is not None and start > 1e-9:
+                slope_hi = min(slope_hi, -start / zero_cross_not_after)
             if slope_lo >= slope_hi:
                 continue
 
