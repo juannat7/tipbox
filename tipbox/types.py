@@ -49,7 +49,7 @@ class BoxModel(ABC):
     @abstractmethod
     def get_parameters(self):
         """Expose model parameters (useful for logging/metadata)."""
-    
+
     @abstractmethod
     def is_tipped(self):
         """Return True if the trajectory exhibits tipping behaviour."""
@@ -68,3 +68,50 @@ class BoxModel(ABC):
 
         Convention: 0 = equilibrium/initial, 1 = critical/max forcing.
         """
+
+    def translate_schedule(
+        self,
+        param_normalized: jnp.ndarray,
+        rdtc: jnp.ndarray,
+        mode: str = "time_to_critical_rate",
+        **mode_kwargs,
+    ) -> jnp.ndarray:
+        """Translate an abstract parameter schedule to a native forcing schedule.
+
+        The abstract schedule (e.g. from ``linear_classified``) defines the rdtc
+        signal stored in the dataset.  This method converts it into a forcing
+        schedule that respects the model's native dynamics.
+
+        Parameters
+        ----------
+        param_normalized : jnp.ndarray, shape (n_steps,)
+            Abstract schedule in [0, 1].  0 = equilibrium, 1 = critical.
+        rdtc : jnp.ndarray, shape (n_steps,)
+            ``1 - param_normalized``.  Provided for convenience.
+        mode : str
+            Translation mode.  Supported modes are model-specific; common ones:
+
+            ``"time_to_critical_rate"``
+                rdtc = 0 marks the time at which the model's critical forcing
+                rate is reached.  The model places its native forcing shape so
+                that the critical rate aligns with that time.
+
+            ``"distance_from_critical_rate"``
+                rdtc encodes the instantaneous distance from the critical rate.
+                The model integrates to derive the forcing.  (Not yet implemented.)
+        **mode_kwargs
+            Mode-specific configuration forwarded to the underlying translator.
+
+        Returns
+        -------
+        jnp.ndarray, shape (n_steps,)
+            Normalized [0, 1] schedule in the model's native forcing space.
+
+        Raises
+        ------
+        NotImplementedError
+            If the model does not support translation or the requested mode.
+        """
+        raise NotImplementedError(
+            f"{type(self).__name__} does not implement translate_schedule"
+        )

@@ -27,22 +27,30 @@ class CompostBombConfig:
 
     # Forcing parameters
     v: float = 0.15  # Rate of atmospheric temperature forcing
-    D3: float = 50  # Noise magnitude (paper default: 0.5, so 50 * 0.01 following default sigma_tilde)
+    D3: float = (
+        50  # Noise magnitude (paper default: 0.5, so 50 * 0.01 following default sigma_tilde)
+    )
 
     Pi: float = 1.055  # Litter fall from plants (kg m^-2 yr^-1)
     r0: float = 0.01  # Microbial respiration parameter (yr^-1)
     alpha: float = math.log(2.5) / 10.0  # Microbial respiration parameter
     mu: float = 2.5e6  # Soil heat capacity (J m^-2 degC^-1)
     A: float = 3.9e7  # Specific heat from microbial respiration (J kg^-1)
-    lambda_param: float = 5.049e6  # Soil-to-air heat transfer coefficient (J yr^-1 m^-2 degC^-1)
+    lambda_param: float = (
+        5.049e6  # Soil-to-air heat transfer coefficient (J yr^-1 m^-2 degC^-1)
+    )
 
     # Simulation parameters
     dt: float = 0.05  # Time step
     t_start: float = 0.0
     t_end: float = 100.0  # Paper specifies time range 0 to 100
 
-    initial_state_min: float = 0  # Initial state (carbon and temperature) (paper: starts at 0)
-    initial_state_max: float = 0  # Initial state (carbon and temperature) (paper: starts at 0)
+    initial_state_min: float = (
+        0  # Initial state (carbon and temperature) (paper: starts at 0)
+    )
+    initial_state_max: float = (
+        0  # Initial state (carbon and temperature) (paper: starts at 0)
+    )
     T_ref: float = 0.0  # Reference temperature (0.0 is the default)
     tip_threshold: float = 30.0  # Threshold for detecting tipping (temperature)
 
@@ -150,7 +158,9 @@ class CompostBombModel(BoxModel):
             C, T = state
 
             # Respiration depends on temperature, not time
-            r_T = self._config.r0 * jnp.exp(self._config.alpha * (T - self._config.T_ref))
+            r_T = self._config.r0 * jnp.exp(
+                self._config.alpha * (T - self._config.T_ref)
+            )
 
             # dC/dt = Π - C * r(T)
             dC_dt = self._config.Pi - C * r_T
@@ -158,7 +168,10 @@ class CompostBombModel(BoxModel):
             C_next = jnp.maximum(C_next, 0.0)
 
             # μ dT/dt = C * r(T) * A - λ (T - T_a(t))
-            dT_dt = (C_next * r_T * self._config.A - self._config.lambda_param * (T - T_a_val)) / self._config.mu
+            dT_dt = (
+                C_next * r_T * self._config.A
+                - self._config.lambda_param * (T - T_a_val)
+            ) / self._config.mu
 
             T_next = T + dT_dt * dt + noise_scale * noise_T_t
             return (C_next, T_next), (C_next, T_next)
@@ -178,6 +191,7 @@ class CompostBombModel(BoxModel):
         total_len: int,
         sigma_tilde: float = 0.01,
         schedule=None,
+        schedule_start: float = 0.0,
         initial_state: Optional[jnp.ndarray] = None,
         noise: Optional[jnp.ndarray] = None,
         null_simulation: bool = False,
@@ -197,8 +211,13 @@ class CompostBombModel(BoxModel):
                 total_len,
                 0.0,
                 self._config.v * self._config.t_end,
+                expected_start=schedule_start,
             )
-            time = jnp.arange(self._config.t_start, self._config.t_start + total_len * self._config.dt, self._config.dt)
+            time = jnp.arange(
+                self._config.t_start,
+                self._config.t_start + total_len * self._config.dt,
+                self._config.dt,
+            )
         else:
             # Legacy: internal T_a schedule with optional slower null ramp
             time = jnp.arange(self._config.t_start, self._config.t_end, self._config.dt)
@@ -286,3 +305,36 @@ class CompostBombModel(BoxModel):
     def normalize_param_values(self, param_values):
         """Normalize atmospheric forcing by max value (v * t_end)."""
         return param_values / (self._config.v * self._config.t_end)
+
+    # -- Schedule translation -------------------------------------------------
+
+    # Rate bounds: v controls the atmospheric temperature forcing rate.
+    # Null uses 95% of default v.
+    _r_crit: float = 0.15    # CompostBombConfig.v default
+    _r_null: float = 0.1425  # legacy null: 0.95 * v
+
+    def translate_schedule(
+        self, param_normalized, rdtc, mode="time_to_critical_rate", **kw
+    ):
+        """Translate abstract schedule to native compost-bomb linear forcing."""
+        if mode == "time_to_critical_rate":
+            return self._translate_time_to_critical_rate(param_normalized, rdtc, **kw)
+        if mode == "distance_from_critical_rate":
+            raise NotImplementedError("distance_from_critical_rate not yet implemented")
+        raise ValueError(f"Unknown translation mode: {mode}")
+
+    def _translate_time_to_critical_rate(self, param_normalized, rdtc, **_kw):
+        """Interpolate v from ``max(param_normalized)`` and generate native forcing.
+
+        The native compost-bomb forcing is ``T_a(t) = v * t``.
+        """
+        n = len(param_normalized)
+        peak = float(jnp.max(param_normalized))
+        v = self._r_null + peak * (self._r_crit - self._r_null)
+
+        t = jnp.linspace(self._config.t_start, self._config.t_end, n)
+        config = replace(self._config, v=v)
+        forcing = self._T_a_schedule(t, config)
+        # Normalize: 0 at t_start (=0), max at t_end (= v * t_end)
+        max_forcing = self._config.v * self._config.t_end
+        return forcing / max_forcing if max_forcing > 0 else jnp.zeros(n)

@@ -181,6 +181,7 @@ class AMOCRateModel(BoxModel):
         total_len: int,
         sigma_tilde: float = 0.01,
         schedule=None,
+        schedule_start: float = 0.0,
         initial_state: Optional[jnp.ndarray] = None,
         noise: Optional[jnp.ndarray] = None,
         null_simulation: bool = False,
@@ -205,6 +206,7 @@ class AMOCRateModel(BoxModel):
                 self._config.H0,
                 self._config.H0 + self._config.dH,
                 upsample_factor=step,
+                expected_start=schedule_start,
             )
             total_time = total_len * dt_out
             time_inner = jnp.linspace(self._config.t_start, self._config.t_start + total_time, len(H_inner))
@@ -256,6 +258,34 @@ class AMOCRateModel(BoxModel):
     def normalize_param_values(self, param_values):
         """Normalize hosing values: 0 at H0, 1 at H0 + dH."""
         return (param_values - self._config.H0) / self._config.dH
+
+    # -- Schedule translation -------------------------------------------------
+
+    # Rate bounds: r controls the freshwater hosing ramp speed.
+    _r_crit: float = 0.017  # AMOCRateConfig.r_fast default (tips)
+    _r_null: float = 0.005  # AMOCRateConfig.r_slow default (no tip)
+
+    def translate_schedule(self, param_normalized, rdtc, mode="time_to_critical_rate", **kw):
+        """Translate abstract schedule to native AMOC forcing."""
+        if mode == "time_to_critical_rate":
+            return self._translate_time_to_critical_rate(param_normalized, rdtc, **kw)
+        if mode == "distance_from_critical_rate":
+            raise NotImplementedError("distance_from_critical_rate not yet implemented")
+        raise ValueError(f"Unknown translation mode: {mode}")
+
+    def _translate_time_to_critical_rate(self, param_normalized, rdtc, **_kw):
+        """Interpolate r from ``max(param_normalized)`` and generate native forcing.
+
+        The native AMOC forcing is a cosh-based ramp → plateau.
+        """
+        n = len(param_normalized)
+        peak = float(jnp.max(param_normalized))
+        r = self._r_null + peak * (self._r_crit - self._r_null)
+
+        t = jnp.linspace(self._config.t_start, self._config.t_end, n)
+        forcing = _forcing_ramp(t, r, self._config.dH, self._config.H0)
+        # Normalize: 0 at H0, 1 at H0 + dH
+        return (forcing - self._config.H0) / self._config.dH
 
     def is_tipped(
         self,

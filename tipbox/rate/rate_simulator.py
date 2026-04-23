@@ -18,7 +18,9 @@ def _select_system(key: jax.random.PRNGKey):
     from ..registry import SYSTEM_REGISTRY, SystemType
 
     rate_systems = [
-        name for name, spec in SYSTEM_REGISTRY.items() if spec.system_type == SystemType.RATE and spec.rate_system
+        name
+        for name, spec in SYSTEM_REGISTRY.items()
+        if spec.system_type == SystemType.RATE and spec.rate_system
     ]
     idx = int(jax.random.randint(key, (), 0, len(rate_systems)))
     system_name = rate_systems[idx]
@@ -35,6 +37,8 @@ def simulate_rate_trajectory(
     system_name: str = None,
     param_end_multiplier: float = 1.1,
     schedule=None,
+    translate_mode: str = None,
+    translate_kwargs: dict = None,
     **generate_kwargs,
 ):
     """Simulate a single rate-induced tipping trajectory.
@@ -62,6 +66,15 @@ def simulate_rate_trajectory(
         Parameter schedule. When provided, uses direct mode (exact length,
         schedule controls parameter evolution). When None, uses legacy
         extraction mode.
+    translate_mode : str, optional
+        When set together with ``schedule``, the schedule is treated as an
+        *abstract* parameter schedule (e.g. from ``linear_classified``).  The
+        model's ``translate_schedule`` method converts it to a native forcing
+        schedule before simulation.  The abstract ``param_normalized`` is stored
+        in the result metadata (not the native one), so that downstream
+        ``rdtc = 1 - param_normalized`` reflects the abstract schedule.
+    translate_kwargs : dict, optional
+        Extra keyword arguments forwarded to ``model.translate_schedule``.
     **generate_kwargs : additional arguments
         Passed to the model.simulate method (dt_sample, dt_integrate, etc.)
 
@@ -78,6 +91,9 @@ def simulate_rate_trajectory(
         - transition_index: detected transition position
         - param_value_transition: parameter value at transition
         - param_normalized: normalized forcing values (0=initial, 1=max forcing)
+        - param_normalized_mode: "direct" or the translation mode name
+        - param_normalized_translation: (only when translated) dict with mode
+          and kwargs used for the translation
 
     Notes
     -----
@@ -104,35 +120,107 @@ def simulate_rate_trajectory(
 
     state_trajectory = None
     if schedule is not None:
-        # Direct mode: schedule controls parameter evolution
+        # Direct mode: schedule controls parameter evolution.
         # NOTE: Rate systems do not support prepare_schedule_with_warmup yet.
-        # Non-zero schedule starts (e.g. linear_classified with warmup) will
-        # fail validation inside the model's simulate(). This is intentional —
-        # rate systems are out of scope for v3 linear_classified schedules.
-        # To add support, follow the pattern in bifurcation_simulator.py.
+        # Non-zero schedule starts will fail validation inside the model's
+        # simulate().  To add support, follow the pattern in
+        # bifurcation_simulator.py.
+
+        from ..bifurcation.schedule import resolve_schedule
+
+        if translate_mode is not None:
+            # Translated mode: abstract schedule → native forcing.
+            # The abstract schedule defines rdtc stored in the dataset;
+            # the native schedule drives the actual simulation.
+            #
+            # To preserve the model's native dynamics, we simulate at the
+            # model's native step count (derived from its time range and dt),
+            # then subsample the output to the requested series_len.
+            native_time = config.t_end - config.t_start
+            sim_dt = config.dt
+            native_n = int(round(native_time / sim_dt))
+
+            # Resolve abstract schedule at native resolution, then subsample
+            # the stored version back to series_len for the dataset.
+            abstract_native, _sched_meta = resolve_schedule(schedule, native_n)
+            abstract_rdtc_native = 1.0 - abstract_native
+
+            native_schedule = model.translate_schedule(
+                abstract_native,
+                abstract_rdtc_native,
+                mode=translate_mode,
+                **(translate_kwargs or {}),
+            )
+            sim_schedule = native_schedule
+            sim_schedule_start = float(native_schedule[0])
+            sim_total_len = native_n
+
+            translation_meta = {
+                "mode": translate_mode,
+                "kwargs": translate_kwargs or {},
+                "native_steps": native_n,
+            }
+        else:
+            # Direct mode: schedule IS the forcing (no translation).
+            sim_schedule = schedule
+            sim_schedule_start = 0.0
+            sim_total_len = series_len
+            translation_meta = None
+
         sim_ret = model.simulate(
             key_sim,
-            total_len=series_len,
+            total_len=sim_total_len,
             sigma_tilde=sigma_tilde,
-            schedule=schedule,
+            schedule=sim_schedule,
+            schedule_start=sim_schedule_start,
             **generate_kwargs,
         )
-        time, trajectory, param_values, sigma = sim_ret[0], sim_ret[1], sim_ret[2], sim_ret[3]
+        time, trajectory, param_values, sigma = (
+            sim_ret[0],
+            sim_ret[1],
+            sim_ret[2],
+            sim_ret[3],
+        )
         state_trajectory = sim_ret[4] if len(sim_ret) > 4 else None
-        normalized = model.normalize_param_values(param_values)
 
-        # Estimate transition from normalized values
-        above = jnp.where(normalized >= 1.0, jnp.arange(len(normalized)), len(normalized) - 1)
+        # Subsample to series_len if we simulated at native resolution
+        if translate_mode is not None and sim_total_len != series_len:
+            subsample_idx = jnp.linspace(0, sim_total_len - 1, series_len).astype(int)
+            time = time[subsample_idx]
+            trajectory = trajectory[subsample_idx] if trajectory.ndim >= 2 else trajectory[subsample_idx]
+            param_values = param_values[subsample_idx]
+            # Abstract schedule for rdtc: subsample to series_len
+            stored_normalized = abstract_native[subsample_idx]
+            if state_trajectory is not None:
+                state_trajectory = state_trajectory[subsample_idx]
+        elif translate_mode is not None:
+            stored_normalized = abstract_native
+        else:
+            # Direct mode: derive param_normalized from physical values
+            stored_normalized = model.normalize_param_values(param_values)
+
+        # Estimate transition from native normalized values
+        native_normalized = model.normalize_param_values(param_values)
+        above = jnp.where(
+            native_normalized >= 1.0,
+            jnp.arange(len(native_normalized)),
+            len(native_normalized) - 1,
+        )
         trans_idx = int(jnp.min(above))
 
         metadata = {
             "label": "null" if null_simulation else "rate",
             "rate_system": system_spec.rate_system,
             "transition_index": trans_idx,
-            "param_value_transition": float(param_values[min(trans_idx, len(param_values) - 1)]),
-            "param_normalized": normalized,
+            "param_value_transition": float(
+                param_values[min(trans_idx, len(param_values) - 1)]
+            ),
+            "param_normalized": stored_normalized,
+            "param_normalized_mode": translate_mode or "direct",
             "system_config": asdict(config),
         }
+        if translation_meta is not None:
+            metadata["param_normalized_translation"] = translation_meta
         if state_trajectory is not None:
             metadata["state_trajectory"] = state_trajectory
         result = TrajectoryResult(
@@ -157,7 +245,12 @@ def simulate_rate_trajectory(
     if system_spec.rate_system in ("saddle_node", "bautin", "compost_bomb", "amoc"):
         sim_kwargs["null_simulation"] = null_simulation
     sim_ret = model.simulate(key_sim, **sim_kwargs)
-    time, trajectory, param_values, sigma = sim_ret[0], sim_ret[1], sim_ret[2], sim_ret[3]
+    time, trajectory, param_values, sigma = (
+        sim_ret[0],
+        sim_ret[1],
+        sim_ret[2],
+        sim_ret[3],
+    )
     state_trajectory = sim_ret[4] if len(sim_ret) > 4 else None
 
     # Check if the trajectory is tipped (pass time/param_values for models that need them, e.g. AMOC)
@@ -204,8 +297,11 @@ def simulate_rate_trajectory(
         "steps_before_transition": steps_before_transition,
         "system_config": asdict(config),
         "transition_index": int(trans_idx_out),
-        "param_value_transition": float(param_values[min(trans_idx_out, param_values.shape[0] - 1)]),
+        "param_value_transition": float(
+            param_values[min(trans_idx_out, param_values.shape[0] - 1)]
+        ),
         "param_normalized": normalized,
+        "param_normalized_mode": "direct",
     }
 
     part_metadata: Dict[str, Any] = {
@@ -214,8 +310,11 @@ def simulate_rate_trajectory(
         "steps_before_transition": steps_before_transition,
         "system_config": asdict(config),
         "transition_index": int(trans_idx_out),
-        "param_value_transition": float(param_values[min(trans_idx_out, param_values.shape[0] - 1)]),
+        "param_value_transition": float(
+            param_values[min(trans_idx_out, param_values.shape[0] - 1)]
+        ),
         "param_normalized": normalized_seg,
+        "param_normalized_mode": "direct",
     }
     if state_trajectory is not None:
         full_metadata["state_trajectory"] = state_trajectory

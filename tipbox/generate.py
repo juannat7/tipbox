@@ -155,10 +155,14 @@ def generate(
         # Rate-induced tipping
         rate_system = system_spec.rate_system
         if rate_system is None:
-            raise ValueError(f"Rate system '{system_name}' missing rate_system specification")
+            raise ValueError(
+                f"Rate system '{system_name}' missing rate_system specification"
+            )
 
-        # Extract schedule to pass explicitly (not via **generate_kwargs)
+        # Extract schedule and translation params (not via **generate_kwargs)
         schedule = generate_kwargs.pop("schedule", None)
+        translate_mode = generate_kwargs.pop("translate_mode", None)
+        translate_kwargs = generate_kwargs.pop("translate_kwargs", None)
 
         for attempt in range(max_attempts):
             key, subkey = jax.random.split(key)
@@ -171,6 +175,8 @@ def generate(
                 sigma_tilde=sigma_tilde,
                 system_name=rate_system,
                 schedule=schedule,
+                translate_mode=translate_mode,
+                translate_kwargs=translate_kwargs,
                 **generate_kwargs,
             )
 

@@ -103,6 +103,7 @@ class SaddleNodeModel(BoxModel):
         total_len: int,
         sigma_tilde: float = 0.01,
         schedule=None,
+        schedule_start: float = 0.0,
         initial_state: Optional[jnp.ndarray] = None,
         noise: Optional[jnp.ndarray] = None,
         null_simulation: bool = False,
@@ -121,6 +122,7 @@ class SaddleNodeModel(BoxModel):
                 total_len,
                 0.0,
                 self._config.lambda_max,
+                expected_start=schedule_start,
             )
             time = jnp.arange(0, total_len * self._config.dt, self._config.dt)
         else:
@@ -206,3 +208,29 @@ class SaddleNodeModel(BoxModel):
     def normalize_param_values(self, param_values):
         """Normalize forcing values by max forcing amplitude."""
         return param_values / self._config.lambda_max
+
+    # -- Schedule translation -------------------------------------------------
+
+    # Rate bounds: epsilon controls native tanh steepness.
+    # Null simulation uses constant-at-zero, so r_null = 0.
+    _r_crit: float = 1.25  # SaddleNodeConfig.epsilon default
+    _r_null: float = 0.0   # legacy null: constant zero forcing
+
+    def translate_schedule(self, param_normalized, rdtc, mode="time_to_critical_rate", **kw):
+        """Translate abstract schedule to native saddle-node tanh forcing."""
+        if mode == "time_to_critical_rate":
+            return self._translate_time_to_critical_rate(param_normalized, rdtc, **kw)
+        if mode == "distance_from_critical_rate":
+            raise NotImplementedError("distance_from_critical_rate not yet implemented")
+        raise ValueError(f"Unknown translation mode: {mode}")
+
+    def _translate_time_to_critical_rate(self, param_normalized, rdtc, **_kw):
+        """Interpolate epsilon from ``max(param_normalized)`` and generate native forcing."""
+        n = len(param_normalized)
+        peak = float(jnp.max(param_normalized))
+        epsilon = self._r_null + peak * (self._r_crit - self._r_null)
+
+        t = jnp.linspace(self._config.t_start, self._config.t_end, n)
+        config = replace(self._config, epsilon=epsilon)
+        forcing = self._lambda_schedule(t, config)
+        return forcing / self._config.lambda_max

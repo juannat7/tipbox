@@ -171,6 +171,7 @@ class BautinModel(BoxModel):
         total_len: int,
         sigma_tilde: float = 0.01,
         schedule=None,
+        schedule_start: float = 0.0,
         initial_state: Optional[jnp.ndarray] = None,
         noise: Optional[jnp.ndarray] = None,
         null_simulation: bool = False,
@@ -179,6 +180,14 @@ class BautinModel(BoxModel):
 
         Time range is fixed to [t_start, t_end] for legacy mode.
         When ``schedule`` is provided, direct mode is used with ``total_len`` samples.
+
+        Parameters
+        ----------
+        schedule_start : float
+            Expected start value of the normalized schedule.  Passed to
+            ``validate_schedule_start``.  Default 0.0 (schedule starts at
+            equilibrium).  Set to ``schedule[0]`` for translated schedules
+            whose native forcing starts above zero.
         """
         key_noise, key_ic = jax.random.split(key)
 
@@ -190,6 +199,7 @@ class BautinModel(BoxModel):
                 total_len,
                 0.0,
                 self._config.lambda_max,
+                expected_start=schedule_start,
             )
             time = jnp.arange(0, total_len * self._config.dt, self._config.dt)
         else:
@@ -278,3 +288,36 @@ class BautinModel(BoxModel):
     def normalize_param_values(self, param_values):
         """Normalize forcing values by max forcing amplitude."""
         return param_values / self._config.lambda_max
+
+    # -- Schedule translation -------------------------------------------------
+
+    # Rate bounds for interpolation.
+    # r_crit: rate at which tipping occurs (default config).
+    # r_null: rate used for null simulations (no tipping).
+    _r_crit: float = 0.1   # BautinConfig.r default
+    _r_null: float = 0.05  # legacy null uses 0.5 * r
+
+    def translate_schedule(self, param_normalized, rdtc, mode="time_to_critical_rate", **kw):
+        """Translate abstract schedule to native Bautin sigmoid forcing."""
+        if mode == "time_to_critical_rate":
+            return self._translate_time_to_critical_rate(param_normalized, rdtc, **kw)
+        if mode == "distance_from_critical_rate":
+            raise NotImplementedError("distance_from_critical_rate not yet implemented")
+        raise ValueError(f"Unknown translation mode: {mode}")
+
+    def _translate_time_to_critical_rate(self, param_normalized, rdtc, **_kw):
+        """Interpolate rate from ``max(param_normalized)`` and generate native forcing.
+
+        ``max(param_normalized)`` determines the rate as a fraction between
+        ``r_null`` (no tipping) and ``r_crit`` (tipping).  The model's own
+        tanh forcing function generates the schedule at that rate over the
+        full native time range.
+        """
+        n = len(param_normalized)
+        peak = float(jnp.max(param_normalized))
+        rate = self._r_null + peak * (self._r_crit - self._r_null)
+
+        t = jnp.linspace(self._config.t_start, self._config.t_end, n)
+        config = replace(self._config, r=rate)
+        forcing = self._lambda_schedule(t, config)
+        return forcing / self._config.lambda_max
