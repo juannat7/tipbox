@@ -163,6 +163,8 @@ def generate(
         schedule = generate_kwargs.pop("schedule", None)
         translate_mode = generate_kwargs.pop("translate_mode", None)
         translate_kwargs = generate_kwargs.pop("translate_kwargs", None)
+        reject_mismatch = generate_kwargs.pop("reject_mismatch", False)
+        rdtc_tipping_threshold = generate_kwargs.pop("rdtc_tipping_threshold", 0.1)
 
         for attempt in range(max_attempts):
             key, subkey = jax.random.split(key)
@@ -177,6 +179,8 @@ def generate(
                 schedule=schedule,
                 translate_mode=translate_mode,
                 translate_kwargs=translate_kwargs,
+                reject_mismatch=reject_mismatch,
+                rdtc_tipping_threshold=rdtc_tipping_threshold,
                 **generate_kwargs,
             )
 

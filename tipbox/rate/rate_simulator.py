@@ -39,6 +39,8 @@ def simulate_rate_trajectory(
     schedule=None,
     translate_mode: str = None,
     translate_kwargs: dict = None,
+    reject_mismatch: bool = False,
+    rdtc_tipping_threshold: float = 0.1,
     **generate_kwargs,
 ):
     """Simulate a single rate-induced tipping trajectory.
@@ -198,6 +200,17 @@ def simulate_rate_trajectory(
         else:
             # Direct mode: derive param_normalized from physical values
             stored_normalized = model.normalize_param_values(param_values)
+
+        # Rejection sampling: if enabled, check whether the tipping outcome
+        # matches the abstract schedule's intent (derived from min rdtc).
+        if reject_mismatch and translate_mode is not None:
+            min_rdtc = float(jnp.min(1.0 - stored_normalized))
+            expect_tipping = min_rdtc < rdtc_tipping_threshold
+            is_tipped = model.is_tipped(
+                trajectory, time=time, param_values=param_values
+            )
+            if bool(is_tipped) != expect_tipping:
+                return None
 
         # Estimate transition from native normalized values
         native_normalized = model.normalize_param_values(param_values)
