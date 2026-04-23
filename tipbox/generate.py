@@ -8,10 +8,9 @@ then simulates stochastic trajectories approaching the tipping point.
 import jax
 import jax.numpy as jnp
 
-from .bifurcation.bifurcation_finder import find_all_bifurcations, select_bifurcation
-from .bifurcation.bifurcation_simulator import simulate_real_bifurcation_trajectory
-from .bifurcation.polynomial_model import generate_random_polynomial_model
-from .bifurcation.stochastic_simulator import simulate_synthetic_bifurcation_trajectory
+# Bifurcation imports are lazy to avoid requiring AUTO-07P when only
+# rate-induced systems are used (AUTO-07P is only needed for synthetic
+# bifurcation detection).
 from .rate.rate_simulator import simulate_rate_trajectory
 from .registry import (
     SystemType,
@@ -201,6 +200,10 @@ def generate(
 
     elif system_spec.is_synthetic_bifurcation:
         # Synthetic bifurcation (polynomial models) - b_fold, b_hopf, b_transcritical
+        from .bifurcation.bifurcation_finder import find_all_bifurcations, select_bifurcation
+        from .bifurcation.polynomial_model import generate_random_polynomial_model
+        from .bifurcation.stochastic_simulator import simulate_synthetic_bifurcation_trajectory
+
         bifurcation_type = system_spec.bifurcation_system
 
         for attempt in range(max_attempts):
@@ -255,6 +258,8 @@ def generate(
 
     else:
         # Real bifurcation system (e.g., May's harvesting)
+        from .bifurcation.bifurcation_simulator import simulate_real_bifurcation_trajectory
+
         real_system_name = system_spec.bifurcation_system
 
         # Extract schedule to pass explicitly
