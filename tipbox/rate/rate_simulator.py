@@ -168,6 +168,7 @@ def simulate_rate_trajectory(
             sim_schedule_start = 0.0
             sim_total_len = series_len
             translation_meta = None
+            _sched_meta = {}  # no schedule metadata in direct mode
 
         sim_ret = model.simulate(
             key_sim,
@@ -247,6 +248,8 @@ def simulate_rate_trajectory(
         }
         if translation_meta is not None:
             metadata["param_normalized_translation"] = translation_meta
+        if _sched_meta:
+            metadata["schedule_metadata"] = _sched_meta
         if state_trajectory is not None:
             metadata["state_trajectory"] = state_trajectory
         result = TrajectoryResult(
