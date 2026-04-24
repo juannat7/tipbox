@@ -273,8 +273,11 @@ class AMOCRateModel(BoxModel):
             raise NotImplementedError("distance_from_critical_rate not yet implemented")
         raise ValueError(f"Unknown translation mode: {mode}")
 
+    # Native cosh ramp reaches plateau at t=0.
+    _t_inflection: float = 0.0
+
     def _translate_time_to_critical_rate(self, param_normalized, rdtc, **_kw):
-        """Interpolate r from ``max(param_normalized)`` and generate native forcing.
+        """Interpolate r and shift native forcing so plateau onset aligns with rdtc=0.
 
         The native AMOC forcing is a cosh-based ramp → plateau.
         """
@@ -282,9 +285,24 @@ class AMOCRateModel(BoxModel):
         peak = float(jnp.max(param_normalized))
         r = self._r_null + peak * (self._r_crit - self._r_null)
 
-        t = jnp.linspace(self._config.t_start, self._config.t_end, n)
+        import random
+
+        min_rdtc = float(jnp.min(rdtc))
+        native_range = self._config.t_end - self._config.t_start
+        if min_rdtc < 0.1:
+            t_cross_idx = int(jnp.argmin(jnp.abs(rdtc)))
+            t_cross_frac = t_cross_idx / n if n > 0 else 0.5
+        else:
+            nsf = _kw.get("null_shift_frac", 0.75)
+            if isinstance(nsf, (list, tuple)) and len(nsf) == 2:
+                t_cross_frac = random.uniform(nsf[0], nsf[1])
+            else:
+                t_cross_frac = float(nsf)
+        t_target = self._config.t_start + t_cross_frac * native_range
+        shift = t_target - self._t_inflection
+        t = jnp.linspace(self._config.t_start - shift, self._config.t_end - shift, n)
+
         forcing = _forcing_ramp(t, r, self._config.dH, self._config.H0)
-        # Normalize: 0 at H0, 1 at H0 + dH
         return (forcing - self._config.H0) / self._config.dH
 
     def is_tipped(

@@ -324,17 +324,21 @@ class CompostBombModel(BoxModel):
         raise ValueError(f"Unknown translation mode: {mode}")
 
     def _translate_time_to_critical_rate(self, param_normalized, rdtc, **_kw):
-        """Interpolate v from ``max(param_normalized)`` and generate native forcing.
+        """Interpolate v and shift native forcing so max forcing aligns with rdtc=0.
 
-        The native compost-bomb forcing is ``T_a(t) = v * t``.
+        The native compost-bomb forcing is ``T_a(t) = v * t`` (linear ramp).
+        We shift the time window so the end of the native ramp (t_end)
+        aligns with the timestep where the abstract schedule peaks.
         """
         n = len(param_normalized)
         peak = float(jnp.max(param_normalized))
         v = self._r_null + peak * (self._r_crit - self._r_null)
 
+        # Compost bomb has a linear ramp (constant rate) — no inflection to
+        # shift.  The rate v directly controls timing.  No shift needed.
         t = jnp.linspace(self._config.t_start, self._config.t_end, n)
+
         config = replace(self._config, v=v)
         forcing = self._T_a_schedule(t, config)
-        # Normalize: 0 at t_start (=0), max at t_end (= v * t_end)
         max_forcing = self._config.v * self._config.t_end
         return forcing / max_forcing if max_forcing > 0 else jnp.zeros(n)

@@ -185,32 +185,45 @@ def simulate_rate_trajectory(
         )
         state_trajectory = sim_ret[4] if len(sim_ret) > 4 else None
 
-        # Subsample to series_len if we simulated at native resolution
-        if translate_mode is not None and sim_total_len != series_len:
-            subsample_idx = jnp.linspace(0, sim_total_len - 1, series_len).astype(int)
-            time = time[subsample_idx]
-            trajectory = trajectory[subsample_idx] if trajectory.ndim >= 2 else trajectory[subsample_idx]
-            param_values = param_values[subsample_idx]
-            # Abstract schedule for rdtc: subsample to series_len
-            stored_normalized = abstract_native[subsample_idx]
-            if state_trajectory is not None:
-                state_trajectory = state_trajectory[subsample_idx]
-        elif translate_mode is not None:
-            stored_normalized = abstract_native
-        else:
-            # Direct mode: derive param_normalized from physical values
-            stored_normalized = model.normalize_param_values(param_values)
-
-        # Rejection sampling: if enabled, check whether the tipping outcome
-        # matches the abstract schedule's intent (derived from min rdtc).
+        # Rejection sampling on the NATIVE (pre-subsample) trajectory so that
+        # tipping detection doesn't miss divergence between subsample points.
         if reject_mismatch and translate_mode is not None:
-            min_rdtc = float(jnp.min(1.0 - stored_normalized))
+            native_rdtc = 1.0 - abstract_native
+            min_rdtc = float(jnp.min(native_rdtc))
             expect_tipping = min_rdtc < rdtc_tipping_threshold
             is_tipped = model.is_tipped(
                 trajectory, time=time, param_values=param_values
             )
             if bool(is_tipped) != expect_tipping:
                 return None
+
+            # Reject early tipping: for critical episodes with shifted forcing,
+            # ensure the system didn't tip before rdtc approached 0.
+            # Only applies to models that shift the native forcing (have
+            # _t_inflection); linear-ramp models like compost_bomb don't shift
+            # and tipping timing is governed by the rate, not the shift.
+            if expect_tipping and is_tipped and hasattr(model, '_t_inflection'):
+                cross_idx = int(jnp.argmin(jnp.abs(native_rdtc)))
+                if cross_idx > 1:
+                    pre_traj = trajectory[:cross_idx]
+                    pre_time = time[:cross_idx] if time is not None else None
+                    pre_pv = param_values[:cross_idx]
+                    if model.is_tipped(pre_traj, time=pre_time, param_values=pre_pv):
+                        return None  # tipped too early
+
+        # Subsample to series_len if we simulated at native resolution
+        if translate_mode is not None and sim_total_len != series_len:
+            subsample_idx = jnp.linspace(0, sim_total_len - 1, series_len).astype(int)
+            time = time[subsample_idx]
+            trajectory = trajectory[subsample_idx] if trajectory.ndim >= 2 else trajectory[subsample_idx]
+            param_values = param_values[subsample_idx]
+            stored_normalized = abstract_native[subsample_idx]
+            if state_trajectory is not None:
+                state_trajectory = state_trajectory[subsample_idx]
+        elif translate_mode is not None:
+            stored_normalized = abstract_native
+        else:
+            stored_normalized = model.normalize_param_values(param_values)
 
         # Estimate transition from native normalized values
         native_normalized = model.normalize_param_values(param_values)
