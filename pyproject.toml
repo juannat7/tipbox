@@ -13,6 +13,7 @@ dependencies = [
     "jax",
     "jaxlib",
     "numpy",
+    "scipy",
     "matplotlib",
 ]
 
