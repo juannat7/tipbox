@@ -1,7 +1,7 @@
 Model collection
 ================
 
-The nine registered configurations cover eight model classes. The
+The eleven registered configurations cover ten model classes. The
 Rosenzweig–MacArthur consumer-resource equations support both transcritical and
 Hopf scenarios.
 
@@ -15,6 +15,8 @@ Hopf scenarios.
    bautin
    compost
    amoc
+   ricker
+   thermoacoustic
 
 Parameter tables are generated from the same typed configurations used by the
 simulators. “Automatic” marks an optional override whose default is calculated
