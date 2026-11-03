@@ -11,14 +11,17 @@ from ..utils import calculate_total_len
 def available_bifurcation_real_systems():
     """Get the available real systems with bifurcation tipping (internal names)."""
     from ..registry import SYSTEM_REGISTRY
-    return tuple(spec.bifurcation_system 
-                for spec in SYSTEM_REGISTRY.values() 
-                if spec.bifurcation_system is not None)
+
+    return tuple(
+        spec.bifurcation_system
+        for spec in SYSTEM_REGISTRY.values()
+        if spec.bifurcation_system is not None
+    )
 
 
 def _select_system(key: jax.random.PRNGKey, system_name: str = None):
     """Select a bifurcation real system.
-    
+
     Parameters
     ----------
     key : JAX random key
@@ -26,15 +29,17 @@ def _select_system(key: jax.random.PRNGKey, system_name: str = None):
         If provided, select this specific system. Otherwise, randomly select.
     """
     from ..registry import SYSTEM_REGISTRY, SystemType
-    
+
     if system_name is not None:
         return get_bifurcation_real_system_spec(system_name)
-    
+
     # Random selection
-    real_systems = [spec for spec in SYSTEM_REGISTRY.values() 
-                    if spec.system_type == SystemType.BIFURCATION 
-                    and spec.bifurcation_system is not None 
-                   ]
+    real_systems = [
+        spec
+        for spec in SYSTEM_REGISTRY.values()
+        if spec.system_type == SystemType.BIFURCATION
+        and spec.bifurcation_system is not None
+    ]
     if not real_systems:
         raise ValueError("No bifurcation real systems available")
     idx = int(jax.random.randint(key, (), 0, len(real_systems)))
@@ -51,7 +56,7 @@ def simulate_real_bifurcation_trajectory(
     system_name: str = None,
     param_end_multiplier: float = 1.1,
     config=None,
-    **generate_kwargs
+    **generate_kwargs,
 ):
     """Simulate a single real system bifurcation trajectory.
 
@@ -94,7 +99,7 @@ def simulate_real_bifurcation_trajectory(
             "steps_before_transition exceeds buffer_size. "
             "Increase buffer_size to maintain constant parameter rate."
         )
-    
+
     # Calculate total simulation length (extended if param_end_multiplier > 1.0)
     total_len = calculate_total_len(series_len, buffer_size, param_end_multiplier)
 
@@ -110,7 +115,7 @@ def simulate_real_bifurcation_trajectory(
         sigma_tilde=sigma_tilde,
         null_simulation=null_simulation,
         param_end_multiplier=param_end_multiplier,
-        **generate_kwargs
+        **generate_kwargs,
     )
 
     # Check if the trajectory crossed the bifurcation point
@@ -148,7 +153,9 @@ def simulate_real_bifurcation_trajectory(
         "steps_before_transition": steps_before_transition,
         "system_config": asdict(config),
         "transition_index": int(trans_idx_out),
-        "param_value_transition": float(param_values[min(trans_idx_out, param_values.shape[0] - 1)])
+        "param_value_transition": float(
+            param_values[min(trans_idx_out, param_values.shape[0] - 1)]
+        ),
     }
 
     full_trajectory = TrajectoryResult(
@@ -156,7 +163,7 @@ def simulate_real_bifurcation_trajectory(
         trajectory=trajectory,
         param_values=param_values,
         sigma=sigma,
-        metadata=metadata
+        metadata=metadata,
     )
 
     part_trajectory = TrajectoryResult(
@@ -164,8 +171,7 @@ def simulate_real_bifurcation_trajectory(
         trajectory=traj_seg,
         param_values=param_seg,
         sigma=sigma,
-        metadata=metadata
+        metadata=metadata,
     )
 
     return (full_trajectory, part_trajectory)
-

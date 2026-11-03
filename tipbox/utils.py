@@ -1,3 +1,4 @@
+from dataclasses import field
 from math import isclose, isfinite
 from typing import Tuple, Type, TypeVar
 
@@ -7,13 +8,20 @@ import jax.numpy as jnp
 T = TypeVar("T")
 
 
+def parameter(default, description: str, units: str = ""):
+    """Declare a dataclass parameter and its documentation in one place."""
+    return field(default=default, metadata={"description": description, "units": units})
+
+
 def sampling_stride(dt_sample: float, dt_integrate: float) -> int:
     """Return an exact positive sampling stride on a fixed integration grid."""
     if not isfinite(dt_sample) or not isfinite(dt_integrate) or dt_integrate <= 0:
         raise ValueError("Sampling and integration steps must be finite and positive")
     stride = round(dt_sample / dt_integrate)
     if stride < 1 or not isclose(stride * dt_integrate, dt_sample, rel_tol=1e-7):
-        raise ValueError("dt_sample must be a positive integer multiple of the integration step")
+        raise ValueError(
+            "dt_sample must be a positive integer multiple of the integration step"
+        )
     return stride
 
 
@@ -43,15 +51,13 @@ def convert_scalar_trajectory(x: jnp.ndarray) -> jnp.ndarray:
 
 
 def calculate_total_len(
-    series_len: int,
-    buffer_size: int,
-    param_end_multiplier: float = 1.1
+    series_len: int, buffer_size: int, param_end_multiplier: float = 1.1
 ) -> int:
     """Calculate total simulation length with optional extension.
-    
+
     For simulations with param_end_multiplier > 1.0, extends the simulation time
     to ensure enough points before transition (forced) or after transition (null).
-    
+
     Parameters
     ----------
     series_len : int
@@ -60,7 +66,7 @@ def calculate_total_len(
         Extra samples simulated prior to the transition
     param_end_multiplier : float, default=1.1
         Multiplier for extending simulation time beyond transition
-        
+
     Returns
     -------
     int
@@ -97,4 +103,3 @@ def extract_segment(
         params_out = params[:series_len]
 
     return time_out, trajectory_out, params_out, transition_idx, success
-

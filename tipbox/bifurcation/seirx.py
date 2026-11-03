@@ -6,7 +6,11 @@ import jax.numpy as jnp
 from jax import lax
 
 from ..types import BoxModel
-from ..utils import extract_segment, register_dataclass_pytree, sampling_stride
+from ..utils import (
+    parameter,
+    register_dataclass_pytree,
+    sampling_stride,
+)
 
 
 @register_dataclass_pytree
@@ -46,31 +50,81 @@ class SEIRxConfig:
     """
 
     # Model parameters (Bury et al. 2021; time in weeks, daily rates × 7)
-    N: float = 100_000.0      # Total population
-    mu: float = 0.02 / 52.0   # Birth/death rate (0.02/year = 1/52 per week)
-    beta: float = 1.5 * 7     # Transmission rate (1.5/day → 10.5/week)
-    epsilon: float = 0.1 * 7  # E→I rate (0.1/day → 0.7/week, ~10 d latent)
-    gamma: float = 0.1 * 7    # Recovery rate (0.1/day → 0.7/week, ~10 d infectious)
-    kappa: float = 0.001 * 7  # Social learning rate (0.001/day → 0.007/week)
-    delta: float = 50.0       # Injunctive social norms (bifurcation at ω = δ)
+    N: float = parameter(
+        100000.0,
+        "Total population including the unobserved recovered compartment.",
+        "individuals",
+    )
+    mu: float = parameter(0.02 / 52.0, "Birth and death rate.", "1 / week")
+    beta: float = parameter(
+        1.5 * 7,
+        "Transmission rate in frequency-dependent incidence beta*S*I/N.",
+        "1 / week",
+    )
+    epsilon: float = parameter(
+        0.1 * 7, "Progression rate from exposed to infectious.", "1 / week"
+    )
+    gamma: float = parameter(0.1 * 7, "Recovery rate.", "1 / week")
+    kappa: float = parameter(
+        0.001 * 7, "Social-learning rate.", "model payoff scaling / week"
+    )
+    delta: float = parameter(
+        50.0,
+        "Injunctive social-norm strength; the disease-free behavioural threshold is omega=delta.",
+        "payoff units",
+    )
 
     # Noise (Bury: σ₁₋₃ = 5, σ₅ = 5×10⁻⁴)
-    sigma_S: float = 5.0
-    sigma_E: float = 5.0      # Noise amplitude for E
-    sigma_I: float = 5.0      # Noise amplitude for I
-    sigma_x: float = 5e-4     # Noise amplitude for x
+    sigma_S: float = parameter(
+        5.0,
+        "Susceptible diffusion amplitude before the noise multiplier.",
+        "individuals / sqrt(week)",
+    )
+    sigma_E: float = parameter(
+        5.0,
+        "Exposed diffusion amplitude before the noise multiplier.",
+        "individuals / sqrt(week)",
+    )
+    sigma_I: float = parameter(
+        5.0,
+        "Infectious diffusion amplitude before the noise multiplier.",
+        "individuals / sqrt(week)",
+    )
+    sigma_x: float = parameter(
+        0.0005,
+        "Vaccinator-fraction diffusion amplitude before the noise multiplier.",
+        "1 / sqrt(week)",
+    )
 
     # Bifurcation parameter ranges (ω: perceived vaccination risk)
     # Transcritical bifurcation at ω = δ; keep omega_bifurcation equal to delta.
-    omega_null: float = 0.0
-    omega_min: float = 0.0
-    omega_max: float = 100.0
-    omega_bifurcation: float = 50.0
+    omega_null: float | None = parameter(
+        None,
+        "Optional null cap; None uses max(omega_min, 2*omega_critical-omega_max).",
+        "payoff units",
+    )
+    omega_min: float = parameter(
+        0.0, "Initial perceived vaccination risk.", "payoff units"
+    )
+    omega_max: float = parameter(100.0, "Forced ramp endpoint and cap.", "payoff units")
+    omega_bifurcation: float | None = parameter(
+        None, "Optional behavioural marker; None uses delta.", "payoff units"
+    )
 
     # Simulation parameters (time in weeks)
-    dt: float = 0.01      # Time step (Euler-Maruyama), in weeks
-    t_start: float = 0.0
-    t_end: float = 100.0  # Default time range (weeks)
+    dt: float = parameter(
+        0.01,
+        "Default integration step; AMOC uses this field for output spacing.",
+        "week",
+    )
+    t_start: float = parameter(
+        0.0, "Start time; rate-induced forcing uses this absolute clock origin.", "week"
+    )
+    t_end: float = parameter(
+        100.0,
+        "End time when make_trajectory is called without n; explicit n sets the end time.",
+        "week",
+    )
 
     @classmethod
     def default(cls) -> "SEIRxConfig":
@@ -95,31 +149,42 @@ class SEIRxModel(BoxModel):
       and I only rises once x drops and susceptibles accumulate.
     """
 
-    def __init__(self, config: SEIRxConfig):
-        self._config = config
+    config_class = SEIRxConfig
 
-    def get_parameters(self):
-        """Get the parameters of the model."""
-        return {
-            "N": self._config.N,
-            "mu": self._config.mu,
-            "beta": self._config.beta,
-            "epsilon": self._config.epsilon,
-            "gamma": self._config.gamma,
-            "kappa": self._config.kappa,
-            "delta": self._config.delta,
-            "sigma_S": self._config.sigma_S,
-            "sigma_E": self._config.sigma_E,
-            "sigma_I": self._config.sigma_I,
-            "sigma_x": self._config.sigma_x,
-            "omega_null": self._config.omega_null,
-            "omega_min": self._config.omega_min,
-            "omega_max": self._config.omega_max,
-            "omega_bifurcation": self._config.omega_bifurcation,
-            "dt": self._config.dt,
-            "t_start": self._config.t_start,
-            "t_end": self._config.t_end,
-        }
+    @property
+    def critical_parameter(self):
+        """Disease-free behavioural threshold omega=delta, or an override."""
+        value = self._config.omega_bifurcation
+        return self._config.delta if value is None else value
+
+    state_names = ("susceptible", "exposed", "infectious", "vaccinator_fraction")
+    observable_names = ("infectious", "vaccinator_fraction")
+    noise_dimension = 4
+    default_sample_dt = 1.0
+    time_unit = "week"
+    forcing_name = "vaccination_risk"
+
+    def _initial_state(self, key, null_simulation):
+        return self._sample_initial_state(key, null_simulation)
+
+    def _forcing(self, time, null_simulation, param_end_multiplier):
+        return self._omega_schedule(time, null_simulation, param_end_multiplier)
+
+    def _integrate(
+        self, time, forcing, dt, noise, state, innovations, midpoint_forcing
+    ):
+        c = self._config
+        scale = (
+            jnp.array([c.sigma_S, c.sigma_E, c.sigma_I, c.sigma_x])
+            * noise
+            * jnp.sqrt(dt)
+        )
+        return self._simulate_path(
+            None, forcing, dt, scale, state, noise=innovations
+        ), scale
+
+    def _observe(self, path):
+        return path[:, 2:]
 
     def _get_param_range(self) -> tuple:
         """Get the bifurcation parameter range (ω)."""
@@ -127,7 +192,7 @@ class SEIRxModel(BoxModel):
             self._config.omega_null,
             self._config.omega_min,
             self._config.omega_max,
-            self._config.omega_bifurcation,
+            self.critical_parameter,
         )
 
     def _omega_schedule(
@@ -153,7 +218,7 @@ class SEIRxModel(BoxModel):
         if null_simulation:
             range_past = omega_max - omega_bif
             cap = omega_bif - range_past
-            cap = jnp.maximum(cap, omega_min)
+            cap = jnp.maximum(cap, omega_min) if omega_null is None else omega_null
             return jnp.minimum(ramp, cap)
         else:
             omega_values = jnp.where(
@@ -325,17 +390,21 @@ class SEIRxModel(BoxModel):
 
         # Sample initial state if not provided
         if initial_state is None:
-            initial_state = self._sample_initial_state(key_ic, null_simulation=null_simulation)
+            initial_state = self._sample_initial_state(
+                key_ic, null_simulation=null_simulation
+            )
         else:
             initial_state = jnp.asarray(initial_state)
 
         # Configure noise scales: σ * sqrt(dt) for Euler-Maruyama
-        noise_scale = jnp.array([
-            sigma_tilde * self._config.sigma_S * jnp.sqrt(self._config.dt),
-            sigma_tilde * self._config.sigma_E * jnp.sqrt(self._config.dt),
-            sigma_tilde * self._config.sigma_I * jnp.sqrt(self._config.dt),
-            sigma_tilde * self._config.sigma_x * jnp.sqrt(self._config.dt),
-        ])
+        noise_scale = jnp.array(
+            [
+                sigma_tilde * self._config.sigma_S * jnp.sqrt(self._config.dt),
+                sigma_tilde * self._config.sigma_E * jnp.sqrt(self._config.dt),
+                sigma_tilde * self._config.sigma_I * jnp.sqrt(self._config.dt),
+                sigma_tilde * self._config.sigma_x * jnp.sqrt(self._config.dt),
+            ]
+        )
 
         # Simulate trajectory at fine time steps
         trajectory_fine = self._simulate_path(
@@ -377,37 +446,15 @@ class SEIRxModel(BoxModel):
         param_values: jnp.ndarray,
         param_end_multiplier: float = 1.1,
     ):
-        """Locate transition: midpoint for null; for forced, first index where ω ≥ bifurcation (paper).
-        """
+        """Locate transition: midpoint for null; for forced, first index where ω ≥ bifurcation (paper)."""
         if null_simulation:
             return len(param_values) // 2
 
         _, _, _, omega_bif = self._get_param_range()
-        
+
         crossed = param_values >= omega_bif
 
         if bool(jnp.any(crossed)):
             return int(jnp.argmax(crossed))
-        
+
         return len(param_values) - 1
-
-    def extract_segment(
-        self,
-        time: jnp.ndarray,
-        trajectory: jnp.ndarray,
-        param_values: jnp.ndarray,
-        transition_idx: int,
-        steps_before_transition: int,
-        series_len: int,
-    ):
-        """Extract a segment of the trajectory around the transition."""
-        time_seg, traj_seg, param_seg, trans_idx_out, success = extract_segment(
-            time,
-            trajectory,
-            param_values,
-            transition_idx,
-            steps_before_transition,
-            series_len,
-        )
-
-        return time_seg, traj_seg, param_seg, trans_idx_out, success

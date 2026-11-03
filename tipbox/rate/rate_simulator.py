@@ -16,9 +16,12 @@ def available_rate_systems():
 def _select_system(key: jax.random.PRNGKey):
     """Randomly select a rate-induced tipping system."""
     from ..registry import SYSTEM_REGISTRY, SystemType
-    
-    rate_systems = [name for name, spec in SYSTEM_REGISTRY.items() 
-                    if spec.system_type == SystemType.RATE and spec.rate_system]
+
+    rate_systems = [
+        name
+        for name, spec in SYSTEM_REGISTRY.items()
+        if spec.system_type == SystemType.RATE and spec.rate_system
+    ]
     idx = int(jax.random.randint(key, (), 0, len(rate_systems)))
     system_name = rate_systems[idx]
     return SYSTEM_REGISTRY[system_name]
@@ -34,7 +37,7 @@ def simulate_rate_trajectory(
     system_name: str = None,
     param_end_multiplier: float = 1.1,
     config=None,
-    **generate_kwargs
+    **generate_kwargs,
 ):
     """Simulate a single rate-induced tipping trajectory.
 
@@ -88,7 +91,7 @@ def simulate_rate_trajectory(
     else:
         # Random selection (backward compatibility)
         system_spec = _select_system(key_select)
-    
+
     config = system_spec.default_config() if config is None else config
     model = system_spec.create_model(config)
 
@@ -99,7 +102,12 @@ def simulate_rate_trajectory(
         null_simulation=null_simulation,
         **generate_kwargs,
     )
-    time, trajectory, param_values, sigma = sim_ret[0], sim_ret[1], sim_ret[2], sim_ret[3]
+    time, trajectory, param_values, sigma = (
+        sim_ret[0],
+        sim_ret[1],
+        sim_ret[2],
+        sim_ret[3],
+    )
     state_trajectory = sim_ret[4] if len(sim_ret) > 4 else None
 
     # Check if the trajectory is tipped (pass time/param_values for models that need them, e.g. AMOC)
@@ -142,7 +150,9 @@ def simulate_rate_trajectory(
         "steps_before_transition": steps_before_transition,
         "system_config": asdict(config),
         "transition_index": int(trans_idx_out),
-        "param_value_transition": float(param_values[min(trans_idx_out, param_values.shape[0] - 1)])
+        "param_value_transition": float(
+            param_values[min(trans_idx_out, param_values.shape[0] - 1)]
+        ),
     }
     if state_trajectory is not None:
         metadata["state_trajectory"] = state_trajectory
@@ -152,7 +162,7 @@ def simulate_rate_trajectory(
         trajectory=trajectory,
         param_values=param_values,
         sigma=sigma,
-        metadata=metadata
+        metadata=metadata,
     )
 
     part_trajectory = TrajectoryResult(
@@ -160,7 +170,7 @@ def simulate_rate_trajectory(
         trajectory=traj_seg,
         param_values=param_seg,
         sigma=sigma,
-        metadata=metadata
+        metadata=metadata,
     )
 
     return (full_trajectory, part_trajectory)
