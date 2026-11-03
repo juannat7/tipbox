@@ -16,13 +16,14 @@ class CompostBombConfig:
     """Configuration for the stochastic compost-bomb dynamic system.
 
     Based on Luke & Cox (2011) equations:
-    μ * dT_s/dt = -λ(T_s - T_a) + A * C_s * r_0 * e^(alpha(T_s - T_ref)) + D_3 * dW
+    dT_s = [-λ(T_s - T_a) + A * C_s * r_0 * e^(alpha(T_s - T_ref))]/μ dt + D_3 * η dW
     dC_s/dt = Π - C_s * r_0 * e^(alpha(T_s - T_ref))
 
     where:
     - T_a(t) = v * t (atmospheric temperature forcing)
     - r(T_s) = r_0 * e^(alpha(T_s - T_ref)) (temperature-dependent respiration)
     - The positive feedback: T ↑ → r(T) ↑ → more heat → T ↑ (compost-bomb instability)
+    - η: shared noise multiplier; diffusion is applied directly to temperature
     """
 
     # Forcing parameters
@@ -62,7 +63,7 @@ class CompostBombConfig:
     )
     dt: float = parameter(
         0.05,
-        "Default integration step; AMOC uses this field for output spacing.",
+        "Default integration step.",
         "year",
     )
     t_start: float = parameter(
@@ -97,13 +98,14 @@ class CompostBombModel(BoxModel):
     """BoxModel abstraction for the stochastic compost-bomb dynamic system.
 
     Implements the compost-bomb system from Luke & Cox (2011):
-    μ * dT_s/dt = -λ(T_s - T_a) + A * C_s * r(T_s) + D_3 * dW
+    dT_s = [-λ(T_s - T_a) + A * C_s * r(T_s)]/μ dt + D_3 * η dW
     dC_s/dt = Π - C_s * r(T_s)
 
     where:
     - r(T_s) = r_0 * e^(alpha(T_s - T_ref)) (temperature-dependent respiration)
     - T_a(t) = v * t (atmospheric temperature forcing)
     - The positive feedback creates the compost-bomb instability
+    - η is the shared noise multiplier, applied after the heat-capacity division
     """
 
     config_class = CompostBombConfig
@@ -182,7 +184,7 @@ class CompostBombModel(BoxModel):
         """Stochastic integration of the compost-bomb system.
 
         Implements (Luke & Cox 2011):
-        μ * dT_s/dt = -λ(T_s - T_a) + A * C_s * r(T_s) + D_3 * dW
+        dT_s = [-λ(T_s - T_a) + A * C_s * r(T_s)]/μ dt + D_3 * η dW
         dC_s/dt = Π - C_s * r(T_s)
 
         where r(T_s) = r_0 * e^(alpha(T_s - T_ref)) (temperature-dependent respiration)

@@ -39,7 +39,7 @@ class BautinConfig:
     )
     dt: float = parameter(
         0.01,
-        "Default integration step; AMOC uses this field for output spacing.",
+        "Default integration step.",
         "model time",
     )
     t_start: float = parameter(
@@ -78,9 +78,11 @@ class BautinModel(BoxModel):
     where Z_t = X_t + iY_t (complex state) and
     Λ(t) = 0.5Λ_max[tanh(0.5Λ_max r t) + 1] (time-varying forcing).
 
-    In Cartesian coordinates (x, y) where w = Z_t - Λ(t) = x + iy:
-        dx/dt = ax - ωy - b(x²+y²)x + (x²+y²)²x + D₂ dW_x/dt
-        dy/dt = ay + ωx - b(x²+y²)y + (x²+y²)²y + D₂ dW_y/dt
+    Stored coordinates are absolute Z_t = X + iY. With w_x = X - Λ(t), w_y = Y,
+    and R² = w_x² + w_y², the Cartesian drift is
+        dX/dt = a*w_x - ω*w_y - b*R²*w_x + R⁴*w_x
+        dY/dt = a*w_y + ω*w_x - b*R²*w_y + R⁴*w_y.
+    Independent noises D₂*η*dW act in both coordinates, where η is noise.
     """
 
     config_class = BautinConfig
@@ -227,8 +229,8 @@ class BautinModel(BoxModel):
         """Simulate the Bautin system.
 
         Time range is fixed to [t_start, t_end] from config (paper: -15 to 15).
-        total_len is ignored. The window length sets the ramp speed: wider (e.g. -20 to 20)
-        → slower ramp → tipping tends to occur later; narrower → earlier tipping.
+        total_len is ignored. The configured time window selects a portion of
+        the absolute-time ramp; r sets its rate independently of that window.
         For null_simulation=True, same ramp shape but with r at 50% (slower rate; visible in plot).
         """
         key_noise, key_ic = jax.random.split(key)

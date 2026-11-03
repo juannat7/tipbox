@@ -22,8 +22,11 @@ stays constant. The automatic null cap is
 The disease-free behavioural marker is :math:`\omega_c=\delta`, unless an
 explicit ``omega_bifurcation`` is supplied.
 
-The initial state is :math:`(0,0,0,1)`. Each Euler–Maruyama update is projected
-to nonnegative populations, :math:`0\le x\le1`, and :math:`S+E+I\le N`.
+The initial state is :math:`(0,0,0,1)`. Each Euler–Maruyama update first floors
+all four coordinates at ``1e-8``, then clips :math:`x` to :math:`[0,1]` and
+rescales :math:`(S,E,I)` if their sum exceeds :math:`N`. This retained numerical
+floor seeds tiny exposed and infectious populations even with ``noise=0``;
+the implemented disease-free boundary is therefore approximate.
 Observations contain :math:`(I,x)`; all four sampled physical coordinates remain
 in result metadata.
 

@@ -29,7 +29,7 @@ class SaddleNodeConfig:
     )
     dt: float = parameter(
         0.01,
-        "Default integration step; AMOC uses this field for output spacing.",
+        "Default integration step.",
         "model time",
     )
     t_start: float = parameter(
