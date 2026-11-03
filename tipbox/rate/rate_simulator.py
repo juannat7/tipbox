@@ -2,6 +2,7 @@ from dataclasses import asdict
 from typing import Any, Dict
 
 import jax
+import jax.numpy as jnp
 
 from ..types import TrajectoryResult
 from ..registry import get_rate_system_spec, get_rate_systems
@@ -109,6 +110,15 @@ def simulate_rate_trajectory(
         sim_ret[3],
     )
     state_trajectory = sim_ret[4] if len(sim_ret) > 4 else None
+
+    if null_simulation and (
+        not bool(jnp.isfinite(trajectory).all())
+        or (
+            state_trajectory is not None
+            and not bool(jnp.isfinite(state_trajectory).all())
+        )
+    ):
+        return None
 
     # Check if the trajectory is tipped (pass time/param_values for models that need them, e.g. AMOC)
     is_tipped = model.is_tipped(

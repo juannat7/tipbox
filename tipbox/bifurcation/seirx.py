@@ -445,6 +445,7 @@ class SEIRxModel(BoxModel):
         null_simulation: bool,
         param_values: jnp.ndarray,
         param_end_multiplier: float = 1.1,
+        time=None,
     ):
         """Midpoint for null; first omega crossing for forced, or None if absent."""
         if null_simulation:
