@@ -4,16 +4,14 @@ Data are downloaded on demand into a user cache, never bundled with TipBox.
 The archive's data-use terms apply separately from the package's MIT license.
 """
 
-import os
 from dataclasses import asdict, dataclass
-from hashlib import sha256
 from io import BytesIO
 from pathlib import Path
-from tempfile import TemporaryDirectory
-from urllib.request import Request, urlopen
 from zipfile import ZipFile
 
 import numpy as np
+
+from ._cache import pinned_file
 
 ARCHIVE_URL = "https://zenodo.org/records/7379358/files/DEV_Bifurcation-main.zip"
 ARCHIVE_NAME = "DEV_Bifurcation-main.zip"
@@ -128,9 +126,10 @@ _SPECS = {
 
 @dataclass(frozen=True)
 class EmpiricalRecord:
-    """Unmodified time and scalar observations, plus source and sampling metadata.
+    """Unmodified time and observations, plus source and sampling metadata.
 
-    ``time`` has shape (n,), and ``observations`` has shape (n, 1). Nonfinite
+    ``time`` has shape (n,), and ``observations`` has shape (n, n_observables).
+    The five aggregated empirical cases each have one observed column. Nonfinite
     observations, duplicate times, and original row order are preserved. Metadata
     contains the specification fields, source DOI and checksum, archive member,
     full upstream terms, and sampling diagnostics. No class labels are assigned.
@@ -153,44 +152,6 @@ def get_empirical_info(name: str) -> EmpiricalSpec:
             f"Unknown empirical case {name!r}; choose from {list_empirical()}"
         )
     return _SPECS[name]
-
-
-def _validate_archive(path):
-    if path.stat().st_size != ARCHIVE_SIZE:
-        raise ValueError(f"Empirical archive has an unexpected size: {path}")
-    if sha256(path.read_bytes()).hexdigest() != ARCHIVE_SHA256:
-        raise ValueError(f"Empirical archive checksum does not match Zenodo v1: {path}")
-
-
-def _archive_path(cache_dir, download, archive_path):
-    if archive_path is not None:
-        path = Path(archive_path).expanduser()
-        _validate_archive(path)
-        return path
-    if cache_dir is None:
-        default = Path.home() / ".cache"
-        xdg = Path(os.environ.get("XDG_CACHE_HOME") or default)
-        cache_dir = (xdg if xdg.is_absolute() else default) / "tipbox"
-    path = Path(cache_dir).expanduser() / "zenodo_7379358" / ARCHIVE_NAME
-    if not path.exists():
-        if not download:
-            raise FileNotFoundError(
-                f"Archive is not cached at {path}. Use download=True or archive_path."
-            )
-        path.parent.mkdir(parents=True, exist_ok=True)
-        # A temporary directory keeps interrupted downloads out of the cache.
-        with TemporaryDirectory(dir=path.parent) as temporary:
-            partial = Path(temporary) / ARCHIVE_NAME
-            request = Request(
-                ARCHIVE_URL, headers={"User-Agent": "TipBox dataset loader"}
-            )
-            with urlopen(request, timeout=60) as response:
-                payload = response.read(ARCHIVE_SIZE + 1)
-            partial.write_bytes(payload)
-            _validate_archive(partial)
-            partial.replace(path)
-    _validate_archive(path)
-    return path
 
 
 def _sampling(time, observations):
@@ -250,7 +211,15 @@ def load_empirical(
     retrospective annotations, not predictions made by this loader.
     """
     spec = get_empirical_info(name)
-    path = _archive_path(cache_dir, download, archive_path)
+    path = pinned_file(
+        ARCHIVE_URL,
+        Path("zenodo_7379358") / ARCHIVE_NAME,
+        size=ARCHIVE_SIZE,
+        checksum=ARCHIVE_SHA256,
+        cache_dir=cache_dir,
+        local_path=archive_path,
+        download=download,
+    )
     member = f"{EMPIRICAL_SUBDIR}/{name}.txt"
     with ZipFile(path) as archive:
         raw = np.genfromtxt(
