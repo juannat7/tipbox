@@ -21,6 +21,8 @@ integration kernels and forcing conventions of its tipping-point models.
 
    usage
    models/index
+   indicators
+   benchmarks
    api
    compatibility
 
