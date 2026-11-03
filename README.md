@@ -65,6 +65,18 @@ Trailing AR1 regression slope, Pearson autocorrelation, variance, skewness, and 
 
 For a labeled ensemble, `ensemble_roc(labels, {"Variance": variance_series})` reduces each trajectory's indicator to a Kendall trend and returns ROC/AUROC with valid and missing counts. It also accepts precomputed scalar scores. See the [complete benchmark example](docs/benchmarks.rst) for generation, labels, event conventions, and plotting.
 
+## Empirical records
+
+```python
+from tipbox.datasets import load_empirical
+
+record = load_empirical("voice")
+time, signal = record.time, record.observations[:, 0]
+print(record.metadata["sampling"])
+```
+
+Five cases are available: `microcosm`, `voice`, `mitochondria`, `climate`, and `blackout`. Records retain their original time axes, missing readings, and source metadata. Data download once into a user cache and are not bundled. The [dataset reference](docs/datasets.rst) explains analysis intervals, offline use, citations, and the upstream data-use terms, which are separate from TipBox's MIT software license.
+
 ## Quickstart
 
 ```python
