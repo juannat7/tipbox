@@ -6,7 +6,7 @@ import jax.numpy as jnp
 from jax import lax
 
 from ..types import BoxModel
-from ..utils import extract_segment, register_dataclass_pytree
+from ..utils import extract_segment, register_dataclass_pytree, sampling_stride
 
 
 @register_dataclass_pytree
@@ -341,7 +341,6 @@ class RosenzweigMacArthurModel(BoxModel):
         param_end_multiplier: float = 1.1,
         initial_state: Optional[jnp.ndarray] = None,
         noise: Optional[jnp.ndarray] = None,
-        **kwargs
     ):
         """Simulate Rosenzweig-MacArthur model.
         
@@ -373,8 +372,9 @@ class RosenzweigMacArthurModel(BoxModel):
         key_noise, key_ic = jax.random.split(key)
 
         # Setup time grid
-        total_time = total_len * dt_sample
-        n_steps = int(total_time / self._config.dt) + 1
+        sample_every = sampling_stride(dt_sample, self._config.dt)
+        total_time = self._config.t_start + total_len * dt_sample
+        n_steps = total_len * sample_every + 1
         time_fine = jnp.linspace(self._config.t_start, total_time, n_steps)
         
         # Compute a schedule
@@ -407,7 +407,6 @@ class RosenzweigMacArthurModel(BoxModel):
         )
 
         # Downsample to output rate
-        sample_every = int(dt_sample / self._config.dt)
         indices = jnp.arange(0, n_steps, sample_every)
         
         time = time_fine[indices]

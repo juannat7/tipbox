@@ -33,6 +33,7 @@ def simulate_rate_trajectory(
     null_simulation: bool = False,
     system_name: str = None,
     param_end_multiplier: float = 1.1,
+    config=None,
     **generate_kwargs
 ):
     """Simulate a single rate-induced tipping trajectory.
@@ -57,7 +58,7 @@ def simulate_rate_trajectory(
     param_end_multiplier : float, default=1.1
         Multiplier for extending simulation time beyond transition
     **generate_kwargs : additional arguments
-        Passed to the model.simulate method (dt_sample, dt_integrate, etc.)
+        Passed to the model.simulate method; unsupported names raise TypeError.
 
     Returns
     -------
@@ -88,14 +89,16 @@ def simulate_rate_trajectory(
         # Random selection (backward compatibility)
         system_spec = _select_system(key_select)
     
-    config = system_spec.default_config()
+    config = system_spec.default_config() if config is None else config
     model = system_spec.create_model(config)
 
-    # Simulate (saddle_node, bautin, compost_bomb use null_simulation: 50% rate in schedule)
-    sim_kwargs = {"total_len": total_len, "sigma_tilde": sigma_tilde}
-    if system_spec.rate_system in ("saddle_node", "bautin", "compost_bomb", "amoc"):
-        sim_kwargs["null_simulation"] = null_simulation
-    sim_ret = model.simulate(key_sim, **sim_kwargs)
+    sim_ret = model.simulate(
+        key_sim,
+        total_len=total_len,
+        sigma_tilde=sigma_tilde,
+        null_simulation=null_simulation,
+        **generate_kwargs,
+    )
     time, trajectory, param_values, sigma = sim_ret[0], sim_ret[1], sim_ret[2], sim_ret[3]
     state_trajectory = sim_ret[4] if len(sim_ret) > 4 else None
 

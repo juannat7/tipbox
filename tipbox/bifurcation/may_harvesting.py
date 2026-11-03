@@ -6,7 +6,7 @@ import jax.numpy as jnp
 from jax import lax
 
 from ..types import BoxModel
-from ..utils import extract_segment, register_dataclass_pytree
+from ..utils import extract_segment, register_dataclass_pytree, sampling_stride
 
 
 @register_dataclass_pytree
@@ -228,7 +228,6 @@ class MayHarvestingModel(BoxModel):
         param_end_multiplier: float = 1.1,
         initial_state: Optional[jnp.ndarray] = None,
         noise: Optional[jnp.ndarray] = None,
-        **kwargs
     ):
         """Simulate May's harvesting model.
         
@@ -262,8 +261,9 @@ class MayHarvestingModel(BoxModel):
         # Setup time grid
         # We need enough time steps for the desired output length
         # Total simulation time = total_len * dt_sample
-        total_time = total_len * dt_sample
-        n_steps = int(total_time / self._config.dt) + 1
+        sample_every = sampling_stride(dt_sample, self._config.dt)
+        total_time = self._config.t_start + total_len * dt_sample
+        n_steps = total_len * sample_every + 1
         time_fine = jnp.linspace(self._config.t_start, total_time, n_steps)
         
         # Compute h schedule
@@ -292,7 +292,6 @@ class MayHarvestingModel(BoxModel):
         )
 
         # Downsample to output rate
-        sample_every = int(dt_sample / self._config.dt)
         indices = jnp.arange(0, n_steps, sample_every)
         
         time = time_fine[indices]
