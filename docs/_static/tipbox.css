@@ -1,0 +1,11 @@
+body { color: #263044; }
+div.body { max-width: 840px; }
+div.body h1, div.body h2, div.body h3 { color: #21334d; font-family: sans-serif; }
+div.body h1 { letter-spacing: -.03em; font-size: 2.4em; }
+div.body p, div.body li { line-height: 1.7; }
+a { color: #4167a5; }
+div.highlight { border-radius: 6px; background: #f5f7fa; }
+table.parameter-table { width: 100%; font-size: .85em; }
+table.parameter-table td, table.parameter-table th { padding: .65em .75em; vertical-align: top; }
+table.parameter-table td:first-child { font-family: monospace; overflow-wrap: anywhere; }
+table.parameter-table th { background: #eef2f7; }
