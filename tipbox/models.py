@@ -19,6 +19,11 @@ from .bifurcation.rosenzweig_macarthur import (
     RosenzweigMacArthurModel as RosenzweigMacArthur,
 )
 from .bifurcation.seirx import SEIRxConfig, SEIRxModel as SEIRx
+from .bifurcation.ricker import RickerConfig, RickerModel as Ricker
+from .bifurcation.thermoacoustic import (
+    ThermoacousticConfig,
+    ThermoacousticModel as Thermoacoustic,
+)
 from .rate.amoc import AMOCRateConfig, AMOCRateModel as AMOCRate
 from .rate.bautin import BautinConfig, BautinModel as Bautin
 from .rate.compost_bomb import CompostBombConfig, CompostBombModel as CompostBomb
@@ -42,4 +47,8 @@ __all__ = [
     "CompostBombConfig",
     "SaddleNode",
     "SaddleNodeConfig",
+    "Ricker",
+    "RickerConfig",
+    "Thermoacoustic",
+    "ThermoacousticConfig",
 ]
