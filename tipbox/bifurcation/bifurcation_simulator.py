@@ -13,7 +13,7 @@ def available_bifurcation_real_systems():
     from ..registry import SYSTEM_REGISTRY
     return tuple(spec.bifurcation_system 
                 for spec in SYSTEM_REGISTRY.values() 
-                if spec.bifurcation_system is not None and not spec.is_synthetic_bifurcation)
+                if spec.bifurcation_system is not None)
 
 
 def _select_system(key: jax.random.PRNGKey, system_name: str = None):
@@ -34,7 +34,7 @@ def _select_system(key: jax.random.PRNGKey, system_name: str = None):
     real_systems = [spec for spec in SYSTEM_REGISTRY.values() 
                     if spec.system_type == SystemType.BIFURCATION 
                     and spec.bifurcation_system is not None 
-                    and not spec.is_synthetic_bifurcation]
+                   ]
     if not real_systems:
         raise ValueError("No bifurcation real systems available")
     idx = int(jax.random.randint(key, (), 0, len(real_systems)))
@@ -50,6 +50,7 @@ def simulate_real_bifurcation_trajectory(
     null_simulation: bool = False,
     system_name: str = None,
     param_end_multiplier: float = 1.1,
+    config=None,
     **generate_kwargs
 ):
     """Simulate a single real system bifurcation trajectory.
@@ -73,7 +74,7 @@ def simulate_real_bifurcation_trajectory(
     param_end_multiplier : float, default=1.1
         Multiplier for the end parameter value
     **generate_kwargs : additional arguments
-        Passed to the model.simulate method (dt_sample, dt_integrate, etc.)
+        Passed to the model.simulate method; unsupported names raise TypeError.
 
     Returns
     -------
@@ -99,7 +100,7 @@ def simulate_real_bifurcation_trajectory(
 
     # Select, setup and initialize model using unified registry
     system_spec = _select_system(key_select, system_name=system_name)
-    config = system_spec.default_config()
+    config = system_spec.default_config() if config is None else config
     model = system_spec.create_model(config)
 
     # Simulate
