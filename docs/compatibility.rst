@@ -42,6 +42,17 @@ calibrated; changing its physical coefficients or initial ON state requires a
 new scientific calibration. Its shared physical equations preserve the previous
 transport laws and year conversion.
 
+Rate-AMOC's positive reference remains the first sample at or after time zero.
+If the simulated interval does not include zero, ``locate_transition`` now
+returns ``None`` rather than substituting an unrelated endpoint. The default
+simulation interval spans zero and retains its previous marker.
+Its collapse classifier now requires a finite transport value below the
+configured threshold; negative infinity alone is numerical failure, not an event.
+The legacy rate generator rejects nonfinite null paths, including physical
+states when returned separately, so that numerical failure cannot become a
+negative label after this classifier correction. Positive normal-form escape
+after a finite transition remains supported.
+
 Control and output changes
 --------------------------
 

@@ -65,6 +65,18 @@ Trailing AR1 regression slope, Pearson autocorrelation, variance, skewness, and 
 
 For a labeled ensemble, `ensemble_roc(labels, {"Variance": variance_series})` reduces each trajectory's indicator to a Kendall trend and returns ROC/AUROC with valid and missing counts. It also accepts precomputed scalar scores. See the [complete benchmark example](docs/benchmarks.rst) for generation, labels, event conventions, and plotting.
 
+```python
+from tipbox.datasets import generate_dataset
+
+dataset = generate_dataset(
+    MayHarvesting(), num_timesteps=300,
+    n_tipping=10, n_null=10, n=1000, noise=0.01, seed=42,
+)
+# dataset.observations: (20, 300, 1); dataset.labels: (20,)
+```
+
+Batch generation preserves the model configuration and records accepted seeds, event references, physical lead times, and rejection counts. `n` controls the full simulation length; `num_timesteps` controls the retained context. The default `lead_steps=1` ends immediately before the model's reference marker.
+
 ## Empirical records
 
 ```python
