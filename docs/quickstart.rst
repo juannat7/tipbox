@@ -45,7 +45,7 @@ Measure a signal before its reference
 -------------------------------------
 
 AR1 measures the lag-one regression slope within a window. Variance
-measures their spread. Both may change as recovery slows near some
+measures the spread of observations. Both may change as recovery slows near some
 bifurcations. Use trailing windows and choose the analysis settings before
 looking at evaluation labels.
 

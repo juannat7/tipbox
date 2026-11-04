@@ -1,7 +1,7 @@
 """Build the reference from the same configurations used by simulations."""
 
-from pathlib import Path
 import sys
+from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parent / "_ext"))
@@ -31,6 +31,5 @@ html_theme_options = {
 html_static_path = ["_static"]
 html_css_files = ["tipbox.css"]
 html_extra_path = ["llms.txt"]
-templates_path = ["_templates"]
 exclude_patterns = ["_build"]
 autodoc_typehints = "description"

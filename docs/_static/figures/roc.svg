@@ -411,7 +411,7 @@ L 282.385002 105.062385
 L 287.142762 105.062385 
 L 287.142762 100.304625 
 L 291.900522 100.304625 
-" clip-path="url(#p0fa37aeb60)" style="fill: none; stroke: #cf8c37; stroke-width: 1.5; stroke-linecap: square"/>
+" clip-path="url(#p0fa37aeb60)" style="fill: none; stroke: #ad752d; stroke-width: 1.5; stroke-linecap: square"/>
    </g>
    <g id="line2d_21">
     <path d="M 54.012522 338.192625 
@@ -445,7 +445,7 @@ L 147.440522 314.786375
      <path d="M 131.440522 326.528875 
 L 139.440522 326.528875 
 L 147.440522 326.528875 
-" style="fill: none; stroke: #cf8c37; stroke-width: 1.5; stroke-linecap: square"/>
+" style="fill: none; stroke: #ad752d; stroke-width: 1.5; stroke-linecap: square"/>
     </g>
     <g id="text_17">
      <text style="font-size: 8px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #19394d" x="153.840522" y="329.328875" transform="rotate(-0 153.840522 329.328875)">Variance (AUC 0.66; n=100/100)</text>
@@ -827,7 +827,7 @@ L 704.850198 100.304625
 L 709.607958 100.304625 
 L 714.365718 100.304625 
 L 719.123478 100.304625 
-" clip-path="url(#p86020ddcf6)" style="fill: none; stroke: #cf8c37; stroke-width: 1.5; stroke-linecap: square"/>
+" clip-path="url(#p86020ddcf6)" style="fill: none; stroke: #ad752d; stroke-width: 1.5; stroke-linecap: square"/>
    </g>
    <g id="line2d_44">
     <path d="M 481.235478 338.192625 
@@ -861,7 +861,7 @@ L 574.663478 314.786375
      <path d="M 558.663478 326.528875 
 L 566.663478 326.528875 
 L 574.663478 326.528875 
-" style="fill: none; stroke: #cf8c37; stroke-width: 1.5; stroke-linecap: square"/>
+" style="fill: none; stroke: #ad752d; stroke-width: 1.5; stroke-linecap: square"/>
     </g>
     <g id="text_34">
      <text style="font-size: 8px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #19394d" x="581.063478" y="329.328875" transform="rotate(-0 581.063478 329.328875)">Variance (AUC 0.85; n=100/100)</text>

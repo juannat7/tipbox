@@ -64,7 +64,7 @@ plt.show()
 
 ![AR1 and variance ROC curves for two simulated ensembles, with retained-score counts](docs/_static/figures/roc.png)
 
-Each trajectory supplies one Kendall trend score. The quick example uses five tipping and five null trajectories; the figure uses 50 of each per model, predeclared windows and increasing score directions, and report score coverage. They describe these outcome-conditioned batches; models have different forcing histories, time units, and event rules. See [benchmark conventions](docs/benchmarks.rst) for labels, accepted seeds, rejection sampling, and physical lead times.
+Each trajectory supplies one Kendall trend score. The quick example uses five tipping and five null trajectories; the figure uses 50 of each per model. Both use predeclared windows and increasing score directions, and report score coverage. They describe these outcome-conditioned batches; models have different forcing histories, time units, and event rules. See [benchmark conventions](docs/benchmarks.rst) for labels, accepted seeds, rejection sampling, and physical lead times.
 
 ## Load empirical observations
 

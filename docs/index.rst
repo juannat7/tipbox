@@ -92,5 +92,5 @@ Research using TipBox
   dynamical systems <https://arxiv.org/abs/2605.12308>`_ (2026).
 
 These studies used earlier versions. :doc:`compatibility` records numerical
-corrections and historical settings. A :download:`plain-text documentation index
-<llms.txt>` provides a compact entry point for coding assistants.
+corrections and historical settings. A `plain-text documentation index
+<llms.txt>`_ provides a compact entry point for coding assistants.

@@ -32,9 +32,9 @@ from tipbox.registry import get_system_info
 
 INK = "#19394d"
 BLUE = "#216a91"
-TEAL = "#27998f"
+TEAL = "#16756e"
 ORANGE = "#ad752d"
-RED = "#ba5c4b"
+RED = "#a84435"
 GRAY = "#aab8be"
 PALE = "#e8eff2"
 CMAP = LinearSegmentedColormap.from_list(
@@ -376,7 +376,7 @@ def indicator_examples(seed, record):
             xytext=(0, 6),
             textcoords="offset points",
             ha="center",
-            color=color,
+            color=INK,
             fontsize=7.5,
         )
         for row, function in enumerate((rolling_ar1, rolling_variance), start=1):
