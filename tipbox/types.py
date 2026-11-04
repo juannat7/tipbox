@@ -129,6 +129,12 @@ class BoxModel(ABC):
             Observations, time, forcing and per-step noise scale. Metadata includes
             the resolved parameters and sampled physical state trajectory.
 
+        Raises
+        ------
+        ValueError
+            If the time grid is not finite and strictly increasing at the active
+            JAX precision. Adjust the clock origin or step, or enable 64-bit mode.
+
         Notes
         -----
         Increasing n extends the time interval at fixed output spacing. The
@@ -162,6 +168,17 @@ class BoxModel(ABC):
 
         steps = (n - 1) * stride
         time = self._config.t_start + jnp.arange(steps + 1) * dt
+        control_time = (
+            self._config.t_start + jnp.arange(2 * steps + 1) * (dt / 2)
+            if self.uses_midpoint_forcing
+            else time
+        )
+        clock = np.asarray(control_time)
+        if not np.isfinite(clock).all() or not (np.diff(clock) > 0).all():
+            raise ValueError(
+                "Time grid must be finite and strictly increasing at the active "
+                "JAX precision; adjust t_start/dt or enable 64-bit mode."
+            )
         key_noise, key_ic = jax.random.split(jax.random.PRNGKey(seed))
         state = (
             self._initial_state(key_ic, null_simulation)
@@ -185,11 +202,6 @@ class BoxModel(ABC):
             raise ValueError(
                 f"innovations must be finite and shaped {(steps, self.noise_dimension)}"
             )
-        control_time = (
-            self._config.t_start + jnp.arange(2 * steps + 1) * (dt / 2)
-            if self.uses_midpoint_forcing
-            else time
-        )
         control = (
             self._forcing(control_time, null_simulation, param_end_multiplier)
             if forcing is None
