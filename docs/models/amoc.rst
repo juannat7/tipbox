@@ -3,6 +3,20 @@ Atlantic meridional overturning circulation
 
 ``b_amoc`` and ``r_amoc`` · ``tipbox.models.AMOC`` and ``AMOCRate``
 
+Both classes accept a nested ``AMOCPhysics`` configuration. Table names such
+as ``physics.K_N`` identify fields on that object:
+
+.. code-block:: python
+
+   from tipbox.models import AMOC, AMOCPhysics
+
+   physics = AMOCPhysics(K_N=1.762e6)  # Gyre transport in m^3/s; the default.
+   model = AMOC(physics=physics, sigma_SN=1e-4)
+
+Changing physical coefficients requires reconsidering the calibrated fold
+marker. Constructor keywords such as ``sigma_SN`` control the simulation
+configuration; nested physical coefficients belong in ``AMOCPhysics``.
+
 Both scenarios use the same two-state reduction of a five-box ocean model.
 The physical coordinates :math:`z_N,z_T` are scaled salinity anomalies:
 :math:`S_N=S_0+z_N/100` and :math:`S_T=S_0+z_T/100`. Absolute salinity in psu is

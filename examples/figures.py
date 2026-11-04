@@ -9,6 +9,7 @@ import argparse
 import hashlib
 import json
 import platform
+from functools import partial
 from pathlib import Path
 
 import jax
@@ -32,12 +33,12 @@ from tipbox.registry import get_system_info
 INK = "#19394d"
 BLUE = "#216a91"
 TEAL = "#27998f"
-ORANGE = "#cf8c37"
+ORANGE = "#ad752d"
 RED = "#ba5c4b"
 GRAY = "#aab8be"
 PALE = "#e8eff2"
 CMAP = LinearSegmentedColormap.from_list(
-    "tipbox_time", ["#cfe6ed", "#56b4bb", "#184e77"]
+    "tipbox_time", ["#66949f", "#2f8393", "#19394d"]
 )
 STYLE = {
     "font.family": "DejaVu Sans",
@@ -77,45 +78,17 @@ RECOVERIES = (
     ("P6", 6684, 6934),
 )
 GALLERY = (
-    ("b_harvesting", "Harvesting", "FOLD", {"n": 1400, "noise": 1.0}, "forcing", 0),
-    (
-        "b_rosenzweig_macarthur_tc",
-        "Consumer–resource",
-        "TRANSCRITICAL",
-        {"n": 1800, "noise": 1.0},
-        0,
-        1,
-    ),
-    (
-        "b_rosenzweig_macarthur_hopf",
-        "Consumer–resource",
-        "HOPF",
-        {"n": 1800, "noise": 1.0},
-        0,
-        1,
-    ),
-    (
-        "b_seirx_tc",
-        "Disease–behaviour",
-        "TRANSCRITICAL",
-        {"n": 1800, "noise": 0.01},
-        0,
-        1,
-    ),
-    ("b_amoc", "Ocean circulation", "FOLD", {"noise": 0.01}, "forcing", 0),
-    ("r_saddle_node", "Moving equilibrium", "RATE", {"noise": 0.01}, "forcing", 0),
-    ("r_bautin", "Bautin oscillator", "RATE", {"noise": 0.01}, 0, 1),
-    ("r_compost_bomb", "Compost instability", "RATE", {"noise": 0.01}, 0, 1),
-    ("r_amoc", "Ocean circulation", "RATE", {"noise": 0.01}, "forcing", 0),
-    (
-        "b_ricker",
-        "Population map",
-        "TRANSCRITICAL",
-        {"n": 600, "noise": 1.0},
-        "forcing",
-        0,
-    ),
-    ("b_thermoacoustic", "Combustor", "SUBCRITICAL HOPF", {"noise": 1.0}, 0, 1),
+    ("b_harvesting", "FOLD", {"n": 1400, "noise": 1.0}, "forcing", 0),
+    ("b_rosenzweig_macarthur_tc", "TRANSCRITICAL", {"n": 1800, "noise": 1.0}, 0, 1),
+    ("b_rosenzweig_macarthur_hopf", "HOPF", {"n": 1800, "noise": 1.0}, 0, 1),
+    ("b_seirx_tc", "TRANSCRITICAL", {"n": 1800, "noise": 0.01}, 0, 1),
+    ("b_amoc", "FOLD", {"noise": 0.01}, "forcing", 0),
+    ("r_saddle_node", "RATE", {"noise": 0.01}, "forcing", 0),
+    ("r_bautin", "RATE", {"noise": 0.01}, 0, 1),
+    ("r_compost_bomb", "RATE", {"noise": 0.01}, 0, 1),
+    ("r_amoc", "RATE", {"noise": 0.01}, "forcing", 0),
+    ("b_ricker", "TRANSCRITICAL", {"n": 600, "noise": 1.0}, "forcing", 0),
+    ("b_thermoacoustic", "SUBCRITICAL HOPF", {"noise": 1.0}, 0, 1),
 )
 
 
@@ -160,10 +133,10 @@ def _colored_path(ax, x, y):
     y = (y - y.min()) / max(float(np.ptp(y)), 1e-12)
     points = np.column_stack([x, y])
     segments = np.stack([points[:-1], points[1:]], axis=1)
-    line = LineCollection(segments, cmap=CMAP, linewidth=0.8, alpha=0.9)
+    line = LineCollection(segments, cmap=CMAP, linewidth=0.8)
     line.set_array(np.linspace(0, 1, len(segments)))
     ax.add_collection(line)
-    ax.plot(x[0], y[0], ".", color="#83c3cc", markersize=4)
+    ax.plot(x[0], y[0], ".", color=CMAP(0.0), markersize=4)
     ax.plot(x[-1], y[-1], ".", color=INK, markersize=4)
     ax.set(xlim=(-0.06, 1.06), ylim=(-0.08, 1.12))
     ax.set_axis_off()
@@ -191,9 +164,7 @@ def gallery(seed):
         3, 4, left=0.05, right=0.97, bottom=0.075, top=0.82, hspace=0.38, wspace=0.23
     )
     manifest = {}
-    for index, (name, title, kind, arguments, horizontal, vertical) in enumerate(
-        GALLERY
-    ):
+    for index, (name, kind, arguments, horizontal, vertical) in enumerate(GALLERY):
         model = get_system_info(name).create_model()
         result = model.make_trajectory(seed=seed, **arguments)
         observations = np.asarray(result.trajectory)
@@ -218,7 +189,7 @@ def gallery(seed):
         ax.text(
             0.02,
             1.15,
-            title,
+            type(model).__name__.removesuffix("Model"),
             transform=ax.transAxes,
             fontsize=12,
             weight="semibold",
@@ -229,7 +200,7 @@ def gallery(seed):
             1.04,
             kind,
             transform=ax.transAxes,
-            fontsize=7.5,
+            fontsize=9,
             color=TEAL if kind == "RATE" else BLUE,
             weight="bold",
         )
@@ -355,6 +326,16 @@ def indicator_examples(seed, record):
                 time[marker], color=RED, linestyle=(0, (3, 3)), linewidth=1
             )
             _clean(axes[row, column])
+        axes[0, column].text(
+            0.98,
+            1.02,
+            "Fold reference" if column == 0 else "State threshold",
+            transform=axes[0, column].transAxes,
+            ha="right",
+            va="bottom",
+            color=RED,
+            fontsize=8,
+        )
         axes[2, column].set_xlabel(f"Time ({model.time_unit})")
         axes[0, column].text(
             0.03,
@@ -379,11 +360,21 @@ def indicator_examples(seed, record):
         }
     time, values = record.time, record.observations[:, 0]
     axes[0, 2].plot(time, values, color=GRAY, linewidth=0.8)
-    colors = CMAP(np.linspace(0.28, 1, len(RECOVERIES)))
+    colors = ("#0072b2", "#d55e00", "#009e73", "#a05d8b", "#a66b00", "#46566b")
+    markers = ("o", "s", "^", "D", "v", "X")
     intervals = []
-    for (label, start, stop), color in zip(RECOVERIES, colors):
+    for (label, start, stop), color, shape in zip(RECOVERIES, colors, markers):
         t, x = time[start:stop], values[start:stop]
         axes[0, 2].plot(t, x, color=color, linewidth=1.4)
+        axes[0, 2].annotate(
+            label,
+            (float(t.mean()), float(x.max())),
+            xytext=(0, 6),
+            textcoords="offset points",
+            ha="center",
+            color=color,
+            fontsize=7.5,
+        )
         for row, function in enumerate((rolling_ar1, rolling_variance), start=1):
             indicator = function(x, window=200, step=5, detrend="linear")
             computed = np.isfinite(indicator)
@@ -391,7 +382,9 @@ def indicator_examples(seed, record):
                 (t - t[0])[computed],
                 indicator[computed],
                 color=color,
-                linewidth=1.4,
+                linewidth=1.1,
+                marker=shape,
+                markersize=3,
                 label=label,
             )
         intervals.append(
@@ -410,10 +403,26 @@ def indicator_examples(seed, record):
     axes[0, 2].set_xlabel("Experimental time (day)")
     axes[0, 2].axvline(27, color=RED, linestyle=(0, (3, 3)), linewidth=1)
     axes[0, 2].set_xlim(0, 29)
+    axes[0, 2].text(
+        0.98,
+        1.02,
+        "27-day reference",
+        transform=axes[0, 2].transAxes,
+        ha="right",
+        va="bottom",
+        color=RED,
+        fontsize=8,
+    )
     axes[1, 2].set_ylabel("AR1 slope")
     axes[2, 2].set_ylabel(r"Variance (m$^{-2}$)")
     axes[1, 2].legend(
-        ncol=3, loc="best", handlelength=1.1, columnspacing=0.9, fontsize=8
+        ncol=6,
+        loc="lower left",
+        bbox_to_anchor=(0, 1.02),
+        handlelength=1.0,
+        columnspacing=0.7,
+        fontsize=7.5,
+        borderaxespad=0,
     )
     for row in (1, 2):
         axes[row, 2].set_xlabel("Time within recovery (day)")
@@ -539,21 +548,43 @@ def roc_examples(seed, n_per_class):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output-dir", type=Path, default=Path("docs/_static/figures"))
-    parser.add_argument("--cache-dir", type=Path)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("docs/_static/figures"),
+        help="Export directory",
+    )
+    parser.add_argument(
+        "--cache-dir",
+        type=Path,
+        help="TipBox source-file cache; None uses its normal user cache",
+    )
     parser.add_argument(
         "--source-path",
         type=Path,
         help="Local original microcosm ODS; otherwise download to cache",
     )
-    parser.add_argument("--n-per-class", type=int, default=50)
-    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--n-per-class",
+        type=int,
+        default=50,
+        help="Tipping and null counts per model in the ROC panels",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="Declared root seed for simulations and batch selection",
+    )
     parser.add_argument(
         "--formats",
         nargs="+",
         choices=("png", "svg", "pdf"),
         default=["png", "svg", "pdf"],
+        help="Figure export formats",
     )
     args = parser.parse_args()
     if args.n_per_class < 1:
@@ -581,11 +612,13 @@ def main():
         },
     }
     with mpl.rc_context(STYLE):
-        for name, (fig, metadata) in (
-            ("overview", gallery(args.seed)),
-            ("indicators", indicator_examples(args.seed, record)),
-            ("roc", roc_examples(args.seed, args.n_per_class)),
+        for name, render in (
+            ("overview", partial(gallery, args.seed)),
+            ("indicators", partial(indicator_examples, args.seed, record)),
+            ("roc", partial(roc_examples, args.seed, args.n_per_class)),
         ):
+            print(f"Rendering {name}...", flush=True)
+            fig, metadata = render()
             _save(fig, name, args.output_dir, args.formats)
             manifest[name] = metadata
             print(f"Rendered {name}", flush=True)

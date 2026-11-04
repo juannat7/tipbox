@@ -1,0 +1,28 @@
+# TipBox
+
+> Named stochastic box models, empirical records, classical early-warning indicators, and trajectory-level ROC/AUROC benchmarks in Python.
+
+Use `from tipbox.models import MayHarvesting` and `model.make_trajectory(n, noise=..., seed=...)` for a simulation. The returned `TrajectoryResult` has `time` shape (T,), `trajectory` shape (T,D), `param_values` shape (T,), and provenance in `metadata`.
+
+Use `from tipbox.datasets import generate_dataset` for labeled pre-reference contexts: observations (N,T,D), labels (N,), absolute time (N,T), and per-row metadata. Explicitly distinguish full simulation `n` from retained context `num_timesteps`. Model clocks, observables, noise meanings, and event rules differ.
+
+Rolling statistics return NumPy arrays aligned to the input, with NaN at warm-up, skipped, or invalid windows. Use integer windows for streaming. One trajectory supplies one score; larger scores mean tipping. Predeclare directions and analysis settings. Do not infer an empirical null class or a physical time unit that the source does not establish.
+
+## Start here
+
+- [Complete quickstart](_sources/quickstart.rst.txt): Installation, simulation, causal indicators, labeled ROC, and one empirical recovery.
+- [API contracts](_sources/api.rst.txt): Imports, required inputs, return shapes, and failure behavior.
+- [Model controls](_sources/usage.rst.txt): Parameter overrides, grids, initial states, forcing, and innovations.
+
+## Scientific reference
+
+- [Model collection](models/index.html): Equations, generated default-parameter tables, units, and reference-event rules.
+- [Indicator definitions](_sources/indicators.rst.txt): AR1 versus Pearson correlation, variance, population moments, detrending, and missingness.
+- [Benchmark protocol](_sources/benchmarks.rst.txt): Outcome-conditioned labels, seed allocation, reference alignment, and ROC conventions.
+- [Observed records](_sources/datasets.rst.txt): Original sources, checksums, licenses, missing data, recovery intervals, and the unresolved mitochondrial clock.
+
+## Optional
+
+- [Figure reproduction](_sources/figures.rst.txt): Fixed presets, export controls, and numerical provenance.
+- [Sim-to-real boundary](_sources/sim_to_real.rst.txt): Daphnia/TAC simulation components; raw observation parsers and verified calibration require source access.
+- [Historical compatibility](_sources/compatibility.rst.txt): Removed generators, numerical corrections, and legacy-interface conventions.

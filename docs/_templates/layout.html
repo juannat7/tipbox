@@ -1,0 +1,5 @@
+{% extends "!layout.html" %}
+{% block extrahead %}
+{{ super() }}
+<link rel="describedby" href="{{ pathto('llms.txt', 1) }}" type="text/plain">
+{% endblock %}

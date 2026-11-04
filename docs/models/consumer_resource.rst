@@ -4,6 +4,13 @@ Rosenzweig–MacArthur consumer-resource model
 ``b_rosenzweig_macarthur_tc`` and ``b_rosenzweig_macarthur_hopf`` ·
 ``tipbox.models.RosenzweigMacArthur``
 
+.. code-block:: python
+
+   from tipbox.models import RosenzweigMacArthur
+
+   invasion = RosenzweigMacArthur(bifurcation_type="transcritical")
+   oscillation = RosenzweigMacArthur(bifurcation_type="hopf")
+
 Resource :math:`x` and consumer :math:`y` obey
 
 .. math::

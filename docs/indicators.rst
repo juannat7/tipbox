@@ -2,7 +2,7 @@ Classical warning indicators
 ============================
 
 Choose one scalar observable before analysis. For example, the first observation
-column of :class:`~tipbox.models.MayHarvesting` is population density:
+column of :doc:`MayHarvesting <models/harvesting>` is population density:
 
 .. code-block:: python
 

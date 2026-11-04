@@ -1,11 +1,23 @@
-body { color: #263044; }
-div.body { max-width: 840px; }
-div.body h1, div.body h2, div.body h3 { color: #21334d; font-family: sans-serif; }
-div.body h1 { letter-spacing: -.03em; font-size: 2.4em; }
-div.body p, div.body li { line-height: 1.7; }
-a { color: #4167a5; }
-div.highlight { border-radius: 6px; background: #f5f7fa; }
-table.parameter-table { width: 100%; font-size: .85em; }
-table.parameter-table td, table.parameter-table th { padding: .65em .75em; vertical-align: top; }
-table.parameter-table td:first-child { font-family: monospace; overflow-wrap: anywhere; }
-table.parameter-table th { background: #eef2f7; }
+body { --content-width: 52rem; }
+h1 { letter-spacing: -.035em; }
+article p, article li { line-height: 1.7; }
+a { text-underline-offset: .18em; }
+.sidebar-brand-text { font-weight: 750; letter-spacing: -.025em; }
+.tipbox-lead { font-size: 1.15rem; color: var(--color-foreground-secondary); }
+.tipbox-paths { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .8rem; margin: 1.5rem 0; }
+.content .tipbox-path { border: 1px solid var(--color-background-border); border-radius: .65rem; padding: .85rem 1rem; background: var(--color-background-secondary); }
+.tipbox-path p { margin: .25rem 0; font-size: .9rem; }
+.tipbox-path p:first-child { font-size: 1rem; font-weight: 650; }
+.highlight { border-radius: .45rem; }
+article img { max-width: 100%; height: auto; }
+article div.math { max-width: 100%; overflow-x: auto; padding-block: .2rem; }
+.table-wrapper { max-width: 100%; overflow-x: auto; }
+table.parameter-table { table-layout: fixed; width: 100%; font-size: .85rem; }
+table.parameter-table td, table.parameter-table th { padding: .65rem .7rem; vertical-align: top; overflow-wrap: anywhere; }
+table.parameter-table td:first-child { font-family: var(--font-stack--monospace); }
+table.parameter-table p { line-height: 1.5; }
+table.contract-table td { overflow-wrap: anywhere; }
+@media (max-width: 48rem) {
+  .tipbox-paths { grid-template-columns: 1fr; }
+  table.parameter-table { min-width: 36rem; }
+}

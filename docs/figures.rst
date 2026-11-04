@@ -8,6 +8,7 @@ TipBox simulation. The figure source is ``examples/figures.py``; the adjacent
 software versions, and display transformations.
 
 .. image:: _static/figures/overview.png
+   :target: _static/figures/overview.svg
    :alt: Eleven named TipBox configurations shown as simulated trajectories.
 
 The gallery uses physical observable pairs or forcing against an observable.
@@ -22,6 +23,7 @@ Signals and classical indicators
 ---------------------------------
 
 .. image:: _static/figures/indicators.png
+   :target: _static/figures/indicators.svg
    :alt: Harvesting, moving-equilibrium, and observed microcosm signals with trailing AR1 and variance.
 
 The first two columns show the first accepted tipping trajectory from a
@@ -52,6 +54,7 @@ Ensemble evaluation
 --------------------
 
 .. image:: _static/figures/roc.png
+   :target: _static/figures/roc.svg
    :alt: AR1 and variance ROC curves for two outcome-conditioned simulated ensembles, with coverage counts.
 
 Each model supplies 50 tipping and 50 null trajectories. The retained
