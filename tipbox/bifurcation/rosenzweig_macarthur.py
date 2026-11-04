@@ -509,7 +509,7 @@ class RosenzweigMacArthurModel(BoxModel):
         param_values: jnp.ndarray,
         param_end_multiplier: float = 1.1,
     ):
-        """Locate transition index: midpoint for null, bifurcation crossing for forced."""
+        """Midpoint for null; first bifurcation crossing for forced, or None."""
         if null_simulation:
             return len(param_values) // 2
 
@@ -520,4 +520,4 @@ class RosenzweigMacArthurModel(BoxModel):
         if bool(jnp.any(crossed)):
             return int(jnp.argmax(crossed))
 
-        return len(param_values) - 1
+        return None

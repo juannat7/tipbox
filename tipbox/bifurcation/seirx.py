@@ -446,7 +446,7 @@ class SEIRxModel(BoxModel):
         param_values: jnp.ndarray,
         param_end_multiplier: float = 1.1,
     ):
-        """Locate transition: midpoint for null; for forced, first index where ω ≥ bifurcation (paper)."""
+        """Midpoint for null; first omega crossing for forced, or None if absent."""
         if null_simulation:
             return len(param_values) // 2
 
@@ -457,4 +457,4 @@ class SEIRxModel(BoxModel):
         if bool(jnp.any(crossed)):
             return int(jnp.argmax(crossed))
 
-        return len(param_values) - 1
+        return None

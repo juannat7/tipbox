@@ -272,7 +272,7 @@ class BoxModel(ABC):
 
     @abstractmethod
     def locate_transition(self, trajectory, **kwargs):
-        """Locate the model's transition/reference marker."""
+        """Return the reference index, or None when that reference is absent."""
 
     def extract_segment(
         self,

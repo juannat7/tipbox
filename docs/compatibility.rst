@@ -14,6 +14,10 @@ simulator's fixed-duration or context-buffer conventions. Reproducibility is
 per interface: the new method uses a shared random-increment layout, so the
 same integer seed does not imply the same noise realization as legacy simulate.
 
+For a forced bifurcation path that never reaches its critical parameter,
+``locate_transition`` returns ``None``. It no longer substitutes the last sample
+for an absent crossing. Null paths retain their midpoint comparison reference.
+
 Scientific corrections
 ----------------------
 

@@ -297,9 +297,10 @@ class AMOCModel(BoxModel):
         param_values: jnp.ndarray,
         param_end_multiplier: float = 1.1,
     ):
+        """Midpoint for null; first hosing fold crossing for forced, or None."""
         if null_simulation:
             return len(param_values) // 2
         crossed = param_values >= self._config.H_fold
         if bool(jnp.any(crossed)):
             return int(jnp.argmax(crossed))
-        return len(param_values) - 1
+        return None
