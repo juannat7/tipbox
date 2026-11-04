@@ -1,8 +1,9 @@
 """Classical early-warning statistics on trailing windows of one scalar signal.
 
 All functions return a NumPy array aligned with the input. Warm-up samples and
-windows containing nonfinite observations are NaN. Windows never use future
-observations; optional linear detrending is fitted separately inside each window.
+windows containing nonfinite observations are NaN. Each window uses observations
+through its endpoint; linear detrending is fitted within that window. For streams,
+use an integer window: fractional windows depend on the full input length.
 These eager analysis functions accept NumPy and concrete JAX arrays.
 """
 
@@ -33,7 +34,7 @@ def window_size(n: int, window: float) -> int:
     return size
 
 
-def _windows(data, window, step, detrend):
+def _rolling(data, window, step, detrend, statistic, **controls):
     values = np.asarray(data, dtype=float)
     if values.ndim != 1:
         raise ValueError("indicators require a one-dimensional scalar signal")
@@ -43,28 +44,45 @@ def _windows(data, window, step, detrend):
     if detrend not in (None, "linear"):
         raise ValueError("detrend must be None or 'linear'")
     windows = sliding_window_view(values, size)[::step]
-    valid = np.isfinite(windows).all(axis=1)
-    windows = np.where(valid[:, None], windows, 0.0)
-    # Translation avoids mean-roundoff artifacts for decimal-valued constants.
-    windows = windows - windows[:, :1]
+    result = np.full(values.size, np.nan)
+    output = result[size - 1 :: step]
     if detrend == "linear":
-        scale = np.max(np.abs(windows), axis=1, keepdims=True)
         time = np.arange(size, dtype=float) - (size - 1) / 2
-        centered = windows - windows.mean(axis=1, keepdims=True)
-        slopes = (centered @ time) / (time @ time)
-        windows = centered - slopes[:, None] * time
-        tolerance = 8 * np.finfo(float).eps * scale
-        windows = np.where(
-            np.max(np.abs(windows), axis=1, keepdims=True) <= tolerance,
-            0.0,
-            windows,
+        time_norm = time @ time
+    # The stride view is cheap; bound the arrays used to prepare and reduce it.
+    batch_size = max(1, 1_000_000 // size)
+    for start in range(0, len(windows), batch_size):
+        batch = windows[start : start + batch_size]
+        valid = np.isfinite(batch).all(axis=1)
+        # Invalid windows use zeros during arithmetic, then become NaN below.
+        batch = np.where(valid[:, None], batch, 0.0)
+        # Translation avoids mean-roundoff artifacts for decimal-valued constants.
+        batch = batch - batch[:, :1]
+        if detrend == "linear":
+            scale = np.max(np.abs(batch), axis=1, keepdims=True)
+            centered = batch - batch.mean(axis=1, keepdims=True)
+            slopes = (centered @ time) / time_norm
+            batch = centered - slopes[:, None] * time
+            tolerance = 8 * np.finfo(float).eps * scale
+            batch = np.where(
+                np.max(np.abs(batch), axis=1, keepdims=True) <= tolerance,
+                0.0,
+                batch,
+            )
+        output[start : start + len(batch)] = np.where(
+            valid, statistic(batch, **controls), np.nan
         )
-    return windows, valid, np.full(values.size, np.nan), size
-
-
-def _aligned(result, statistic, valid, size, step):
-    result[size - 1 :: step] = np.where(valid, statistic, np.nan)
     return result
+
+
+def _variance(windows, ddof):
+    if (
+        not isinstance(ddof, Integral)
+        or isinstance(ddof, bool)
+        or not 0 <= ddof < windows.shape[1]
+    ):
+        raise ValueError("ddof must be an integer in [0, window_size)")
+    return windows.var(axis=1, ddof=ddof)
 
 
 def rolling_variance(data, window=0.5, *, ddof=0, step=1, detrend=None):
@@ -91,14 +109,11 @@ def rolling_variance(data, window=0.5, *, ddof=0, step=1, detrend=None):
         Values at the right edge of each evaluated window; NaN elsewhere.
         Constant finite windows have variance zero.
     """
-    windows, valid, result, size = _windows(data, window, step, detrend)
-    if not isinstance(ddof, Integral) or isinstance(ddof, bool) or not 0 <= ddof < size:
-        raise ValueError("ddof must be an integer in [0, window_size)")
-    return _aligned(result, windows.var(axis=1, ddof=ddof), valid, size, step)
+    return _rolling(data, window, step, detrend, _variance, ddof=ddof)
 
 
-def _correlation(data, window, lag, step, detrend, pearson):
-    windows, valid, result, size = _windows(data, window, step, detrend)
+def _correlation(windows, lag, pearson):
+    size = windows.shape[1]
     if (
         not isinstance(lag, Integral)
         or isinstance(lag, bool)
@@ -118,7 +133,7 @@ def _correlation(data, window, lag, step, detrend, pearson):
         out=np.full(len(windows), np.nan),
         where=denominator > 0,
     )
-    return _aligned(result, statistic, valid, size, step)
+    return statistic
 
 
 def rolling_ar1(data, window=0.5, *, lag=1, step=1, detrend=None):
@@ -130,7 +145,7 @@ def rolling_ar1(data, window=0.5, *, lag=1, step=1, detrend=None):
     count, not a physical-time interval. The window, step and detrend arguments
     have the same meanings as in :func:`rolling_variance`.
     """
-    return _correlation(data, window, lag, step, detrend, pearson=False)
+    return _rolling(data, window, step, detrend, _correlation, lag=lag, pearson=False)
 
 
 def rolling_acf(data, window=0.5, *, lag=1, step=1, detrend=None):
@@ -141,11 +156,10 @@ def rolling_acf(data, window=0.5, *, lag=1, step=1, detrend=None):
     pairs and nonzero variance in both vectors; undefined correlations are NaN.
     Arguments share the meanings in :func:`rolling_ar1`.
     """
-    return _correlation(data, window, lag, step, detrend, pearson=True)
+    return _rolling(data, window, step, detrend, _correlation, lag=lag, pearson=True)
 
 
-def _moment(data, window, step, detrend, order):
-    windows, valid, result, size = _windows(data, window, step, detrend)
+def _moment(windows, order):
     centered = windows - windows.mean(axis=1, keepdims=True)
     variance = (centered**2).mean(axis=1)
     statistic = np.divide(
@@ -154,7 +168,7 @@ def _moment(data, window, step, detrend, order):
         out=np.full(len(windows), np.nan),
         where=variance > 0,
     )
-    return _aligned(result, statistic, valid, size, step)
+    return statistic
 
 
 def rolling_skewness(data, window=0.5, *, step=1, detrend=None):
@@ -163,7 +177,7 @@ def rolling_skewness(data, window=0.5, *, step=1, detrend=None):
     Constant windows have undefined skewness (NaN). Window, step and detrend
     arguments have the same meanings as in :func:`rolling_variance`.
     """
-    return _moment(data, window, step, detrend, order=3)
+    return _rolling(data, window, step, detrend, _moment, order=3)
 
 
 def rolling_kurtosis(data, window=0.5, *, excess=True, step=1, detrend=None):
@@ -174,4 +188,6 @@ def rolling_kurtosis(data, window=0.5, *, excess=True, step=1, detrend=None):
     Constant windows are undefined (NaN). Other arguments share the meanings in
     :func:`rolling_variance`.
     """
-    return _moment(data, window, step, detrend, order=4) - (3 if excess else 0)
+    return _rolling(data, window, step, detrend, _moment, order=4) - (
+        3 if excess else 0
+    )

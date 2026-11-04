@@ -20,6 +20,11 @@ integration kernels. Their definitions follow the classical comparisons in
 `kews <https://github.com/juannat7/kews/blob/main/experiments/indicators.py>`_.
 TipBox adds explicit missing-data handling and population moments.
 
+Window preparation and statistics run in bounded batches. Long records do not
+materialize the complete window matrix; computational work still grows with
+the number and length of windows. Definitions, missingness rules, and trailing
+alignment are preserved; floating-point roundoff can depend on batch shape.
+
 Windows and defaults
 --------------------
 
