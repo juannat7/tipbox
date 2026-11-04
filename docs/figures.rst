@@ -7,6 +7,12 @@ TipBox simulation. The figure source is ``examples/figures.py``; the adjacent
 ``_static/figures/manifest.json`` records numerical controls, source checksums,
 software versions, and display transformations.
 
+Cards use public model names, so a displayed name maps directly to an import
+from ``tipbox.models``. Each gallery curve is the first accepted tipping
+trajectory from root seed 42 with 300 pre-reference samples available. Selection
+uses the model's declared outcome convention; a forcing crossing need not be
+an observed state jump. Accepted seeds and rejection attempts are in the manifest.
+
 .. image:: _static/figures/overview.png
    :target: _static/figures/overview.svg
    :alt: Eleven named TipBox configurations shown as simulated trajectories.
@@ -43,6 +49,9 @@ panels show each recovery against its own elapsed time. Indicators use 200
 samples, step five, and per-window linear detrending; intervals are never
 concatenated. These illustrative calculations use TipBox's classical
 definitions, rather than reproducing the original paper's analysis.
+P1–P6 labels on the raw record map to distinct colors and marker shapes below;
+the legend sits outside the indicator data. Red dashed references are labeled
+by their case-specific meaning.
 
 The empirical figure is available under CC BY-NC 4.0, with attribution to
 Veraart et al. (2012), data DOI:10.17026/dans-ztg-93aw. Interval annotations

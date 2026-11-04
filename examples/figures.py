@@ -109,6 +109,19 @@ def _simulation_metadata(model, result, arguments):
     }
 
 
+def _tipping_example(model, arguments, seed):
+    selection = generate_dataset(
+        model, num_timesteps=300, n_tipping=1, n_null=0, seed=seed, **arguments
+    ).metadata[0]
+    result = model.make_trajectory(seed=selection["seed"], **arguments)
+    return result, {
+        "selection": "first accepted tipping trajectory from generate_dataset",
+        "selection_context_samples": 300,
+        "root_seed": seed,
+        "attempt": selection["attempt"],
+    }
+
+
 def _save(fig, name, output, formats):
     for extension in formats:
         fig.savefig(
@@ -166,7 +179,7 @@ def gallery(seed):
     manifest = {}
     for index, (name, kind, arguments, horizontal, vertical) in enumerate(GALLERY):
         model = get_system_info(name).create_model()
-        result = model.make_trajectory(seed=seed, **arguments)
+        result, selection = _tipping_example(model, arguments, seed)
         observations = np.asarray(result.trajectory)
         x = (
             np.asarray(result.param_values)
@@ -206,6 +219,7 @@ def gallery(seed):
         )
         manifest[name] = {
             **_simulation_metadata(model, result, arguments),
+            **selection,
             "horizontal": model.forcing_name
             if horizontal == "forcing"
             else model.observable_names[horizontal],
@@ -283,15 +297,7 @@ def indicator_examples(seed, record):
     for column, (model, arguments, kind, title, ylabel, window) in enumerate(
         model_cases
     ):
-        selection = generate_dataset(
-            model,
-            num_timesteps=300,
-            n_tipping=1,
-            n_null=0,
-            seed=seed,
-            **arguments,
-        ).metadata[0]
-        result = model.make_trajectory(seed=selection["seed"], **arguments)
+        result, selection = _tipping_example(model, arguments, seed)
         marker = model.locate_transition(
             result.trajectory, False, param_values=result.param_values, time=result.time
         )
@@ -347,9 +353,7 @@ def indicator_examples(seed, record):
         )
         manifest[type(model).__name__] = {
             **_simulation_metadata(model, result, arguments),
-            "selection": "first accepted tipping trajectory from generate_dataset",
-            "root_seed": seed,
-            "attempt": selection["attempt"],
+            **selection,
             "marker_index": int(marker),
             "marker_time": float(time[marker]),
             "indicator_input_slice": [0, int(marker)],
