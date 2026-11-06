@@ -1,10 +1,14 @@
-# <img src="docs/tipbox-icon-300ppi.png" alt="" width="48" height="48" align="absmiddle"> TipBox
+# <img src="https://raw.githubusercontent.com/juannat7/tipbox/main/docs/tipbox-icon-300ppi.png" alt="" width="48" height="48" align="absmiddle"> TipBox
 
 TipBox is a collection of tipping models and empirical observations. It covers bifurcation- and rate-induced tipping in stochastic systems, with early-warning indicators such as lag-1 autocorrelation and variance.
 
 <div align="center">
 
-[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/) [![Documentation](https://img.shields.io/badge/docs-Documentation-b31b1b)](https://juannat7.github.io/tipbox/) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![PyPI version](https://img.shields.io/pypi/v/tipbox)](https://pypi.org/project/tipbox/)
+[![PyPI downloads](https://static.pepy.tech/personalized-badge/tipbox?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=Downloads)](https://pepy.tech/projects/tipbox)
+[![Documentation](https://img.shields.io/badge/docs-Documentation-b31b1b)](https://juannat7.github.io/tipbox/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/juannat7/tipbox/blob/main/LICENSE)
 
 </div>
 
@@ -22,10 +26,10 @@ TipBox is a collection of tipping models and empirical observations. It covers b
 ## Installation
 
 ```bash
-git clone https://github.com/juannat7/tipbox.git
-cd tipbox
-pip install -e .
+pip install tipbox
 ```
+
+For development, clone this repository and run `pip install -e .`.
 
 ## Generate or load a time series
 
@@ -51,9 +55,9 @@ observed = Microcosm().load()
 
 Simulation results contain `time` and `trajectory` arrays; loaded observations contain `time` and `observations`. Equations, parameters, and simulation controls are in the [documentation](https://juannat7.github.io/tipbox/usage.html).
 
-![Bifurcation-induced tipping, rate-induced tipping, and empirical observations](docs/_static/figures/trajectories.png)
+![Bifurcation-induced tipping, rate-induced tipping, and empirical observations](https://raw.githubusercontent.com/juannat7/tipbox/main/docs/_static/figures/trajectories.png)
 
-Empirical panels: [CC BY-NC 4.0](docs/_static/figures/LICENSE.md).
+Empirical panels: [CC BY-NC 4.0](https://github.com/juannat7/tipbox/blob/main/docs/_static/figures/LICENSE.md).
 
 ## Compute early-warning indicators
 
@@ -72,7 +76,7 @@ variance = rolling_variance(signal, window=200, detrend="linear")
 
 The [indicator reference](https://juannat7.github.io/tipbox/indicators.html) also covers autocorrelation, skewness, and kurtosis.
 
-![AR1 and variance for the same three time series](docs/_static/figures/indicators.png)
+![AR1 and variance for the same three time series](https://raw.githubusercontent.com/juannat7/tipbox/main/docs/_static/figures/indicators.png)
 
 ## Benchmarking
 
@@ -107,7 +111,7 @@ report = ensemble_roc(batch.labels, indicators)  # Labels: 0 control, 1 tipping.
 ax = plot_roc(report)
 ```
 
-![AR1 and variance ROC curves for the May harvesting batch](docs/_static/figures/roc.png)
+![AR1 and variance ROC curves for the May harvesting batch](https://raw.githubusercontent.com/juannat7/tipbox/main/docs/_static/figures/roc.png)
 
 See the [benchmark guide](https://juannat7.github.io/tipbox/benchmarks.html) for labels, trend scores, and evaluation conventions.
 
@@ -138,12 +142,12 @@ Model links include equations and defaults; observation links describe `.load()`
 
 Full reference: [system catalog](https://juannat7.github.io/tipbox/models/index.html).
 
-![Phase portraits and simulated trajectories, with start and end markers](docs/_static/figures/overview.png)
+![Phase portraits and simulated trajectories, with start and end markers](https://raw.githubusercontent.com/juannat7/tipbox/main/docs/_static/figures/overview.png)
 
 ## Notebook examples
 
-- [Generation and evaluation](notebook/01_generate_batch.ipynb)
-- [Parameter sensitivity](notebook/02_sensitivity_analysis.ipynb)
+- [Generation and evaluation](https://github.com/juannat7/tipbox/blob/main/notebook/01_generate_batch.ipynb)
+- [Parameter sensitivity](https://github.com/juannat7/tipbox/blob/main/notebook/02_sensitivity_analysis.ipynb)
 
 ## Used in research
 
