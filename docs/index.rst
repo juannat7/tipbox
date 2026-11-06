@@ -5,6 +5,9 @@ Named dynamical systems for studying critical transitions. Configure a physical
 model, generate reproducible trajectories, and compare warning indicators using
 explicit observations and event definitions.
 
+.. image:: _static/figures/overview.png
+   :alt: Eleven named box-model configurations, drawn from actual TipBox simulations.
+
 .. code-block:: python
 
    from tipbox.models import MayHarvesting
@@ -25,6 +28,7 @@ integration kernels and forcing conventions of its tipping-point models.
    benchmarks
    datasets
    sim_to_real
+   figures
    api
    compatibility
 

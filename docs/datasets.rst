@@ -164,6 +164,50 @@ Stored times have finite rounding precision. Treating index-lags as a uniform
 physical lag inside a recovery interval is an explicit approximation, rather
 than a correction silently performed by TipBox.
 
+.. _original-microcosm-source:
+
+Original microcosm deposit
+--------------------------
+
+``load_microcosm_original`` reads the original Veraart et al. (2012) deposit,
+`doi:10.17026/dans-ztg-93aw <https://doi.org/10.17026/dans-ztg-93aw>`_. It
+retains full-precision times and both measured chemostats, ``M1`` and ``M2``:
+
+.. code-block:: python
+
+   from tipbox.datasets import load_microcosm_original
+
+   record = load_microcosm_original()
+   time = record.time                         # (7914,), days
+   m1, m2 = record.observations.T             # light attenuation, m^-1
+   print(record.metadata["sampling_by_observable"])
+
+The pinned file is ``Correct data both chemostats.ods`` (897,788 bytes),
+retrieved directly from DANS datafile 14452. TipBox reads the first sheet's
+measurement rows and first three columns with the Python standard library;
+baseline columns are not subtracted. M1 contains 130 missing readings and M2
+contains 103. All rows and missing values remain in place. This original
+deposit uses `CC BY-NC 4.0
+<https://creativecommons.org/licenses/by-nc/4.0/>`_; cite Veraart et al.,
+`Nature 481, 357–359 <https://doi.org/10.1038/nature10723>`_ and the data DOI.
+These terms differ from the aggregated Zenodo record above.
+
+M1 matches the aggregated microcosm series after that file's five-significant-
+digit rounding. The six recovery intervals used in :doc:`figures` correspond
+to zero-based, stop-exclusive row slices ``[161:411]``, ``[1283:1533]``,
+``[3001:3251]``, ``[4076:4326]``, ``[5273:5523]``, and ``[6684:6934]``.
+Each contains 250 finite M1 readings, uniformly spaced by approximately
+0.0035461 day. Applying the rounded aggregate time bounds to the original
+times would omit a boundary row. The full experiment has interruptions;
+recovery intervals are analyzed separately. No reference event or recovery
+annotations are inferred for M2.
+
+``cache_dir=None`` and ``download=True`` follow the shared cache conventions
+below, using the ``dans_ztg_93aw`` subdirectory. ``source_path=None`` can be
+replaced with a local unmodified ODS path for offline use; it overrides cache
+lookup and never downloads. Every load verifies file size and SHA256
+``cec2680a8af7cc13e8afe31f92b9315d9c481b23523d73f9c47b552f75132f3e``.
+
 Cache and offline use
 ---------------------
 
@@ -205,3 +249,5 @@ API
 
 .. automodule:: tipbox.datasets.empirical
    :members: EmpiricalSpec, EmpiricalRecord, list_empirical, get_empirical_info, load_empirical
+
+.. autofunction:: tipbox.datasets.load_microcosm_original

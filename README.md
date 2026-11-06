@@ -1,137 +1,119 @@
-# tipbox
+# TipBox
 
-Named stochastic box models and classical early-warning benchmarks for tipping-point time series, with JAX integration kernels.
+Named stochastic box models, empirical time series, and classical early-warning benchmarks for critical transitions.
 
-## Developer's Guide
+![TipBox model gallery: eleven named configurations drawn from actual simulations](docs/_static/figures/overview.png)
+
+Configure a model, generate reproducible trajectories, and compare warning indicators through ROC/AUROC. The compact model interface and trajectory gallery take inspiration from [dysts](https://github.com/GilpinLab/dysts). Integration kernels use JAX; continuation software is not required.
+
+## Get started
 
 ```bash
-conda create -n tipbox python=3.10
-conda activate tipbox
-git clone https://github.com/juannat7/tipbox
+git clone https://github.com/juannat7/tipbox.git
 cd tipbox
 pip install -e .
 ```
 
-The named box models require no external continuation software. The former random-polynomial generators (`b_fold`, `b_hopf`, `b_transcritical`) have been removed; their implementation is preserved in [the repository history](https://github.com/juannat7/tipbox/tree/6b6443e).
-
-## Available Box Models
-
-### Bifurcation-Induced Tipping
-
-| System | Type | Description | Reference |
-|--------|------|-------------|-----------|
-| `b_harvesting` | Semi-real | May's harvesting model (fold) | May 1977 |
-| `b_rosenzweig_macarthur_tc` | Semi-real | Consumer-resource model (transcritical) | Bury et al. 2021 |
-| `b_rosenzweig_macarthur_hopf` | Semi-real | Consumer-resource model (Hopf) | Bury et al. 2021 |
-| `b_seirx_tc` | Semi-real | SEIRx disease–vaccination behaviour (transcritical) | Bury et al. 2021 |
-| `b_amoc` | Semi-real | AMOC 2-box model (bifurcation-induced) | Ritchie et al. 2023; Alkhayuon et al. 2019 |
-| `b_ricker` | Discrete map | Density-dependent population map (growth crosses zero) | Ricker 1954 |
-| `b_thermoacoustic` | Oscillator | Thermoacoustic subcritical Hopf | Bonciolini et al. 2018 |
-
-### Rate-Induced Tipping
-
-| System | Description | Reference |
-|--------|-------------|-----------|
-| `r_bautin` | Bautin normal form | Ritchie et al. 2023 |
-| `r_compost_bomb` | Compost bomb instability | Wieczorek et al. 2011 |
-| `r_saddle_node` | Saddle-node normal form | Ashwin et al. 2012 |
-| `r_amoc` | AMOC 2-box model (rate-induced) | Ritchie et al. 2023; Alkhayuon et al. 2019 |
-
-## Model API
-
-```python
-from tipbox.models import MayHarvesting
-
-model = MayHarvesting(r=1.0, k=1.0, s=0.1)
-result = model.make_trajectory(1000, noise=0.01, seed=42)
-print(model.get_parameters())
-```
-
-Every model exposes typed configuration, physical state and observable names, and an exact-grid trajectory method. See the [model reference](docs/index.rst) for equations, units, defaults, numerical conventions, and historical compatibility. To build the documentation locally, install `pip install -e ".[docs]"` and run `python -m sphinx -b html docs docs/_build/html`.
-
-## Classical warning indicators
+Python 3.10 or newer is required.
 
 ```python
 from tipbox.models import MayHarvesting
 from tipbox.indicators import rolling_ar1, rolling_variance
-from tipbox.metrics import kendall_tau
 
-result = MayHarvesting().make_trajectory(1000, seed=42)
-signal = result.trajectory[:, 0]
+model = MayHarvesting(r=1.0, k=1.0, s=0.1)
+result = model.make_trajectory(1000, noise=1.0, seed=42)
+time, signal = result.time, result.trajectory[:, 0]
 ar1 = rolling_ar1(signal, window=200, detrend="linear")
 variance = rolling_variance(signal, window=200, detrend="linear")
-print(kendall_tau(variance))
+print(model.get_parameters())
 ```
 
-Trailing AR1 regression slope, Pearson autocorrelation, variance, skewness, and kurtosis share explicit window, step, and detrending controls. Results keep the input length, with `NaN` for warm-up or missing-data windows. See [definitions and defaults](docs/indicators.rst).
+Models expose physical coefficients, initial states, forcing, noise, integration and sampling controls. Trailing AR1 regression slope, Pearson autocorrelation, variance, skewness, and kurtosis share explicit window, step, and detrending arguments. Results retain the input length, with `NaN` for warm-up or missing-data windows.
 
-For a labeled ensemble, `ensemble_roc(labels, {"Variance": variance_series})` reduces each trajectory's indicator to a Kendall trend and returns ROC/AUROC with valid and missing counts. It also accepts precomputed scalar scores. See the [complete benchmark example](docs/benchmarks.rst) for generation, labels, event conventions, and plotting.
+The [documentation](docs/index.rst) explains each model's equations, parameter defaults, units, numerical conventions, and event rules. Noise controls have model-specific physical meanings; the [shared API](docs/usage.rst) describes their use.
+
+## See the indicators
+
+![Bifurcation-induced, rate-induced, and empirical signals with trailing AR1 and variance](docs/_static/figures/indicators.png)
+
+Harvesting and moving-equilibrium simulations illustrate bifurcation- and rate-induced tipping. Their indicators use observations strictly before each model's reference marker. The measured microcosm uses six separate recovery experiments, plotted against elapsed recovery time in the lower panels. Indicator windows never cross recovery boundaries.
+
+Microcosm: Veraart et al. (2012), [original DANS deposit](https://doi.org/10.17026/dans-ztg-93aw), CC BY-NC 4.0; recovery annotations follow [Grziwotz et al. (2023)](https://doi.org/10.1126/sciadv.abq4558). This composite figure has a [separate attribution and license](docs/_static/figures/LICENSE.md). [Figure settings and reproduction](docs/figures.rst) document all controls and display choices.
+
+## Build and evaluate a benchmark
 
 ```python
 from tipbox.datasets import generate_dataset
+from tipbox.metrics import ensemble_roc, plot_roc
 
 dataset = generate_dataset(
     MayHarvesting(), num_timesteps=300,
-    n_tipping=10, n_null=10, n=1000, noise=0.01, seed=42,
+    n_tipping=50, n_null=50, n=1000,
+    noise=1.0, lead_steps=1, seed=42,
 )
-# dataset.observations: (20, 300, 1); dataset.labels: (20,)
+signals = dataset.observations[:, :, 0]  # (100, 300)
+indicators = {
+    "AR1": [rolling_ar1(x, window=100, detrend="linear") for x in signals],
+    "Variance": [rolling_variance(x, window=100, detrend="linear") for x in signals],
+}
+result = ensemble_roc(dataset.labels, indicators)
+print(result.curves["Variance"].auroc)
+ax = plot_roc(result)
 ```
 
-Batch generation preserves the model configuration and records accepted seeds, event references, physical lead times, and rejection counts. `n` controls the full simulation length; `num_timesteps` controls the retained context. The default `lead_steps=1` ends immediately before the model's reference marker.
+![AR1 and variance ROC curves for two simulated ensembles, with retained-score counts](docs/_static/figures/roc.png)
 
-## Empirical records
+Each trajectory supplies one Kendall trend score. The examples use 50 tipping and 50 null trajectories per model, predeclared windows and increasing score directions, and report score coverage. They describe these outcome-conditioned batches; models have different forcing histories, time units, and event rules. See [benchmark conventions](docs/benchmarks.rst) for labels, accepted seeds, rejection sampling, and physical lead times.
+
+## Load empirical observations
 
 ```python
-from tipbox.datasets import load_empirical
+from tipbox.datasets import load_empirical, load_microcosm_original
 
 record = load_empirical("voice")
 time, signal = record.time, record.observations[:, 0]
 print(record.metadata["sampling"])
+
+microcosm = load_microcosm_original()  # Full-precision time; both M1 and M2.
 ```
 
-Five cases are available: `microcosm`, `voice`, `mitochondria`, `climate`, and `blackout`. Records retain their original time axes, missing readings, and source metadata. Data download once into a user cache and are not bundled. The [dataset reference](docs/datasets.rst) explains analysis intervals, offline use, citations, and the upstream data-use terms, which are separate from TipBox's MIT software license.
+The five cases used by [KEWS](https://github.com/juannat7/kews) are `microcosm`, `voice`, `mitochondria`, `climate`, and `blackout`. Loaders preserve missing readings, original time axes, and source metadata. Data download into a user cache and are not bundled. The [dataset reference](docs/datasets.rst) covers offline use, analysis intervals, citations, and source-specific data terms.
 
-`Ricker` and `Thermoacoustic` provide simulation components for the Daphnia and TAC sim-to-real cases. The [paired-case reference](docs/sim_to_real.rst) identifies original observations, event conventions, and calibration requirements. Their raw Dryad archives could not be accessed from the development environment; automatic observation parsers and the private TipPFN calibration are not included.
+`Ricker` and `Thermoacoustic` provide simulation components for Daphnia extinction and thermoacoustic combustion. The [sim-to-real reference](docs/sim_to_real.rst) identifies original observations, event conventions, and calibration requirements. Automatic Dryad observation parsers and the private TipPFN calibration remain pending source access.
 
-## Quickstart
+## Model collection
 
-```python
-import jax
-from tipbox.generate import generate
+| Model | Registry name | Mechanism | Reference |
+|---|---|---|---|
+| `MayHarvesting` | `b_harvesting` | Fold | May 1977 |
+| `RosenzweigMacArthur(bifurcation_type="transcritical")` | `b_rosenzweig_macarthur_tc` | Transcritical | Bury et al. 2021 |
+| `RosenzweigMacArthur(bifurcation_type="hopf")` | `b_rosenzweig_macarthur_hopf` | Hopf | Bury et al. 2021 |
+| `SEIRx` | `b_seirx_tc` | Transcritical | Bury et al. 2021 |
+| `AMOC` | `b_amoc` | Fold | Alkhayuon et al. 2019; Ritchie et al. 2023 |
+| `Ricker` | `b_ricker` | Transcritical population map | Ricker 1954 |
+| `Thermoacoustic` | `b_thermoacoustic` | Subcritical Hopf | Bonciolini et al. 2018 |
+| `SaddleNode` | `r_saddle_node` | Rate-induced | Ashwin et al. 2012 |
+| `Bautin` | `r_bautin` | Rate-induced | Ritchie et al. 2023 |
+| `CompostBomb` | `r_compost_bomb` | Rate-induced | Wieczorek et al. 2011 |
+| `AMOCRate` | `r_amoc` | Rate-induced | Alkhayuon et al. 2019; Ritchie et al. 2023 |
 
-# Generate a tipping trajectory
-full, part, info = generate(
-    key=jax.random.PRNGKey(42),
-    tipping_type='b_harvesting',          # or 'b_harvesting', 'r_compost_bomb', etc.
-    null_simulation=False,           # True for non-tipping trajectory
-    num_timesteps=500,
-    sigma_tilde=0.01,
-)
+The [model reference](docs/models/index.rst) includes equations and defaults. The original nine configurations remain, alongside the two sim-to-real simulation components. The former AUTO-dependent random-polynomial generators (`b_fold`, `b_hopf`, `b_transcritical`) are preserved in [repository history](https://github.com/juannat7/tipbox/tree/6b6443e).
 
-# full.trajectory  - complete simulation
-# part.trajectory  - extracted pre-transition segment
-# info             - metadata (transition_index, system_name, etc.)
-# full.sigma       - integration-step noise scale
+## Documentation and examples
+
+```bash
+pip install -e ".[docs]"
+python -m sphinx -b html docs docs/_build/html
+JAX_PLATFORMS=cpu python examples/figures.py
 ```
 
-The SEIRx simulator now applies `sigma_tilde` to its configured noise amplitudes, as documented. To reproduce its former noise level, use `sigma_tilde=1.0`; the high-level default is `0.01`. Rate models use their configured time grid; change their typed configuration to adjust integration steps or physical parameters.
+The figure script produces PNG, SVG, PDF, and a manifest recording parameters, seeds, source checksums, software versions, and analysis choices. See [reproduction controls](docs/figures.rst).
 
-## Tutorial
-
-| Notebook | Description |
-|----------|-------------|
-| [`01_generate_batch.ipynb`](notebook/01_generate_batch.ipynb) | Batch generation of tipping trajectories, including tutorial on how to use the package generally |
-| [`02_sensitivity_analysis.ipynb`](notebook/02_sensitivity_analysis.ipynb) | Parameter sensitivity analysis using autodiff |
-
-## TODO
-
-- [ ] Add three-species chaotic food chain model (Hopf) — Zhuge 2025
-- [ ] Add Plant-herbivore model (Rate) — Ritchie 2023
-- [ ] Add AMOC 5-box model (Rate) — Ritchie 2023
+Historical notebooks cover [batch generation](notebook/01_generate_batch.ipynb) and [parameter sensitivity](notebook/02_sensitivity_analysis.ipynb). The original `tipbox.generate.generate` entry point remains available; [compatibility notes](docs/compatibility.rst) explain numerical corrections and settings for earlier experiments.
 
 ## Used in research
 
 - Nathaniel et al. (2026), [Koopman early warning signals for bifurcation and rate-induced tipping](https://arxiv.org/abs/2608.14716), with the [KEWS implementation](https://github.com/juannat7/kews).
 - Sevinchan et al. (2026), [In-context learning to predict critical transitions in dynamical systems](https://arxiv.org/abs/2605.12308).
 
-These studies used earlier versions; the [compatibility reference](docs/compatibility.rst) records numerical corrections and historical settings.
+These studies used earlier versions of TipBox. Historical settings are documented in the [compatibility reference](docs/compatibility.rst).
