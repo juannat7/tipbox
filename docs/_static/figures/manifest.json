@@ -8,36 +8,36 @@
   },
   "jax_backend": "cpu",
   "jax_enable_x64": false,
-  "script_sha256": "4ed585462c417166ae1858cbecfc1a6a700c34d9ff0b1f71d16ff13697b14a77",
+  "script_sha256": "9e09c0eba5c13a7ac09e662867f456a3a1c20335cdda893250337e7f24ab4c14",
   "package_sources_sha256": {
     "__init__.py": "3c6b12ed5bfaa65508d5ed1731a5ed26dad3a94a83ccde96ec2d916d5f0062eb",
     "_amoc.py": "3aa4751ec838a7d6041c782a9dfd9a5fbfb176b3efe08e1acb7c522f0e635add",
     "bifurcation/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    "bifurcation/amoc.py": "a34efee2f201473c455292d65a0047e041e7e5a1fb1f410ea6b0b00585632bb2",
-    "bifurcation/bifurcation_simulator.py": "8932bf8a596eacc4dccf9c0508acd8c3e00ad6ab64dbea33216073abd17a30fd",
-    "bifurcation/may_harvesting.py": "e8e78bb246c8c7785bdf9b7564d377f0408f94b885af0f9a664660fdfd0f5a38",
-    "bifurcation/ricker.py": "a8f77ea262e0c13a04fee14c51a4fed3a666a45578ffda1597368b5366d21905",
-    "bifurcation/rosenzweig_macarthur.py": "8f7528ce667a4786a02a70adb3cfd57ab96cfcc59c059cf22cd36bf6ccf87ee4",
-    "bifurcation/seirx.py": "77538eb921000bc875e44e0a59a22dc7dd8899b710a9423ecf8d20e5cbbe7c8d",
-    "bifurcation/thermoacoustic.py": "02d79356a8ee971ec631869e4d4f5449955e08157034bb94c8d404ab14c5c6d3",
+    "bifurcation/amoc.py": "e7349b3aa794d6eee3f876dea07fc44a18613022edd9949049c70cbdd126f8e5",
+    "bifurcation/bifurcation_simulator.py": "95fbfd22148dbd3dfecad54aa09d2833a16e2f79386f2ef095c5b784c9753d87",
+    "bifurcation/may_harvesting.py": "e153fb35beeebb4704ffc18cefa6c501e1340fc476961c6d87ed607de46d833c",
+    "bifurcation/ricker.py": "2866a77f996cf15e1cb5cb7bc7f025efd25e532fb7eb8cb430966c8095409e68",
+    "bifurcation/rosenzweig_macarthur.py": "5b2708bcf8bbf9ea10033a960e3845609dc56b1c0339d4dbd2741d4e9a1bc61e",
+    "bifurcation/seirx.py": "de48b33b56ea7ff1f8e87e3912fbba469130747afbd8cfdcaaf4ba4f6c4d1e04",
+    "bifurcation/thermoacoustic.py": "0a72c6b84a00ca563283665b8664257a6b8a87725d0cb07f106d4e36984d240b",
     "datasets/__init__.py": "b00b5ccca3c8a3611a39e394b34d2d223053b1159ee87fe64fc53f6f40b1f1ab",
     "datasets/_cache.py": "76f8fe6b0fe2a377aaaef63b3e7e75cd0d7cc43c81bf8eb338ef1947c1e250f2",
-    "datasets/benchmarks.py": "890d254db9f8e2ee8be8ef7fe3448afbea501f0344a5d1456bd5b6dee5195ddb",
+    "datasets/benchmarks.py": "bc0f848abf0aad51ff427a8c3a780f173f50ce5eb63328044cd8506bb8189b0a",
     "datasets/empirical.py": "b9eb335e5973a807899c35b6d6139b09dc025969267021ad9421e35e27d5eee1",
     "datasets/microcosm.py": "85bcd1b8cba272d0042f3ceeb04ec5497d861ef9fb3a8e9aad82ed8c0357d18c",
-    "generate.py": "cd4d7cf0275ac77a6a56bce9a23d09cc87d7d85e215a0be0955af61b83075e3d",
-    "indicators.py": "c25763181c1d73c19381a403f4ccf02daa24a0c41c30e45049ecea618bb4fbdd",
+    "generate.py": "b250d9e22729fea61c532e9ac033089a7dcfd887def0d00529f1ea86717544e5",
+    "indicators.py": "17c74bb0ba0585b3dda6a2cab535d5ef226a82bb2ba14bb4262d976547ccf100",
     "metrics.py": "15ecfb93eeee231cfcaa7bb9bb988c4ea5143944baa2fd88fbbffb5d97955dde",
     "models.py": "62307a5dbee43a90879638f133d61280b3769e90c942743c44d0c47ff8bdf2a8",
     "rate/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    "rate/amoc.py": "f05d92d9f4c0d2bb6a2e1b0923c650e0c5c32610e1fb921002beaee69da49e71",
-    "rate/bautin.py": "0d682b5c22ee3d0f375c8a9d18b75db0e049e8e83f057ba56186e0550b6ffc4f",
-    "rate/compost_bomb.py": "d8e6436465c632b625f7dff88122b6704d0324451152b54cab47cec2b597fb08",
-    "rate/rate_simulator.py": "5cb1b9e58187f1c5512a2a39e68c8cd32be6d8ff751d0b2fdb6118c6e8a82827",
-    "rate/saddle_node.py": "a7450c2d09cfbecb85e476d5d4caafa7f6633e0b5e199c950776fa7757d6d0e8",
+    "rate/amoc.py": "0430e90bc2d9880622b19c280ffc7a54f18a8f4316c10519afb040822661bdb7",
+    "rate/bautin.py": "d3e0b5b04518b64bd2e8a64fe0f05b0a05884d6394b2366433a3d868e14f4439",
+    "rate/compost_bomb.py": "c043799269a68b1a5837bb4921d9919be6f14a13a6c885d09243ec3407616889",
+    "rate/rate_simulator.py": "471eb40bf9088483a9371f1d70dcfd052e0238e38dcb1fac80aaa4bf6b9883e8",
+    "rate/saddle_node.py": "80450b3ab0d9edcf040c3922da32107ffbef1eb0a929c8b6cff7dd250622d729",
     "registry.py": "1f6e976a1e0e7fb24d6ae432aab579002515f61a2f0f40bc78a168172920b975",
-    "types.py": "044ae76cd226c8249b48c7c1bfa84fcef442da874bed61196723e4d9c3589815",
-    "utils.py": "9381ebef5a27d295c82af49f97281e6d077ce0691f5995d339980e82ba832956"
+    "types.py": "68ed3f19a2cc991110d084c0a172196327d91a2fbaf86c101dd4464ea609b596",
+    "utils.py": "366284df0eb5861e2f2fc88e9436d622473193d29904ca7dc72b6ca81d855ee9"
   },
   "overview": {
     "b_harvesting": {
@@ -59,7 +59,7 @@
         "initial_state_max": 1.0
       },
       "arguments": {
-        "n": 1400,
+        "num_samples": 1400,
         "noise": 1.0
       },
       "seed": 43,
@@ -117,7 +117,7 @@
         "t_end": 100.0
       },
       "arguments": {
-        "n": 89951,
+        "num_samples": 89951,
         "dt_sample": 0.02,
         "noise": 1.0
       },
@@ -178,7 +178,7 @@
         "t_end": 100.0
       },
       "arguments": {
-        "n": 89951,
+        "num_samples": 89951,
         "dt_sample": 0.02,
         "noise": 1.0
       },
@@ -238,7 +238,7 @@
         "t_end": 100.0
       },
       "arguments": {
-        "n": 1800,
+        "num_samples": 1800,
         "noise": 0.01
       },
       "seed": 43,
@@ -604,7 +604,7 @@
         "t_end": 500.0
       },
       "arguments": {
-        "n": 600,
+        "num_samples": 600,
         "noise": 1.0
       },
       "seed": 43,
@@ -655,7 +655,7 @@
         "t_end": 1.1
       },
       "arguments": {
-        "n": 11001,
+        "num_samples": 11001,
         "dt_sample": 0.0001,
         "noise": 1.0
       },
@@ -714,7 +714,7 @@
         "initial_state_max": 1.0
       },
       "arguments": {
-        "n": 1200,
+        "num_samples": 1200,
         "noise": 1.0
       },
       "seed": 43,
@@ -753,7 +753,7 @@
           "initial_state_max": 1.0
         },
         "arguments": {
-          "n": 1200,
+          "num_samples": 1200,
           "noise": 1.0,
           "null_simulation": true
         },
@@ -891,7 +891,7 @@
           ],
           "time_start": 0.5709219858155947,
           "time_stop": 1.4539007092198375,
-          "n": 250
+          "num_samples": 250
         },
         {
           "label": "P2",
@@ -901,7 +901,7 @@
           ],
           "time_start": 4.549645390070857,
           "time_stop": 5.4326241134751,
-          "n": 250
+          "num_samples": 250
         },
         {
           "label": "P3",
@@ -911,7 +911,7 @@
           ],
           "time_start": 10.641843971631054,
           "time_stop": 11.524822695035297,
-          "n": 250
+          "num_samples": 250
         },
         {
           "label": "P4",
@@ -921,7 +921,7 @@
           ],
           "time_start": 14.453900709219653,
           "time_stop": 15.336879432623896,
-          "n": 250
+          "num_samples": 250
         },
         {
           "label": "P5",
@@ -931,7 +931,7 @@
           ],
           "time_start": 19.49858156028367,
           "time_stop": 20.381560283687914,
-          "n": 250
+          "num_samples": 250
         },
         {
           "label": "P6",
@@ -941,7 +941,7 @@
           ],
           "time_start": 24.50212765957438,
           "time_stop": 25.385106382978623,
-          "n": 250
+          "num_samples": 250
         }
       ],
       "window": 200,
@@ -970,7 +970,7 @@
         "initial_state_max": 1.0
       },
       "arguments": {
-        "n": 1200,
+        "num_samples": 1200,
         "noise": 1.0
       },
       "seed": 43,
@@ -1009,7 +1009,7 @@
           "initial_state_max": 1.0
         },
         "arguments": {
-          "n": 1200,
+          "num_samples": 1200,
           "noise": 1.0,
           "null_simulation": true
         },
@@ -1147,7 +1147,7 @@
           ],
           "time_start": 0.5709219858155947,
           "time_stop": 1.4539007092198375,
-          "n": 250
+          "num_samples": 250
         },
         {
           "label": "P2",
@@ -1157,7 +1157,7 @@
           ],
           "time_start": 4.549645390070857,
           "time_stop": 5.4326241134751,
-          "n": 250
+          "num_samples": 250
         },
         {
           "label": "P3",
@@ -1167,7 +1167,7 @@
           ],
           "time_start": 10.641843971631054,
           "time_stop": 11.524822695035297,
-          "n": 250
+          "num_samples": 250
         },
         {
           "label": "P4",
@@ -1177,7 +1177,7 @@
           ],
           "time_start": 14.453900709219653,
           "time_stop": 15.336879432623896,
-          "n": 250
+          "num_samples": 250
         },
         {
           "label": "P5",
@@ -1187,7 +1187,7 @@
           ],
           "time_start": 19.49858156028367,
           "time_stop": 20.381560283687914,
-          "n": 250
+          "num_samples": 250
         },
         {
           "label": "P6",
@@ -1197,7 +1197,7 @@
           ],
           "time_start": 24.50212765957438,
           "time_stop": 25.385106382978623,
-          "n": 250
+          "num_samples": 250
         }
       ],
       "window": 200,
@@ -1225,13 +1225,13 @@
         "initial_state_max": 1.0
       },
       "arguments": {
-        "n": 1000,
+        "num_samples": 1000,
         "noise": 1.0
       },
       "root_seed": 43,
-      "n_per_class": 50,
-      "num_timesteps": 300,
-      "lead_steps": 1,
+      "num_per_class": 50,
+      "context_samples": 300,
+      "lead_samples": 1,
       "physical_lead_min": 1.0,
       "physical_lead_max": 1.0,
       "window": 100,
@@ -1487,7 +1487,7 @@
           "initial_state_max": 1.0
         },
         "arguments": {
-          "n": 1400,
+          "num_samples": 1400,
           "noise": 1.0,
           "null_simulation": true
         },
@@ -1544,7 +1544,7 @@
           "t_end": 100.0
         },
         "arguments": {
-          "n": 89951,
+          "num_samples": 89951,
           "dt_sample": 0.02,
           "noise": 1.0,
           "null_simulation": true
@@ -1604,7 +1604,7 @@
           "t_end": 100.0
         },
         "arguments": {
-          "n": 89951,
+          "num_samples": 89951,
           "dt_sample": 0.02,
           "noise": 1.0,
           "null_simulation": true
@@ -1663,7 +1663,7 @@
           "t_end": 100.0
         },
         "arguments": {
-          "n": 1800,
+          "num_samples": 1800,
           "noise": 0.01,
           "null_simulation": true
         },
@@ -2023,7 +2023,7 @@
           "t_end": 500.0
         },
         "arguments": {
-          "n": 600,
+          "num_samples": 600,
           "noise": 1.0,
           "null_simulation": true
         },
@@ -2073,7 +2073,7 @@
           "t_end": 1.1
         },
         "arguments": {
-          "n": 11001,
+          "num_samples": 11001,
           "dt_sample": 0.0001,
           "noise": 1.0,
           "null_simulation": true

@@ -17,8 +17,8 @@ Simulate
    from tipbox.models import MayHarvesting
 
    model = MayHarvesting()
-   # n: sampled observations; noise: process-noise strength; seed: random seed.
-   result = model.make_trajectory(n=1200, noise=1.0, seed=43)
+   # num_samples: sampled observations; noise: process-noise strength; seed: random seed.
+   result = model.make_trajectory(num_samples=1200, noise=1.0, seed=43)
 
 Choose other models from the :doc:`catalog <models/index>`.
 

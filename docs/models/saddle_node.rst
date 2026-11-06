@@ -11,10 +11,10 @@ Usage
    from tipbox.models import SaddleNode
 
    model = SaddleNode(epsilon=1.4)
-   result = model.make_trajectory(n=2401, noise=0.01, seed=43)
+   result = model.make_trajectory(num_samples=2401, noise=0.01, seed=43)
    state = result.trajectory[:, 0]
 
-   control = model.make_trajectory(n=2401, noise=0.01, seed=43, null_simulation=True)
+   control = model.make_trajectory(num_samples=2401, noise=0.01, seed=43, null_simulation=True)
 
 .. figure:: ../_static/figures/r_saddle_node.png
    :target: ../_static/figures/r_saddle_node.png

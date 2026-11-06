@@ -41,9 +41,9 @@ def _select_system(key: jax.random.PRNGKey, system_name: str = None):
 
 def simulate_real_bifurcation_trajectory(
     key: jax.random.PRNGKey,
-    series_len: int = 500,
-    steps_before_transition: int = 1,
-    buffer_size: int = 1000,
+    context_samples: int = 500,
+    excluded_samples: int = 1,
+    buffer_samples: int = 1000,
     sigma_tilde: float = 0.01,
     null_simulation: bool = False,
     system_name: str = None,
@@ -55,14 +55,16 @@ def simulate_real_bifurcation_trajectory(
 
     key_select, key_sim = jax.random.split(key)
 
-    if steps_before_transition > buffer_size:
+    if excluded_samples > buffer_samples:
         raise ValueError(
-            "steps_before_transition exceeds buffer_size. "
-            "Increase buffer_size to maintain constant parameter rate."
+            "excluded_samples exceeds buffer_samples. "
+            "Increase buffer_samples to maintain constant parameter rate."
         )
 
     # Calculate total simulation length (extended if param_end_multiplier > 1.0)
-    total_len = calculate_total_len(series_len, buffer_size, param_end_multiplier)
+    total_len = calculate_total_len(
+        context_samples, buffer_samples, param_end_multiplier
+    )
 
     # Select, setup and initialize model using unified registry
     system_spec = _select_system(key_select, system_name=system_name)
@@ -100,8 +102,8 @@ def simulate_real_bifurcation_trajectory(
         trajectory,
         param_values,
         trans_idx,
-        steps_before_transition=steps_before_transition,
-        series_len=series_len,
+        excluded_samples=excluded_samples,
+        context_samples=context_samples,
     )
 
     if not success:
@@ -111,7 +113,7 @@ def simulate_real_bifurcation_trajectory(
     metadata: Dict[str, Any] = {
         "label": "null" if null_simulation else system_spec.bifurcation_system,
         "bifurcation_real_system": system_spec.bifurcation_system,
-        "steps_before_transition": steps_before_transition,
+        "excluded_samples": excluded_samples,
         "system_config": asdict(config),
         "transition_index": int(trans_idx_out),
         "param_value_transition": float(

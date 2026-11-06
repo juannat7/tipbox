@@ -19,8 +19,8 @@ Example
 
    # 50 tipping trajectories + 50 controls; retain 300 samples before each reference.
    batch = generate_dataset(
-       MayHarvesting(), n_tipping=50, n_null=50, n=1000,
-       num_timesteps=300, noise=1.0, seed=43,
+       MayHarvesting(), num_tipping=50, num_controls=50, num_samples=1000,
+       context_samples=300, noise=1.0, seed=43,
    )
    signals = batch.observations[:, :, 0]
    indicators = {
@@ -31,7 +31,7 @@ Example
    print(report.curves["Variance"].auroc)
    ax = plot_roc(report)
 
-``n`` controls the full simulation; ``num_timesteps`` retains 300 observations
+``num_samples`` controls the full simulation; ``context_samples`` retains 300 observations
 before each reference. Each trajectory contributes one Kendall trend score.
 Higher scores indicate tipping.
 

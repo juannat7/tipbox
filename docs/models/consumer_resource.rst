@@ -12,10 +12,10 @@ Usage
    from tipbox.models import RosenzweigMacArthur
 
    model = RosenzweigMacArthur(bifurcation_type="transcritical", a_transcritical_max=10.0)
-   result = model.make_trajectory(n=89951, dt_sample=0.02, noise=1.0, seed=43)
+   result = model.make_trajectory(num_samples=89951, dt_sample=0.02, noise=1.0, seed=43)
    resource, consumer = result.trajectory.T
 
-   control = model.make_trajectory(n=89951, dt_sample=0.02, noise=1.0, seed=43, null_simulation=True)
+   control = model.make_trajectory(num_samples=89951, dt_sample=0.02, noise=1.0, seed=43, null_simulation=True)
 
 .. figure:: ../_static/figures/b_rosenzweig_macarthur_tc.png
    :target: ../_static/figures/b_rosenzweig_macarthur_tc.png
@@ -28,9 +28,9 @@ Select ``"hopf"`` for the oscillatory scenario:
 .. code-block:: python
 
    model = RosenzweigMacArthur(bifurcation_type="hopf")
-   result = model.make_trajectory(n=89951, dt_sample=0.02, noise=1.0, seed=43)
+   result = model.make_trajectory(num_samples=89951, dt_sample=0.02, noise=1.0, seed=43)
 
-   control = model.make_trajectory(n=89951, dt_sample=0.02, noise=1.0, seed=43, null_simulation=True)
+   control = model.make_trajectory(num_samples=89951, dt_sample=0.02, noise=1.0, seed=43, null_simulation=True)
 
 .. figure:: ../_static/figures/b_rosenzweig_macarthur_hopf.png
    :target: ../_static/figures/b_rosenzweig_macarthur_hopf.png

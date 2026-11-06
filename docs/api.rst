@@ -9,8 +9,8 @@ Simulation
 Constructors take the parameters listed on each :doc:`model page <models/index>`.
 ``make_trajectory`` returns time ``(T,)``, observations ``(T,D)``, and forcing ``(T,)``.
 
-* ``n`` includes the initial sample; ``dt_sample`` must be an integer multiple of ``dt``.
-* Duration-normalized ramps change when ``n`` changes. Rate forcing uses absolute time.
+* ``num_samples`` includes the initial sample; ``dt_sample`` must be an integer multiple of ``dt``.
+* Duration-normalized ramps change when ``num_samples`` changes. Rate forcing uses absolute time.
 * ``noise`` scales diffusion; SaddleNode instead takes a diffusion intensity.
 * Initial states use ``model.state_names``; Ricker uses log population.
 * ``noise=0`` removes process noise. Supply ``initial_state`` for fixed initialization.
@@ -64,7 +64,7 @@ Benchmarking
 ------------
 
 ``generate_dataset`` returns observations ``(N,T,D)``, labels ``(N,)``, and
-per-row times, forcing, and metadata. ``lead_steps=1`` ends the context one
+per-row times, forcing, and metadata. ``lead_samples=1`` ends the context one
 sample before the model reference. Null references are comparison points;
 a forcing crossing need not coincide with an observed state jump. Balanced,
 outcome-selected batches do not estimate natural tipping probabilities.

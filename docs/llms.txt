@@ -2,9 +2,9 @@
 
 > Named stochastic box models, empirical records, early-warning indicators, and trajectory-level ROC/AUROC benchmarks in Python.
 
-Use `from tipbox.models import MayHarvesting` and `model.make_trajectory(n, noise=..., seed=...)` for a simulation. The returned `TrajectoryResult` has `time` shape (T,), `trajectory` shape (T,D), `param_values` shape (T,), and provenance in `metadata`.
+Use `from tipbox.models import MayHarvesting` and `model.make_trajectory(num_samples=1200, noise=1.0, seed=43)` for a simulation. The returned `TrajectoryResult` has `time` shape (T,), `trajectory` shape (T,D), `param_values` shape (T,), and provenance in `metadata`.
 
-Use `from tipbox.datasets import generate_dataset` for labeled pre-reference contexts: observations (N,T,D), labels (N,), absolute time (N,T), and per-row metadata. Explicitly distinguish full simulation `n` from retained context `num_timesteps`. Model clocks, observables, noise meanings, and event rules differ.
+Use `from tipbox.datasets import generate_dataset` for labeled pre-reference contexts: observations (N,T,D), labels (N,), absolute time (N,T), and per-row metadata. `num_samples` sets the full trajectory length; `context_samples` sets the retained window. `num_tipping` and `num_controls` set class counts; `lead_samples` sets the sample distance to each reference. Model clocks, observables, noise meanings, and event rules differ.
 
 Rolling statistics return NumPy arrays aligned to the input, with NaN at warm-up, skipped, or invalid windows. Use integer windows for streaming. One trajectory supplies one score; larger scores mean tipping. Predeclare directions and analysis settings. Do not infer an empirical null class or a physical time unit that the source does not establish.
 

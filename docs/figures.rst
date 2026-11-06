@@ -18,7 +18,7 @@ source checksums, and software versions.
      - Default
    * - ``--seed``
      - ``43``
-   * - ``--n-per-class``
+   * - ``--num-per-class``
      - ``50`` for the ROC example
    * - ``--formats``
      - ``png svg pdf``
@@ -47,10 +47,10 @@ Indicators and AUROC
 The README's May and saddle-node examples use the same tipping/control pairs
 for trajectories and indicators. Both indicators use 200-sample, linearly
 detrended windows ending before the tipping reference. Controls use the same
-analysis interval. May uses ``n=1200, noise=1``; saddle-node uses
-``epsilon=1.4, n=2401, noise=0.01``.
+analysis interval. May uses ``num_samples=1200, noise=1``; saddle-node uses
+``epsilon=1.4, num_samples=2401, noise=0.01``.
 
-The ROC example uses 50 tipping and 50 control May trajectories, ``n=1000``,
+The ROC example uses 50 tipping and 50 control May trajectories, ``num_samples=1000``,
 context 300, lead one, window 100, linear detrending, and increasing Kendall
 trend scores. The :doc:`benchmark guide <benchmarks>` reproduces it.
 

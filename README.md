@@ -37,16 +37,16 @@ from tipbox.datasets import Microcosm
 
 # Bifurcation-induced tipping (null_simulation=False by default).
 harvesting = MayHarvesting()
-# n: sampled observations; noise: process-noise strength; seed: random seed.
-bifurcation = harvesting.make_trajectory(n=1200, noise=1.0, seed=43)
+# num_samples: sampled observations; noise: process-noise strength; seed: random seed.
+bifurcation = harvesting.make_trajectory(num_samples=1200, noise=1.0, seed=43)
 # null_simulation=True selects the non-tipping control.
-bifurcation_control = harvesting.make_trajectory(n=1200, noise=1.0, seed=43, null_simulation=True)
+bifurcation_control = harvesting.make_trajectory(num_samples=1200, noise=1.0, seed=43, null_simulation=True)
 
 # Rate-induced tipping: simulate 2,401 observations of a moving equilibrium.
 # epsilon sets the rate of the equilibrium shift.
 rate_model = SaddleNode(epsilon=1.4)
-rate = rate_model.make_trajectory(n=2401, noise=0.01, seed=43)
-rate_control = rate_model.make_trajectory(n=2401, noise=0.01, seed=43, null_simulation=True)
+rate = rate_model.make_trajectory(num_samples=2401, noise=0.01, seed=43)
+rate_control = rate_model.make_trajectory(num_samples=2401, noise=0.01, seed=43, null_simulation=True)
 
 # Empirical observations: Veraart et al. (2012), chemostats M1 and M2.
 observed = Microcosm().load()
@@ -92,8 +92,8 @@ from tipbox.metrics import ensemble_roc, plot_roc
 
 # 50 tipping trajectories + 50 controls; retain 300 samples before each reference.
 batch = generate_dataset(
-    MayHarvesting(), n_tipping=50, n_null=50, n=1000,
-    num_timesteps=300, noise=1.0, seed=43,
+    MayHarvesting(), num_tipping=50, num_controls=50, num_samples=1000,
+    context_samples=300, noise=1.0, seed=43,
 )
 signals = batch.observations[:, :, 0]  # First observed variable in each trajectory.
 indicators = {

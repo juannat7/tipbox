@@ -13,10 +13,10 @@ AMOCFold
    from tipbox.models import AMOCFold
 
    model = AMOCFold()
-   result = model.make_trajectory(n=1041, noise=0.01, seed=43)
+   result = model.make_trajectory(num_samples=1041, noise=0.01, seed=43)
    transport = result.trajectory[:, 0]
 
-   control = model.make_trajectory(n=1041, noise=0.01, seed=43, null_simulation=True)
+   control = model.make_trajectory(num_samples=1041, noise=0.01, seed=43, null_simulation=True)
 
 .. figure:: ../_static/figures/b_amoc.png
    :target: ../_static/figures/b_amoc.png
@@ -34,10 +34,10 @@ AMOCRate
    from tipbox.models import AMOCRate
 
    model = AMOCRate()
-   result = model.make_trajectory(n=1142, noise=0.01, seed=43)
+   result = model.make_trajectory(num_samples=1142, noise=0.01, seed=43)
    transport = result.trajectory[:, 0]
 
-   control = model.make_trajectory(n=1142, noise=0.01, seed=43, null_simulation=True)
+   control = model.make_trajectory(num_samples=1142, noise=0.01, seed=43, null_simulation=True)
 
 .. figure:: ../_static/figures/r_amoc.png
    :target: ../_static/figures/r_amoc.png
@@ -152,7 +152,7 @@ through the shared immutable ``AMOCPhysics`` configuration, for example:
    from tipbox.models import AMOCFold, AMOCPhysics
 
    model = AMOCFold(physics=AMOCPhysics(K_N=1.8e6), sigma_ic=0)
-   result = model.make_trajectory(n=1000, noise=0.0, seed=43)
+   result = model.make_trajectory(num_samples=1000, noise=0.0, seed=43)
 
 References: `Alkhayuon et al. (2019)
 <https://doi.org/10.1098/rspa.2019.0051>`_ and Appendix A4 of
