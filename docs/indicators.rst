@@ -1,5 +1,5 @@
-Classical warning indicators
-============================
+Early-warning indicators
+========================
 
 Choose one scalar observable before analysis. For example, the first observation
 column of :doc:`MayHarvesting <models/harvesting>` is population density:
@@ -16,7 +16,7 @@ column of :doc:`MayHarvesting <models/harvesting>` is population density:
 
 The functions accept concrete NumPy or JAX arrays and return NumPy arrays of the
 same length. They are eager analysis routines, rather than JAX-transformable
-integration kernels. Their definitions follow the classical comparisons in
+integration kernels. Their definitions follow the indicator comparisons in
 `kews <https://github.com/juannat7/kews/blob/main/experiments/indicators.py>`_.
 TipBox adds explicit missing-data handling and population moments.
 
@@ -97,7 +97,7 @@ The AR slope can exceed :math:`[-1,1]`. The correlation differs from an ACF
 estimated using a shared full-window mean and variance, so specify the
 convention when comparing implementations.
 
-These classical signals need not increase before every transition, especially
+These indicators need not increase before every transition, especially
 for rate-induced tipping. Skewness also depends on the sign of the chosen
 observable. Inspect the physics and predeclare score directions rather than
 flipping indicators after seeing their test AUROC.

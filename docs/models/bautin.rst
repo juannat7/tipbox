@@ -3,6 +3,28 @@ Rate-induced Bautin normal form
 
 ``r_bautin`` · ``tipbox.models.Bautin``
 
+Usage
+-----
+
+.. code-block:: python
+
+   from tipbox.models import Bautin
+
+   model = Bautin()
+   result = model.make_trajectory(n=3001, noise=0.01, seed=42)
+   x, y = result.trajectory.T
+
+.. figure:: ../_static/figures/r_bautin.png
+   :alt: Cartesian coordinates of the translating oscillator. Points beyond the configured radius threshold are omitted before escape.
+
+   Cartesian coordinates of the translating oscillator. Points beyond the configured radius threshold are omitted before escape.
+
+``n`` counts sampled observations. See :doc:`../usage` for integration,
+sampling, noise, and custom-forcing controls.
+
+Equations and forcing
+---------------------
+
 Let :math:`Z=X+iY` and :math:`w=Z-\Lambda(t)`. The implemented Cartesian dynamics
 are equivalent to
 
@@ -27,6 +49,9 @@ uniform interval. The legacy event marker is the first time
 Euler–Maruyama uses independent noises in both coordinates. The polynomial
 normal form can diverge after departure; long full trajectories may become
 nonfinite. Benchmark contexts must be checked before calculating indicators.
+
+Parameters and defaults
+-----------------------
 
 .. model-parameters:: r_bautin
 

@@ -1,4 +1,4 @@
-"""Classical early-warning statistics on trailing windows of one scalar signal.
+"""Early-warning statistics on trailing windows of one scalar signal.
 
 All functions return a NumPy array aligned with the input. Warm-up samples and
 windows containing nonfinite observations are NaN. Each window uses observations

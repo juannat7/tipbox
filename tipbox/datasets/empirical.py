@@ -31,7 +31,7 @@ class EmpiricalSpec:
     ``transition_time`` and ``trend_start`` are reference values used in the
     upstream plotting script and KEWS analysis; they are not event estimates
     inferred by this loader. ``example_window`` and ``example_step`` are sample
-    counts from that analysis, rather than tuned classical-indicator defaults.
+    counts from that analysis, rather than tuned indicator defaults.
     Recovery intervals are inclusive (label, start, stop) triples.
     ``time_unit_notes`` records source inconsistencies; an unresolved unit must
     be clarified before assigning physical durations to its raw time coordinates.
@@ -257,3 +257,46 @@ def load_empirical(
         "preprocessing": "none",
     }
     return EmpiricalRecord(time=time, observations=observations, metadata=metadata)
+
+
+class _ArchivedCase:
+    _name: str
+
+    def load(
+        self,
+        *,
+        cache_dir: str | Path | None = None,
+        download: bool = True,
+        archive_path: str | Path | None = None,
+    ) -> EmpiricalRecord:
+        """Load the record; see :func:`tipbox.datasets.empirical.load_empirical` for controls."""
+        return load_empirical(
+            self._name,
+            cache_dir=cache_dir,
+            download=download,
+            archive_path=archive_path,
+        )
+
+
+class VoiceOnset(_ArchivedCase):
+    """Subglottal pressure during voice onset, from the Grziwotz et al. archive."""
+
+    _name = "voice"
+
+
+class CellularATP(_ArchivedCase):
+    """Cellular fluorescence ratio; physical time units remain unresolved."""
+
+    _name = "mitochondria"
+
+
+class Paleoclimate(_ArchivedCase):
+    """Greenhouse Earth CaCO3 record, retaining signed geological ages."""
+
+    _name = "climate"
+
+
+class ElectricalBlackout(_ArchivedCase):
+    """Electrical frequency around a blackout, from the Grziwotz et al. archive."""
+
+    _name = "blackout"

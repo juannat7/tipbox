@@ -1,12 +1,14 @@
 # TipBox
 
-> Named stochastic box models, empirical records, classical early-warning indicators, and trajectory-level ROC/AUROC benchmarks in Python.
+> Named stochastic box models, empirical records, early-warning indicators, and trajectory-level ROC/AUROC benchmarks in Python.
 
 Use `from tipbox.models import MayHarvesting` and `model.make_trajectory(n, noise=..., seed=...)` for a simulation. The returned `TrajectoryResult` has `time` shape (T,), `trajectory` shape (T,D), `param_values` shape (T,), and provenance in `metadata`.
 
 Use `from tipbox.datasets import generate_dataset` for labeled pre-reference contexts: observations (N,T,D), labels (N,), absolute time (N,T), and per-row metadata. Explicitly distinguish full simulation `n` from retained context `num_timesteps`. Model clocks, observables, noise meanings, and event rules differ.
 
 Rolling statistics return NumPy arrays aligned to the input, with NaN at warm-up, skipped, or invalid windows. Use integer windows for streaming. One trajectory supplies one score; larger scores mean tipping. Predeclare directions and analysis settings. Do not infer an empirical null class or a physical time unit that the source does not establish.
+
+Use `from tipbox.datasets import Microcosm, Paleoclimate` and `Microcosm().load()` or `Paleoclimate().load()` for empirical observations. All five system-named observation classes expose `.load()` with explicit cache and offline controls; functional loaders remain available. Records preserve source times, missing values, and provenance.
 
 ## Start here
 
@@ -16,6 +18,8 @@ Rolling statistics return NumPy arrays aligned to the input, with NaN at warm-up
 
 ## Scientific reference
 
+- [Master system catalog](_sources/systems.rst.txt): Every public model class, sim-to-real simulation component, and observation class, grouped by dataset type.
+- [Citations](_sources/citations.rst.txt): KEWS and TipPFN references with BibTeX.
 - [Model collection](models/index.html): Equations, generated default-parameter tables, units, and reference-event rules.
 - [Indicator definitions](_sources/indicators.rst.txt): AR1 versus Pearson correlation, variance, population moments, detrending, and missingness.
 - [Benchmark protocol](_sources/benchmarks.rst.txt): Outcome-conditioned labels, seed allocation, reference alignment, and ROC conventions.

@@ -102,3 +102,19 @@ def load_microcosm_original(
     return EmpiricalRecord(
         time=data[:, 0], observations=data[:, 1:3], metadata=metadata
     )
+
+
+class Microcosm:
+    """Original cyanobacterial chemostat observations, M1 and M2 (Veraart, 2012)."""
+
+    def load(
+        self,
+        *,
+        cache_dir: str | Path | None = None,
+        download: bool = True,
+        source_path: str | Path | None = None,
+    ) -> EmpiricalRecord:
+        """Load both records; see :func:`tipbox.datasets.load_veraart2012` for controls."""
+        return load_microcosm_original(
+            cache_dir=cache_dir, download=download, source_path=source_path
+        )

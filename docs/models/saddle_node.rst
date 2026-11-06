@@ -3,6 +3,28 @@ Rate-induced saddle-node normal form
 
 ``r_saddle_node`` · ``tipbox.models.SaddleNode``
 
+Usage
+-----
+
+.. code-block:: python
+
+   from tipbox.models import SaddleNode
+
+   model = SaddleNode(epsilon=1.4)
+   result = model.make_trajectory(n=2401, noise=0.01, seed=43)
+   state = result.trajectory[:, 0]
+
+.. figure:: ../_static/figures/r_saddle_node.png
+   :alt: A trajectory leaving the moving stable branch. The view ends at state 5; dashed lines mark the configured state threshold.
+
+   A trajectory leaving the moving stable branch. The view ends at state 5; dashed lines mark the configured state threshold.
+
+``n`` counts sampled observations. See :doc:`../usage` for integration,
+sampling, noise, and custom-forcing controls.
+
+Equations and forcing
+---------------------
+
 .. math::
 
    dX &= [(X+\Lambda(t))^2-1]dt+\sqrt{2\eta}\,dW_t,\\
@@ -25,6 +47,9 @@ threshold is ``epsilon_c=4/3``. The configured ``epsilon=1.25`` is below it;
 positive paths at the default rate are noise-assisted. The figures explicitly
 use ``epsilon=1.4``. The null rate is halved, so the batch compares different
 forcing histories. Neither protocol reproduces a matched-forcing experiment.
+
+Parameters and defaults
+-----------------------
 
 .. model-parameters:: r_saddle_node
 

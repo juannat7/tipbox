@@ -53,7 +53,7 @@ class ModelParameters(SphinxDirective):
             result.insert(
                 0,
                 nodes.paragraph(
-                    text=f"Default critical parameter: {value:.8g}. Automatic markers follow the physical coefficients where supported; AMOC uses an explicitly calibrated marker."
+                    text=f"Default critical parameter: {value:.8g}."
                 ),
             )
         return result

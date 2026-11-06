@@ -16,6 +16,17 @@ extensions = [
     "model_parameters",
 ]
 html_theme = "furo"
+templates_path = ["_templates"]
+html_sidebars = {
+    "**": [
+        "sidebar/brand.html",
+        "sidebar/repository.html",
+        "sidebar/search.html",
+        "sidebar/scroll-start.html",
+        "sidebar/navigation.html",
+        "sidebar/scroll-end.html",
+    ]
+}
 html_title = "TipBox"
 html_baseurl = "https://juannat7.github.io/tipbox/"
 html_theme_options = {

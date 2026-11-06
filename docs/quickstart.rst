@@ -79,10 +79,10 @@ Use measured data
 .. code-block:: python
 
    import numpy as np
-   from tipbox.datasets import load_veraart2012
+   from tipbox.datasets import Microcosm
    from tipbox.indicators import rolling_variance
 
-   record = load_veraart2012()
+   record = Microcosm().load()
    recovery = record.observations[161:411, 0]  # M1, first recovery
    variance = rolling_variance(recovery, window=200, step=5, detrend="linear")
    print(record.observations.shape)             # (7914, 2): M1, M2

@@ -8,7 +8,7 @@
   },
   "jax_backend": "cpu",
   "jax_enable_x64": false,
-  "script_sha256": "24568192afb822281632f4b705839efeea85318ff72a5c2c101ad18860210af3",
+  "script_sha256": "21ebe5e5442c6056dc09e6e92e6b5049c17963bcb7c9e0259c878581450a4ebf",
   "package_sources_sha256": {
     "__init__.py": "3c6b12ed5bfaa65508d5ed1731a5ed26dad3a94a83ccde96ec2d916d5f0062eb",
     "_amoc.py": "3aa4751ec838a7d6041c782a9dfd9a5fbfb176b3efe08e1acb7c522f0e635add",
@@ -20,13 +20,13 @@
     "bifurcation/rosenzweig_macarthur.py": "b0a46559eff3ce920d1b061382640a1b4bca626f1f4e18e16dc858ef91a799e3",
     "bifurcation/seirx.py": "bca1ebbd253f1c21d00e0e4b4f6bc602d75436a5a4edca557d3fa2c68e8fafa4",
     "bifurcation/thermoacoustic.py": "02d79356a8ee971ec631869e4d4f5449955e08157034bb94c8d404ab14c5c6d3",
-    "datasets/__init__.py": "e1c3d1537d4023bf206d2a9bdd4cd320ffbc349a541f97fe365bf4f917f6429f",
+    "datasets/__init__.py": "066a6524d12f410146b1ad192fe333b11420b558f91abc77bde8b68b17b13722",
     "datasets/_cache.py": "76f8fe6b0fe2a377aaaef63b3e7e75cd0d7cc43c81bf8eb338ef1947c1e250f2",
     "datasets/benchmarks.py": "890d254db9f8e2ee8be8ef7fe3448afbea501f0344a5d1456bd5b6dee5195ddb",
-    "datasets/empirical.py": "48ac517f1cb343572e3cc0f20e3d58bc51e3f6ef546d5fed8e716475e2e3ccc9",
-    "datasets/microcosm.py": "13fcbd702f5e541bfd8a5a6408d5c438e4d4508eff70b4bb19ca5166a3bce23b",
+    "datasets/empirical.py": "7d4a2f634f0d37a142206cbacbde99a58d1c7faf1cb7791cd59086a78ac6fbe2",
+    "datasets/microcosm.py": "20719dad9a6d36d4bdc764e26f34199e51030a0c2aca99fd5e5a5d9ca03746f1",
     "generate.py": "cd4d7cf0275ac77a6a56bce9a23d09cc87d7d85e215a0be0955af61b83075e3d",
-    "indicators.py": "81d27be57a07110bc5ad1d650fd708aa489742cbea29afcde12b9a8c98910c35",
+    "indicators.py": "c25763181c1d73c19381a403f4ccf02daa24a0c41c30e45049ecea618bb4fbdd",
     "metrics.py": "15ecfb93eeee231cfcaa7bb9bb988c4ea5143944baa2fd88fbbffb5d97955dde",
     "models.py": "b38d487f578bdcc9121cb1408d65aa358b3b7381416a345f3a2cf1dd0de197c3",
     "rate/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -1297,251 +1297,155 @@
           "n_negative": 50
         }
       }
-    },
-    "SaddleNodeModel": {
-      "parameters": {
-        "epsilon": 1.4,
-        "lambda_max": 3.0,
-        "null_rate_factor": 0.5,
-        "dt": 0.01,
-        "t_start": -16.0,
-        "t_end": 8.0,
-        "initial_state_min": -10.0,
-        "initial_state_max": -1.0,
-        "tip_threshold": 0.0
-      },
-      "arguments": {
-        "noise": 0.01
-      },
-      "root_seed": 42,
-      "n_per_class": 50,
-      "num_timesteps": 300,
-      "lead_steps": 1,
-      "physical_lead_min": 0.009998321533203125,
-      "physical_lead_max": 0.010000228881835938,
-      "window": 100,
-      "detrend": "linear",
-      "score": "Kendall tau-b, increasing direction declared for both indicators",
-      "accepted_seeds": [
-        42,
-        142,
-        242,
-        342,
-        442,
-        542,
-        642,
-        742,
-        842,
-        942,
-        1042,
-        1142,
-        1242,
-        1342,
-        1442,
-        1542,
-        1642,
-        1742,
-        1842,
-        1942,
-        2042,
-        2142,
-        2242,
-        2342,
-        2442,
-        2542,
-        2642,
-        2742,
-        2842,
-        2942,
-        3042,
-        3142,
-        3242,
-        3342,
-        3442,
-        3542,
-        3642,
-        3742,
-        3842,
-        3942,
-        4042,
-        4142,
-        4242,
-        4342,
-        4442,
-        4542,
-        4642,
-        4742,
-        4842,
-        4942,
-        5042,
-        5145,
-        5243,
-        5343,
-        5443,
-        5542,
-        5642,
-        5744,
-        5842,
-        5942,
-        6043,
-        6143,
-        6242,
-        6342,
-        6442,
-        6542,
-        6642,
-        6742,
-        6842,
-        6942,
-        7043,
-        7145,
-        7242,
-        7342,
-        7445,
-        7542,
-        7643,
-        7743,
-        7842,
-        7943,
-        8042,
-        8142,
-        8245,
-        8342,
-        8442,
-        8542,
-        8642,
-        8742,
-        8842,
-        8942,
-        9042,
-        9142,
-        9242,
-        9343,
-        9444,
-        9542,
-        9642,
-        9742,
-        9842,
-        9942
+    }
+  },
+  "model_previews": {
+    "b_harvesting": {
+      "observed_columns": [
+        0
       ],
-      "attempts": [
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        4,
-        2,
-        2,
-        2,
-        1,
-        1,
-        3,
-        1,
-        1,
-        2,
-        2,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        2,
-        4,
-        1,
-        1,
-        4,
-        1,
-        2,
-        2,
-        1,
-        2,
-        1,
-        1,
-        4,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        2,
-        3,
-        1,
-        1,
-        1,
-        1,
+      "display_time_interval": [
+        0.0,
+        1399.0
+      ],
+      "n_displayed": 1400,
+      "reference_time": 1171.0,
+      "reference_line": "model reference event, not an estimated jump time",
+      "simulation": "overview.b_harvesting"
+    },
+    "b_rosenzweig_macarthur_tc": {
+      "observed_columns": [
+        0,
         1
       ],
-      "curves": {
-        "AR1": {
-          "auroc": 0.868,
-          "n_valid": 100,
-          "n_missing": 0,
-          "n_positive": 50,
-          "n_negative": 50
-        },
-        "Variance": {
-          "auroc": 0.8396,
-          "n_valid": 100,
-          "n_missing": 0,
-          "n_positive": 50,
-          "n_negative": 50
-        }
-      }
+      "display_time_interval": [
+        0.0,
+        1799.0
+      ],
+      "n_displayed": 89951,
+      "reference_time": 1587.3599853515625,
+      "reference_line": "model reference event, not an estimated jump time",
+      "simulation": "overview.b_rosenzweig_macarthur_tc"
+    },
+    "b_rosenzweig_macarthur_hopf": {
+      "observed_columns": [
+        0,
+        1
+      ],
+      "display_time_interval": [
+        1195.760009765625,
+        1215.760009765625
+      ],
+      "n_displayed": 1001,
+      "reference_time": 1205.760009765625,
+      "reference_line": "model reference event, not an estimated jump time",
+      "simulation": "overview.b_rosenzweig_macarthur_hopf"
+    },
+    "b_seirx_tc": {
+      "observed_columns": [
+        0
+      ],
+      "display_time_interval": [
+        0.0,
+        1799.0
+      ],
+      "n_displayed": 1800,
+      "reference_time": 818.0,
+      "reference_line": "model reference event, not an estimated jump time",
+      "simulation": "overview.b_seirx_tc"
+    },
+    "b_amoc": {
+      "observed_columns": [
+        0
+      ],
+      "display_time_interval": [
+        0.0,
+        5200.0
+      ],
+      "n_displayed": 1041,
+      "reference_time": 4730.0,
+      "reference_line": "model reference event, not an estimated jump time",
+      "simulation": "overview.b_amoc"
+    },
+    "r_saddle_node": {
+      "observed_columns": [
+        0
+      ],
+      "display_time_interval": [
+        -8.0,
+        1.3199996948242188
+      ],
+      "n_displayed": 933,
+      "reference_time": 1.0900001525878906,
+      "reference_line": "model reference event, not an estimated jump time",
+      "simulation": "overview.r_saddle_node"
+    },
+    "r_bautin": {
+      "observed_columns": [
+        0,
+        1
+      ],
+      "display_time_interval": [
+        -15.0,
+        -3.510000228881836
+      ],
+      "n_displayed": 1150,
+      "reference_time": -3.5,
+      "reference_line": "model reference event, not an estimated jump time",
+      "simulation": "overview.r_bautin"
+    },
+    "r_compost_bomb": {
+      "observed_columns": [
+        1
+      ],
+      "display_time_interval": [
+        0.0,
+        55.25
+      ],
+      "n_displayed": 1105,
+      "reference_time": 54.25,
+      "reference_line": "model reference event, not an estimated jump time",
+      "simulation": "overview.r_compost_bomb"
+    },
+    "r_amoc": {
+      "observed_columns": [
+        0
+      ],
+      "display_time_interval": [
+        -2505.0,
+        3200.0
+      ],
+      "n_displayed": 1142,
+      "reference_time": 0.0,
+      "reference_line": "model reference event, not an estimated jump time",
+      "simulation": "overview.r_amoc"
+    },
+    "b_ricker": {
+      "observed_columns": [
+        0
+      ],
+      "display_time_interval": [
+        0.0,
+        599.0
+      ],
+      "n_displayed": 600,
+      "reference_time": 364.0,
+      "reference_line": "model reference event, not an estimated jump time",
+      "simulation": "overview.b_ricker"
+    },
+    "b_thermoacoustic": {
+      "observed_columns": [
+        0,
+        2
+      ],
+      "display_time_interval": [
+        0.0,
+        1.100000023841858
+      ],
+      "n_displayed": 11001,
+      "reference_time": 0.44999998807907104,
+      "reference_line": "model reference event, not an estimated jump time",
+      "simulation": "overview.b_thermoacoustic"
     }
   }
 }

@@ -3,6 +3,28 @@ Compost-bomb instability
 
 ``r_compost_bomb`` · ``tipbox.models.CompostBomb``
 
+Usage
+-----
+
+.. code-block:: python
+
+   from tipbox.models import CompostBomb
+
+   model = CompostBomb()
+   result = model.make_trajectory(n=2001, noise=0.01, seed=45)
+   carbon, temperature = result.trajectory.T
+
+.. figure:: ../_static/figures/r_compost_bomb.png
+   :alt: Soil temperature during warming. The view ends at 150 degrees Celsius; dashed lines mark the configured temperature threshold.
+
+   Soil temperature during warming. The view ends at 150 degrees Celsius; dashed lines mark the configured temperature threshold.
+
+``n`` counts sampled observations. See :doc:`../usage` for integration,
+sampling, noise, and custom-forcing controls.
+
+Equations and forcing
+---------------------
+
 Soil carbon :math:`C` and soil temperature :math:`T` follow
 
 .. math::
@@ -21,6 +43,9 @@ the deterministic heat balance by :math:`\mu`.
 Initial carbon and temperature are independently sampled from the configured
 uniform interval; its default zero-width interval sets both to zero. The legacy
 transition marker is the first soil-temperature crossing of ``tip_threshold``.
+
+Parameters and defaults
+-----------------------
 
 .. model-parameters:: r_compost_bomb
 
