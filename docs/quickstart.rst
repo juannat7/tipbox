@@ -5,9 +5,7 @@ Install with Python 3.10 or newer:
 
 .. code-block:: bash
 
-   git clone https://github.com/juannat7/tipbox.git
-   cd tipbox
-   pip install -e .
+   pip install tipbox
 
 Simulate
 --------
