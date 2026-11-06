@@ -1,4 +1,4 @@
-"""Five empirical cases used by KEWS, from the pinned Grziwotz et al. archive.
+"""Empirical observations from the pinned Grziwotz et al. archive.
 
 Data are downloaded on demand into a user cache, never bundled with TipBox.
 The archive's data-use terms apply separately from the package's MIT license.
@@ -25,14 +25,13 @@ TERMS_MEMBER = f"{ARCHIVE_ROOT}/README.txt"
 
 
 @dataclass(frozen=True)
-class EmpiricalSpec:
+class _EmpiricalSpec:
     """Source labels and retrospective analysis settings, available offline.
 
     ``transition_time`` and ``trend_start`` are reference values used in the
     upstream plotting script and KEWS analysis; they are not event estimates
     inferred by this loader. ``example_window`` and ``example_step`` are sample
     counts from that analysis, rather than tuned indicator defaults.
-    Recovery intervals are inclusive (label, start, stop) triples.
     ``time_unit_notes`` records source inconsistencies; an unresolved unit must
     be clarified before assigning physical durations to its raw time coordinates.
     """
@@ -49,32 +48,11 @@ class EmpiricalSpec:
     example_step: int
     time_column: int = 0
     value_column: int = 1
-    recovery_intervals: tuple[tuple[str, float, float], ...] = ()
     time_unit_notes: str = ""
 
 
 _SPECS = {
-    "microcosm": EmpiricalSpec(
-        name="microcosm",
-        display_name="Cyanobacterial microcosm",
-        time_unit="day",
-        observable="Light attenuation",
-        observable_unit="m^-1",
-        contributor="Egbert H. van Nes; Veraart et al. (2012), doi:10.1038/nature10723",
-        transition_time=27.0,
-        trend_start=0.0,
-        example_window=200,
-        example_step=5,
-        recovery_intervals=(
-            ("P1", 0.57092, 1.4539),
-            ("P2", 4.5496, 5.4326),
-            ("P3", 10.642, 11.525),
-            ("P4", 14.454, 15.337),
-            ("P5", 19.499, 20.382),
-            ("P6", 24.502, 25.385),
-        ),
-    ),
-    "voice": EmpiricalSpec(
+    "voice": _EmpiricalSpec(
         name="voice",
         display_name="Voice onset",
         time_unit="s",
@@ -86,7 +64,7 @@ _SPECS = {
         example_window=200,
         example_step=50,
     ),
-    "mitochondria": EmpiricalSpec(
+    "mitochondria": _EmpiricalSpec(
         name="mitochondria",
         display_name="Cellular ATP",
         time_unit="unresolved",
@@ -105,7 +83,7 @@ _SPECS = {
             "experiment: Wagner et al. (2019), doi:10.1111/nph.16093."
         ),
     ),
-    "climate": EmpiricalSpec(
+    "climate": _EmpiricalSpec(
         name="climate",
         display_name="Greenhouse Earth climate",
         time_unit="million years, signed age increasing toward present",
@@ -119,7 +97,7 @@ _SPECS = {
         time_column=1,
         value_column=0,
     ),
-    "blackout": EmpiricalSpec(
+    "blackout": _EmpiricalSpec(
         name="blackout",
         display_name="Electrical blackout",
         time_unit="s",
@@ -136,32 +114,11 @@ _SPECS = {
 
 @dataclass(frozen=True)
 class EmpiricalRecord:
-    """Unmodified time and observations, plus source and sampling metadata.
-
-    ``time`` has shape (n,), and ``observations`` has shape (n, n_observables).
-    The five aggregated empirical cases each have one observed column. Nonfinite
-    observations, duplicate times, and original row order are preserved. Metadata
-    contains the specification fields, source DOI and checksum, archive member,
-    full upstream terms, and sampling diagnostics. No class labels are assigned.
-    """
+    """Time (T,), observations (T,D), and source/sampling metadata."""
 
     time: np.ndarray
     observations: np.ndarray
     metadata: dict
-
-
-def list_empirical() -> tuple[str, ...]:
-    """Names of the five supported empirical records; requires no network."""
-    return tuple(sorted(_SPECS))
-
-
-def get_empirical_info(name: str) -> EmpiricalSpec:
-    """Inspect a case's labels, reference marker, and example controls offline."""
-    if name not in _SPECS:
-        raise ValueError(
-            f"Unknown empirical case {name!r}; choose from {list_empirical()}"
-        )
-    return _SPECS[name]
 
 
 def _sampling(time, observations):
@@ -186,41 +143,15 @@ def _sampling(time, observations):
     }
 
 
-def load_empirical(
+def _load_record(
     name: str,
     *,
     cache_dir: str | Path | None = None,
     download: bool = True,
     archive_path: str | Path | None = None,
 ) -> EmpiricalRecord:
-    """Load one pinned empirical record, preserving its raw sampling and gaps.
-
-    Parameters
-    ----------
-    name : str
-        A name from :func:`list_empirical`.
-    cache_dir : path-like or None, default=None
-        Cache root; defaults to $XDG_CACHE_HOME/tipbox or ~/.cache/tipbox.
-        The archive lives in the zenodo_7379358 subdirectory.
-    download : bool, default=True
-        Download the 1 MB archive if absent. False permits cached/offline use only.
-        Existing archives are always checked; corrupt caches raise ValueError and
-        are not silently replaced. HTTP/network errors propagate to the caller.
-    archive_path : path-like or None, default=None
-        Use an already downloaded, unmodified Zenodo v1 ZIP. This overrides cache
-        lookup and never downloads or extracts files. Size and SHA256 must match.
-
-    Notes
-    -----
-    Only a named text member and its README are read; archive files are never
-    extracted. No rows are removed, sorted, interpolated, detrended, or normalized.
-    Upstream terms require acknowledgement, restrict monitoring data to nonprofit
-    use, and require contact with data administrators before publication or
-    presentations; see metadata["terms"] and the source record. These terms are
-    separate from TipBox's MIT software license. Reference markers are
-    retrospective annotations, not predictions made by this loader.
-    """
-    spec = get_empirical_info(name)
+    """Read one record from the verified source archive."""
+    spec = _SPECS[name]
     path = pinned_file(
         ARCHIVE_URL,
         Path("zenodo_7379358") / ARCHIVE_NAME,
@@ -269,8 +200,11 @@ class _ArchivedCase:
         download: bool = True,
         archive_path: str | Path | None = None,
     ) -> EmpiricalRecord:
-        """Load the record; see :func:`tipbox.datasets.empirical.load_empirical` for controls."""
-        return load_empirical(
+        """Load observations; cache_dir selects the cache, download=False uses it offline.
+
+        archive_path reads a local, unmodified source ZIP instead of the cache.
+        """
+        return _load_record(
             self._name,
             cache_dir=cache_dir,
             download=download,

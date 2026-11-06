@@ -1,23 +1,28 @@
 TipBox
 ======
 
-TipBox collects stochastic tipping models, empirical observations, and simulation
-components for sim-to-real studies. It covers bifurcation- and rate-induced
-tipping, early-warning indicators, and trajectory-level ROC/AUROC.
+TipBox collects stochastic tipping models and empirical observations. It covers
+bifurcation- and rate-induced tipping, early-warning indicators, and
+trajectory-level ROC/AUROC benchmarking.
 
 .. code-block:: python
 
    from tipbox.models import MayHarvesting
 
-   result = MayHarvesting().make_trajectory(1000, noise=1, seed=42)
+   result = MayHarvesting().make_trajectory(
+       n=1000,
+       noise=1,
+       seed=42,
+   )
    population = result.trajectory[:, 0]
 
 :doc:`quickstart` covers installation through evaluation. Each
 :doc:`model page <models/index>` gives its equations, parameters, units, and
-reference event. Defaults are generated from the live configurations.
+reference event.
 
 .. toctree::
    :maxdepth: 1
+   :hidden:
    :caption: Getting started
 
    quickstart
@@ -25,22 +30,20 @@ reference event. Defaults are generated from the live configurations.
 
 .. toctree::
    :maxdepth: 1
+   :hidden:
    :caption: Reference
 
-   systems
    models/index
    indicators
    benchmarks
-   datasets
    api
 
 .. toctree::
    :maxdepth: 1
+   :hidden:
    :caption: Reproduction
 
    figures
-   sim_to_real
-   compatibility
    citations
 
 Research using TipBox:

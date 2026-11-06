@@ -11,16 +11,25 @@ Usage
    from tipbox.models import Bautin
 
    model = Bautin()
-   result = model.make_trajectory(n=3001, noise=0.01, seed=42)
+   result = model.make_trajectory(
+       n=3001,
+       noise=0.01,
+       seed=42,
+   )
    x, y = result.trajectory.T
 
+   control = model.make_trajectory(
+       n=3001,
+       noise=0.01,
+       seed=43,
+       null_simulation=True,
+   )
+
 .. figure:: ../_static/figures/r_bautin.png
-   :alt: Cartesian coordinates of the translating oscillator. Points beyond the configured radius threshold are omitted before escape.
+   :target: ../_static/figures/r_bautin.png
+   :alt: X trajectories for tipping and control. The dashed line marks the first radius-threshold crossing time.
 
-   Cartesian coordinates of the translating oscillator. Points beyond the configured radius threshold are omitted before escape.
-
-``n`` counts sampled observations. See :doc:`../usage` for integration,
-sampling, noise, and custom-forcing controls.
+   X trajectories for tipping and control. The dashed line marks the first radius-threshold crossing time.
 
 Equations and forcing
 ---------------------
@@ -43,7 +52,7 @@ with translating equilibrium
 The radial factors are :math:`|w|^2` and :math:`|w|^4`, not complex powers of
 :math:`w`. The null schedule multiplies ``r`` by ``null_rate_factor``. Each
 initial Cartesian coordinate is sampled independently from the configured
-uniform interval. The legacy event marker is the first time
+uniform interval. The event marker is the first time
 :math:`\sqrt{X^2+Y^2}` exceeds ``tip_threshold``, measured about the origin.
 
 Euler–Maruyama uses independent noises in both coordinates. The polynomial

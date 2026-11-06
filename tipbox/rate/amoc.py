@@ -58,7 +58,7 @@ class AMOCRateConfig:
     )
     sigma_ic: float = parameter(
         0.01,
-        "Initial-state standard deviation in make_trajectory; legacy simulate uses the configured mean.",
+        "Initial-state standard deviation in make_trajectory; simulate uses the configured mean.",
         "state",
     )
     dt: float = parameter(
@@ -79,7 +79,7 @@ class AMOCRateConfig:
     )
     # Tipped when Q (AMOC strength in Sv) < 0 (collapsed / reversed).
     Q_collapse_threshold: float = parameter(
-        0.0, "AMOC transport threshold for the legacy collapse classifier.", "Sv"
+        0.0, "AMOC transport threshold for the collapse classifier.", "Sv"
     )
 
     @classmethod

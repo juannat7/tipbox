@@ -1,75 +1,107 @@
-Model collection
-================
+System catalog
+==============
 
-The :doc:`master catalog <../systems>` groups models, sim-to-real components,
-and empirical observations.
+Bifurcation-induced
+-------------------
 
-Choose a model by its physical observable and reference event. The eleven
-registered configurations cover ten classes; Rosenzweig–MacArthur supports
-transcritical and Hopf scenarios. Import classes from ``tipbox.models``.
+Import classes from ``tipbox.models``. Each page gives a runnable example,
+trajectory, equation, and parameter defaults.
 
-.. list-table:: Models and observations
+.. list-table::
    :header-rows: 1
-   :widths: 26 20 24 30
-   :class: contract-table
+   :widths: 42 28 30
+   :class: catalog-table
 
-   * - Model
-     - Mechanism
-     - Observed columns
-     - Reference
+   * - Class
+     - Transition
+     - Source
    * - :doc:`MayHarvesting <harvesting>`
-     - Bifurcation
-     - Biomass
-     - Upper fold crossing
+     - Fold
+     - May (1977)
    * - :doc:`RosenzweigMacArthur <consumer_resource>`
      - Transcritical / Hopf
-     - Resource, consumer
-     - Selected analytic threshold
+     - Bury et al. (2021)
    * - :doc:`SEIRx <seirx>`
-     - Bifurcation
-     - Infectious count, vaccinator fraction
-     - Behavioural threshold
-   * - :doc:`AMOC <amoc>`
-     - Bifurcation
-     - Transport, northern and tropical salinity anomalies
-     - Calibrated hosing fold
-   * - :doc:`SaddleNode <saddle_node>`
-     - Rate-induced
-     - State
-     - Configured state threshold
-   * - :doc:`Bautin <bautin>`
-     - Rate-induced
-     - Cartesian state X, Y
-     - Radius threshold about the origin
-   * - :doc:`CompostBomb <compost>`
-     - Rate-induced
-     - Soil carbon, soil temperature
-     - Soil-temperature threshold
-   * - :doc:`AMOCRate <amoc>`
-     - Rate-induced
-     - Transport, northern and tropical salinity anomalies
-     - Time zero after a finite-collapse outcome check
+     - Transcritical
+     - Bury et al. (2021)
+   * - :ref:`AMOCFold <amoc-fold>`
+     - Fold
+     - Alkhayuon et al. (2019)
    * - :doc:`Ricker <ricker>`
-     - Discrete population map
-     - Population
-     - Nonpositive log growth
+     - Transcritical
+     - Ricker (1954)
    * - :doc:`Thermoacoustic <thermoacoustic>`
      - Subcritical Hopf
-     - Pressure, scaled velocity, phase-plane amplitude
-     - Linear growth reaches zero
+     - Bonciolini et al. (2018)
 
-Each page starts with a runnable call and its trajectory, then states its equation, time unit, noise convention, initial-state rule,
-and numerical constraints. Parameter tables come from the live typed
-configurations. “Automatic” marks an override calculated from other coefficients;
-parameters for another selected mode are identified in their descriptions.
+Rate-induced
+------------
 
-Equal numbers of samples do not imply equal physical durations or noise
-strengths across models. Inspect ``model.state_names`` and
-``model.observable_names`` before selecting a column for an indicator.
+.. list-table::
+   :header-rows: 1
+   :widths: 42 58
+   :class: catalog-table
+
+   * - Class
+     - Source
+   * - :doc:`SaddleNode <saddle_node>`
+     - Ashwin et al. (2012)
+   * - :doc:`Bautin <bautin>`
+     - Huang et al. (2024)
+   * - :doc:`CompostBomb <compost>`
+     - Wieczorek et al. (2011)
+   * - :ref:`AMOCRate <amoc-rate>`
+     - Alkhayuon et al. (2019)
+
+.. _empirical-observations:
+
+Empirical
+---------
+
+Import classes from ``tipbox.datasets`` and call ``load()``.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 35 30
+   :class: catalog-table
+
+   * - Class
+     - Observation
+     - Source
+   * - :class:`~tipbox.datasets.Microcosm`
+     - Light attenuation, M1 and M2
+     - `Veraart et al. (2012) <https://doi.org/10.17026/dans-ztg-93aw>`_
+   * - :class:`~tipbox.datasets.VoiceOnset`
+     - Subglottal pressure
+     - `Grziwotz et al. (2023) <https://doi.org/10.5281/zenodo.7379358>`_
+   * - :class:`~tipbox.datasets.CellularATP`
+     - Fluorescence ratio
+     - Grziwotz et al. (2023)
+   * - :class:`~tipbox.datasets.Paleoclimate`
+     - CaCO3
+     - Grziwotz et al. (2023)
+   * - :class:`~tipbox.datasets.ElectricalBlackout`
+     - Frequency
+     - Grziwotz et al. (2023)
+
+Microcosm is CC BY-NC 4.0. The Grziwotz archive requires attribution, nonprofit
+use, and contact with the listed data administrators before publication or
+presentation; complete terms are in ``record.metadata["terms"]``.
+
+Missing values and source clocks are preserved. CellularATP has inconsistent
+source time units, reported as ``"unresolved"``. Microcosm has interrupted
+recordings: compute indicators within individual recovery intervals; the
+:doc:`figure guide <../figures>` lists their row slices.
+
+Simulation
+----------
+
+:doc:`../usage` covers sampling, initial states, and forcing.
+:doc:`../benchmarks` shows labeled batches and AUROC.
 
 .. toctree::
-   :maxdepth: 1
    :hidden:
+   :maxdepth: 1
 
    harvesting
    consumer_resource

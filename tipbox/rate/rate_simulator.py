@@ -40,7 +40,7 @@ def simulate_rate_trajectory(
     config=None,
     **generate_kwargs,
 ):
-    """Simulate and extract legacy rate-model context. Return None on outcome/context rejection."""
+    """Simulate and extract rate-model context. Return None on outcome/context rejection."""
 
     key_select, key_sim = jax.random.split(key)
 
@@ -57,7 +57,7 @@ def simulate_rate_trajectory(
     if system_name is not None:
         system_spec = get_rate_system_spec(system_name)
     else:
-        # Random selection (backward compatibility)
+        # Random selection (optional selection)
         system_spec = _select_system(key_select)
 
     config = system_spec.default_config() if config is None else config

@@ -238,7 +238,7 @@ class MayHarvestingModel(BoxModel):
         initial_state: Optional[jnp.ndarray] = None,
         noise: Optional[jnp.ndarray] = None,
     ):
-        """Legacy simulator: returns time, [biomass, 0], harvesting and step-noise scale.
+        """simulator: returns time, [biomass, 0], harvesting and step-noise scale.
 
         total_len counts output intervals; the result includes the initial sample."""
         key_noise, key_ic = jax.random.split(key)

@@ -5,101 +5,65 @@ From the repository root:
 
 .. code-block:: bash
 
-   pip install -e .
    python examples/figures.py
 
-This writes the gallery, eleven model-page trajectory previews, the README
-examples, and ROC curves as PNG, SVG, and PDF, plus ``manifest.json``, to
-``docs/_static/figures``.
-The original microcosm ODS downloads once into the user cache. For offline use,
-add ``--source-path "/path/to/Correct data both chemostats.ods"``.
-Other controls: ``--seed 42``, ``--n-per-class 50``, ``--cache-dir PATH``,
-``--output-dir PATH``, and ``--formats png svg pdf``.
+Exports PNG, SVG, PDF, and ``manifest.json`` to ``docs/_static/figures``.
+The manifest records parameters, accepted seeds, sampling, display limits,
+source checksums, and software versions.
 
-The manifest records all coefficients, accepted seeds, attempts, grids,
-windows, source checksums, software versions, backend/precision, and hashes of
-the script and package sources. Numerical details can differ across versions
-or backends. These examples validate the package workflow, not a paper's full
-experimental protocol or private fitted calibration.
+.. list-table:: Command options
+   :header-rows: 1
 
-Model-page previews
--------------------
+   * - Option
+     - Default
+   * - ``--seed``
+     - ``42``
+   * - ``--n-per-class``
+     - ``50`` for the ROC example
+   * - ``--formats``
+     - ``png svg pdf``
+   * - ``--output-dir``
+     - ``docs/_static/figures``
+   * - ``--cache-dir``
+     - User cache
+   * - ``--source-path``
+     - Download the original microcosm ODS if absent
 
-Each model reference page pairs a runnable call with a time-domain preview.
-These previews use the exact same simulation as the gallery. The parameter
-strip uses the same time coordinates as the trajectory; the Hopf preview
-zooms to a 20-time-unit window and shades that interval on the full schedule.
-Horizontal dashed lines mark
-critical forcing levels where defined, and vertical lines mark the model's
-reference event. A reference need not coincide with the realized jump.
-Display limits and observed columns are recorded in ``model_previews`` in
-the manifest. Escaping normal forms are cropped before numerical divergence.
+Model previews
+--------------
 
-Model collection
-----------------
+Each page compares an accepted tipping trajectory with an accepted control.
+Labels follow the model's event definition. Vertical dashed lines mark the
+positive reference; horizontal lines mark critical forcing levels where defined.
+Both panels use the same displayed time interval and vertical scale.
 
-.. image:: _static/figures/overview.png
-   :target: _static/figures/overview.png
-   :alt: Eleven simulated model trajectories in physical coordinates, with labeled axes.
+The transcritical Rosenzweig–MacArthur example uses attack-rate endpoint 10 to
+show consumer invasion. Its constructor default remains 6. Escaping normal
+forms are cropped; exact limits and selection seeds are in the manifest.
 
-Parameter insets show the full forcing schedule, the critical level when
-defined, and a shaded display interval. The Rosenzweig–MacArthur panels use
-0.02-unit sampling and short intervals around their reference; the thermoacoustic
-phase portrait also uses a short reference-centered interval. Exact bounds
-are recorded in the manifest. Rate models without a critical forcing level
-have no horizontal threshold line.
+Indicators and AUROC
+--------------------
 
-Each curve is the first accepted positive from root seed 42 with 300
-pre-reference observations available. Open/filled dots mark the displayed
-start/end. Coordinates keep their physical scale. Escaped saddle-node states
-above absolute value 5, Bautin radii above the configured threshold, compost
-temperatures above 150, and nonfinite points are omitted. Ricker is plotted
-against time; other panels use the labeled forcing or observable pair.
+The README's May and saddle-node examples use the same tipping/control pairs
+for trajectories and indicators. Both indicators use 200-sample, linearly
+detrended windows ending before the tipping reference. Controls use the same
+analysis interval. May uses ``n=1200, noise=1``; saddle-node uses
+``epsilon=1.4, n=2401, noise=0.01``.
 
-Sample trajectories
--------------------
+The ROC example uses 50 tipping and 50 control May trajectories, ``n=1000``,
+context 300, lead one, window 100, linear detrending, and increasing Kendall
+trend scores. The :doc:`benchmark guide <benchmarks>` reproduces it.
 
-.. image:: _static/figures/trajectories.png
-   :target: _static/figures/trajectories.png
-   :alt: Three columns showing the two simulated trajectories and Veraart2012 M1.
+Microcosm
+---------
 
-The two figures below and above share the exact same simulation results and
-observed record.
+M1 recoveries P1–P6 use these zero-based, stop-exclusive row slices:
+``[161:411]``, ``[1283:1533]``, ``[3001:3251]``, ``[4076:4326]``,
+``[5273:5523]``, and ``[6684:6934]``. Each has 250 finite readings.
+Indicators use window 200 and step 5 within each recovery, with linear detrending.
 
-Warning indicators
-------------------
-
-.. image:: _static/figures/indicators.png
-   :target: _static/figures/indicators.png
-   :alt: May harvesting, rate-driven saddle-node, and observed microcosm with trailing AR1 and variance.
-
-May uses ``n=1200, noise=1``. Saddle-node uses ``epsilon=1.4, noise=0.01``;
-its deterministic rate threshold is 4/3 for the other default coefficients.
-Indicators use 200-sample, linearly detrended windows strictly before the fold
-or state-threshold reference. Gray portions provide later context only.
-
-M1 recoveries P1–P6 use separate 250-sample intervals, window 200, step 5,
-and linear detrending. Lower panels use elapsed recovery time. No windows
-cross perturbations. The 27-day reference and recovery annotations follow
-Grziwotz et al. (2023); these calculations use TipBox's statistic definitions.
-
-Microcosm attribution: Veraart et al. (2012),
-`DANS <https://doi.org/10.17026/dans-ztg-93aw>`_, CC BY-NC 4.0.
-See ``_static/figures/LICENSE.md`` for the composite's terms.
-
-ROC
----
-
-.. image:: _static/figures/roc.png
-   :target: _static/figures/roc.png
-   :alt: AR1 and variance ROC curves from a May harvesting ensemble.
-
-The May harvesting example supplies 50 positive and 50 null trajectories, context 300,
-lead one, window 100, linear detrending, and increasing Kendall trend scores.
-May uses ``n=1000, noise=1``.
-AUROC describes these outcome-conditioned batches with different forcing
-histories; it is not a general performance estimate.
-
-PNG previews and the :download:`manifest <_static/figures/manifest.json>` are
-versioned. SVG/PDF exports are generated by the command above for publication;
-they are not stored in Git.
+Data: Veraart et al. (2012), `DANS <https://doi.org/10.17026/dans-ztg-93aw>`_,
+CC BY-NC 4.0. Recovery annotations and the 27-day reference follow
+`Grziwotz et al. (2023) <https://doi.org/10.5281/zenodo.7379358>`_.
+See :download:`figure terms <_static/figures/LICENSE.md>` and the
+:download:`manifest <_static/figures/manifest.json>`.

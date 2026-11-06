@@ -8,36 +8,36 @@
   },
   "jax_backend": "cpu",
   "jax_enable_x64": false,
-  "script_sha256": "21ebe5e5442c6056dc09e6e92e6b5049c17963bcb7c9e0259c878581450a4ebf",
+  "script_sha256": "bc10fb63a22343c1211f1ca1b722d376ca05c69fa908e33d4a61cc8f54f70db7",
   "package_sources_sha256": {
     "__init__.py": "3c6b12ed5bfaa65508d5ed1731a5ed26dad3a94a83ccde96ec2d916d5f0062eb",
     "_amoc.py": "3aa4751ec838a7d6041c782a9dfd9a5fbfb176b3efe08e1acb7c522f0e635add",
     "bifurcation/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    "bifurcation/amoc.py": "60940f0b548b4f31b9861434909c7acafe245747d2dd70747b7e706c8ffa7e15",
-    "bifurcation/bifurcation_simulator.py": "fc58332dabcaa2b11dde2fd6ce053dddfeb41bc3e3ecde5b167c9177bb3facd4",
-    "bifurcation/may_harvesting.py": "a2121f8bf98a5c20ca90c6a2e84ac1d11e815b1637a3d15d88c05e4a63ae1850",
-    "bifurcation/ricker.py": "20dfc281dea759df1ba37a217d3968b6ae58edabe58735e892521fc5534c4346",
-    "bifurcation/rosenzweig_macarthur.py": "b0a46559eff3ce920d1b061382640a1b4bca626f1f4e18e16dc858ef91a799e3",
-    "bifurcation/seirx.py": "bca1ebbd253f1c21d00e0e4b4f6bc602d75436a5a4edca557d3fa2c68e8fafa4",
+    "bifurcation/amoc.py": "a34efee2f201473c455292d65a0047e041e7e5a1fb1f410ea6b0b00585632bb2",
+    "bifurcation/bifurcation_simulator.py": "8932bf8a596eacc4dccf9c0508acd8c3e00ad6ab64dbea33216073abd17a30fd",
+    "bifurcation/may_harvesting.py": "e8e78bb246c8c7785bdf9b7564d377f0408f94b885af0f9a664660fdfd0f5a38",
+    "bifurcation/ricker.py": "a8f77ea262e0c13a04fee14c51a4fed3a666a45578ffda1597368b5366d21905",
+    "bifurcation/rosenzweig_macarthur.py": "8f7528ce667a4786a02a70adb3cfd57ab96cfcc59c059cf22cd36bf6ccf87ee4",
+    "bifurcation/seirx.py": "77538eb921000bc875e44e0a59a22dc7dd8899b710a9423ecf8d20e5cbbe7c8d",
     "bifurcation/thermoacoustic.py": "02d79356a8ee971ec631869e4d4f5449955e08157034bb94c8d404ab14c5c6d3",
-    "datasets/__init__.py": "066a6524d12f410146b1ad192fe333b11420b558f91abc77bde8b68b17b13722",
+    "datasets/__init__.py": "b00b5ccca3c8a3611a39e394b34d2d223053b1159ee87fe64fc53f6f40b1f1ab",
     "datasets/_cache.py": "76f8fe6b0fe2a377aaaef63b3e7e75cd0d7cc43c81bf8eb338ef1947c1e250f2",
     "datasets/benchmarks.py": "890d254db9f8e2ee8be8ef7fe3448afbea501f0344a5d1456bd5b6dee5195ddb",
-    "datasets/empirical.py": "7d4a2f634f0d37a142206cbacbde99a58d1c7faf1cb7791cd59086a78ac6fbe2",
-    "datasets/microcosm.py": "20719dad9a6d36d4bdc764e26f34199e51030a0c2aca99fd5e5a5d9ca03746f1",
+    "datasets/empirical.py": "b9eb335e5973a807899c35b6d6139b09dc025969267021ad9421e35e27d5eee1",
+    "datasets/microcosm.py": "85bcd1b8cba272d0042f3ceeb04ec5497d861ef9fb3a8e9aad82ed8c0357d18c",
     "generate.py": "cd4d7cf0275ac77a6a56bce9a23d09cc87d7d85e215a0be0955af61b83075e3d",
     "indicators.py": "c25763181c1d73c19381a403f4ccf02daa24a0c41c30e45049ecea618bb4fbdd",
     "metrics.py": "15ecfb93eeee231cfcaa7bb9bb988c4ea5143944baa2fd88fbbffb5d97955dde",
-    "models.py": "b38d487f578bdcc9121cb1408d65aa358b3b7381416a345f3a2cf1dd0de197c3",
+    "models.py": "62307a5dbee43a90879638f133d61280b3769e90c942743c44d0c47ff8bdf2a8",
     "rate/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    "rate/amoc.py": "9f44cf372381f7ee8700f80a36701e5bed56f69411e49dc63a581b63203320b7",
-    "rate/bautin.py": "dfdf441e4d7bdf3a13f1d8adcb152ea1e5296cd8d0c1c30983bf60f1e03cf434",
-    "rate/compost_bomb.py": "2e0ca1ca7d8c29f30546786a4e5c6611c7ad7d662423a527fd75f2b5d7f9b3c0",
-    "rate/rate_simulator.py": "272c2c9065d01eacc3d7d427700296b33d4c26026501583c4999c22eaf393e62",
-    "rate/saddle_node.py": "f0ce61d871aa56e32fac968e917a8eb68db5d3565f1ad586d7660ed7d6979d22",
-    "registry.py": "4838de505e5d344043bb3796e597053d38017c41ba1ed1c40c1236c1de4dc941",
-    "types.py": "f89d2989238832b4b41d9de03af4b5fc7e9afd22e7f47daaeaf8841a406c8f1f",
-    "utils.py": "9d96140418621598d91305061f370fd47d64f588524a32045584691158a16971"
+    "rate/amoc.py": "f05d92d9f4c0d2bb6a2e1b0923c650e0c5c32610e1fb921002beaee69da49e71",
+    "rate/bautin.py": "0d682b5c22ee3d0f375c8a9d18b75db0e049e8e83f057ba56186e0550b6ffc4f",
+    "rate/compost_bomb.py": "d8e6436465c632b625f7dff88122b6704d0324451152b54cab47cec2b597fb08",
+    "rate/rate_simulator.py": "5cb1b9e58187f1c5512a2a39e68c8cd32be6d8ff751d0b2fdb6118c6e8a82827",
+    "rate/saddle_node.py": "a7450c2d09cfbecb85e476d5d4caafa7f6633e0b5e199c950776fa7757d6d0e8",
+    "registry.py": "1f6e976a1e0e7fb24d6ae432aab579002515f61a2f0f40bc78a168172920b975",
+    "types.py": "044ae76cd226c8249b48c7c1bfa84fcef442da874bed61196723e4d9c3589815",
+    "utils.py": "9381ebef5a27d295c82af49f97281e6d077ce0691f5995d339980e82ba832956"
   },
   "overview": {
     "b_harvesting": {
@@ -75,7 +75,7 @@
       "n_observations": 1400,
       "time_start": 0.0,
       "time_end": 1399.0,
-      "selection": "first accepted tipping trajectory from generate_dataset",
+      "selection": "first accepted tipping trajectory",
       "selection_context_samples": 300,
       "root_seed": 42,
       "attempt": 1,
@@ -106,7 +106,7 @@
         "bifurcation_type": "transcritical",
         "a_transcritical_null": null,
         "a_transcritical_min": 2.0,
-        "a_transcritical_max": 6.0,
+        "a_transcritical_max": 10.0,
         "a_transcritical_bifurcation": null,
         "a_hopf_null": null,
         "a_hopf_min": 12.0,
@@ -136,7 +136,7 @@
       "n_observations": 89951,
       "time_start": 0.0,
       "time_end": 1799.0,
-      "selection": "first accepted tipping trajectory from generate_dataset",
+      "selection": "first accepted tipping trajectory",
       "selection_context_samples": 300,
       "root_seed": 42,
       "attempt": 1,
@@ -144,13 +144,13 @@
       "vertical": "consumer",
       "display_scaling": "physical coordinates; no min/max normalization",
       "display_filter": "finite points; saddle-node |state|<=5; Bautin radius<=tip_threshold; compost temperature<=150",
-      "n_displayed": 76,
+      "n_displayed": 25001,
       "display_time_interval": [
-        1586.8599853515625,
-        1588.3599853515625
+        693.6799926757812,
+        1193.679931640625
       ],
-      "reference_index": 79368,
-      "reference_time": 1587.3599853515625,
+      "reference_index": 39684,
+      "reference_time": 793.6799926757812,
       "critical_parameter": 5.88235294117647,
       "parameter_inset": "full forcing schedule; shading marks displayed interval; dashed line is the critical parameter when defined"
     },
@@ -197,7 +197,7 @@
       "n_observations": 89951,
       "time_start": 0.0,
       "time_end": 1799.0,
-      "selection": "first accepted tipping trajectory from generate_dataset",
+      "selection": "first accepted tipping trajectory",
       "selection_context_samples": 300,
       "root_seed": 42,
       "attempt": 1,
@@ -258,7 +258,7 @@
       "n_observations": 1800,
       "time_start": 0.0,
       "time_end": 1799.0,
-      "selection": "first accepted tipping trajectory from generate_dataset",
+      "selection": "first accepted tipping trajectory",
       "selection_context_samples": 300,
       "root_seed": 42,
       "attempt": 1,
@@ -277,7 +277,7 @@
       "parameter_inset": "full forcing schedule; shading marks displayed interval; dashed line is the critical parameter when defined"
     },
     "b_amoc": {
-      "model": "AMOCModel",
+      "model": "AMOCFoldModel",
       "parameters": {
         "physics": {
           "S0": 0.035,
@@ -336,7 +336,7 @@
       "n_observations": 1041,
       "time_start": 0.0,
       "time_end": 5200.0,
-      "selection": "first accepted tipping trajectory from generate_dataset",
+      "selection": "first accepted tipping trajectory",
       "selection_context_samples": 300,
       "root_seed": 42,
       "attempt": 1,
@@ -383,7 +383,7 @@
       "n_observations": 2401,
       "time_start": -16.0,
       "time_end": 8.0,
-      "selection": "first accepted tipping trajectory from generate_dataset",
+      "selection": "first accepted tipping trajectory",
       "selection_context_samples": 300,
       "root_seed": 42,
       "attempt": 2,
@@ -436,7 +436,7 @@
       "n_observations": 3001,
       "time_start": -15.0,
       "time_end": 15.0,
-      "selection": "first accepted tipping trajectory from generate_dataset",
+      "selection": "first accepted tipping trajectory",
       "selection_context_samples": 300,
       "root_seed": 42,
       "attempt": 1,
@@ -492,7 +492,7 @@
       "n_observations": 2001,
       "time_start": 0.0,
       "time_end": 100.0,
-      "selection": "first accepted tipping trajectory from generate_dataset",
+      "selection": "first accepted tipping trajectory",
       "selection_context_samples": 300,
       "root_seed": 42,
       "attempt": 4,
@@ -572,7 +572,7 @@
       "n_observations": 1142,
       "time_start": -2505.0,
       "time_end": 3200.0,
-      "selection": "first accepted tipping trajectory from generate_dataset",
+      "selection": "first accepted tipping trajectory",
       "selection_context_samples": 300,
       "root_seed": 42,
       "attempt": 1,
@@ -620,7 +620,7 @@
       "n_observations": 600,
       "time_start": 0.0,
       "time_end": 599.0,
-      "selection": "first accepted tipping trajectory from generate_dataset",
+      "selection": "first accepted tipping trajectory",
       "selection_context_samples": 300,
       "root_seed": 42,
       "attempt": 1,
@@ -675,7 +675,7 @@
       "n_observations": 11001,
       "time_start": 0.0,
       "time_end": 1.100000023841858,
-      "selection": "first accepted tipping trajectory from generate_dataset",
+      "selection": "first accepted tipping trajectory",
       "selection_context_samples": 300,
       "root_seed": 42,
       "attempt": 1,
@@ -730,10 +730,53 @@
       "n_observations": 1200,
       "time_start": 0.0,
       "time_end": 1199.0,
-      "selection": "first accepted tipping trajectory from generate_dataset",
+      "selection": "first accepted tipping trajectory",
       "selection_context_samples": 300,
       "root_seed": 42,
       "attempt": 1,
+      "control": {
+        "model": "MayHarvestingModel",
+        "parameters": {
+          "r": 1.0,
+          "k": 1.0,
+          "s": 0.1,
+          "h_min": 0.15,
+          "h_max": 0.27,
+          "h_bifurcation": null,
+          "null_initial_mean": 0.75,
+          "null_initial_std": 0.1,
+          "sigma": 0.01,
+          "dt": 0.01,
+          "t_start": 0.0,
+          "t_end": 100.0,
+          "initial_state_min": 0.5,
+          "initial_state_max": 1.0
+        },
+        "arguments": {
+          "n": 1200,
+          "noise": 1.0,
+          "null_simulation": true
+        },
+        "seed": 42,
+        "dt": 0.01,
+        "dt_sample": 1.0,
+        "initial_state": [
+          0.8105763792991638
+        ],
+        "observables": [
+          "biomass"
+        ],
+        "time_unit": "model time",
+        "n_observations": 1200,
+        "time_start": 0.0,
+        "time_end": 1199.0
+      },
+      "control_selection": {
+        "selection": "first accepted control",
+        "selection_context_samples": 300,
+        "root_seed": 42,
+        "attempt": 1
+      },
       "marker_index": 1004,
       "marker_time": 1004.0,
       "indicator_input_slice": [
@@ -777,10 +820,47 @@
       "n_observations": 2401,
       "time_start": -16.0,
       "time_end": 8.0,
-      "selection": "first accepted tipping trajectory from generate_dataset",
+      "selection": "first accepted tipping trajectory",
       "selection_context_samples": 300,
       "root_seed": 42,
       "attempt": 2,
+      "control": {
+        "model": "SaddleNodeModel",
+        "parameters": {
+          "epsilon": 1.4,
+          "lambda_max": 3.0,
+          "null_rate_factor": 0.5,
+          "dt": 0.01,
+          "t_start": -16.0,
+          "t_end": 8.0,
+          "initial_state_min": -10.0,
+          "initial_state_max": -1.0,
+          "tip_threshold": 0.0
+        },
+        "arguments": {
+          "noise": 0.01,
+          "null_simulation": true
+        },
+        "seed": 42,
+        "dt": 0.01,
+        "dt_sample": 0.01,
+        "initial_state": [
+          -3.451021909713745
+        ],
+        "observables": [
+          "state"
+        ],
+        "time_unit": "model time",
+        "n_observations": 2401,
+        "time_start": -16.0,
+        "time_end": 8.0
+      },
+      "control_selection": {
+        "selection": "first accepted control",
+        "selection_context_samples": 300,
+        "root_seed": 42,
+        "attempt": 1
+      },
       "marker_index": 1709,
       "marker_time": 1.0900001525878906,
       "indicator_input_slice": [
@@ -906,10 +986,53 @@
       "n_observations": 1200,
       "time_start": 0.0,
       "time_end": 1199.0,
-      "selection": "first accepted tipping trajectory from generate_dataset",
+      "selection": "first accepted tipping trajectory",
       "selection_context_samples": 300,
       "root_seed": 42,
       "attempt": 1,
+      "control": {
+        "model": "MayHarvestingModel",
+        "parameters": {
+          "r": 1.0,
+          "k": 1.0,
+          "s": 0.1,
+          "h_min": 0.15,
+          "h_max": 0.27,
+          "h_bifurcation": null,
+          "null_initial_mean": 0.75,
+          "null_initial_std": 0.1,
+          "sigma": 0.01,
+          "dt": 0.01,
+          "t_start": 0.0,
+          "t_end": 100.0,
+          "initial_state_min": 0.5,
+          "initial_state_max": 1.0
+        },
+        "arguments": {
+          "n": 1200,
+          "noise": 1.0,
+          "null_simulation": true
+        },
+        "seed": 42,
+        "dt": 0.01,
+        "dt_sample": 1.0,
+        "initial_state": [
+          0.8105763792991638
+        ],
+        "observables": [
+          "biomass"
+        ],
+        "time_unit": "model time",
+        "n_observations": 1200,
+        "time_start": 0.0,
+        "time_end": 1199.0
+      },
+      "control_selection": {
+        "selection": "first accepted control",
+        "selection_context_samples": 300,
+        "root_seed": 42,
+        "attempt": 1
+      },
       "marker_index": 1004,
       "marker_time": 1004.0,
       "indicator_input_slice": [
@@ -953,10 +1076,47 @@
       "n_observations": 2401,
       "time_start": -16.0,
       "time_end": 8.0,
-      "selection": "first accepted tipping trajectory from generate_dataset",
+      "selection": "first accepted tipping trajectory",
       "selection_context_samples": 300,
       "root_seed": 42,
       "attempt": 2,
+      "control": {
+        "model": "SaddleNodeModel",
+        "parameters": {
+          "epsilon": 1.4,
+          "lambda_max": 3.0,
+          "null_rate_factor": 0.5,
+          "dt": 0.01,
+          "t_start": -16.0,
+          "t_end": 8.0,
+          "initial_state_min": -10.0,
+          "initial_state_max": -1.0,
+          "tip_threshold": 0.0
+        },
+        "arguments": {
+          "noise": 0.01,
+          "null_simulation": true
+        },
+        "seed": 42,
+        "dt": 0.01,
+        "dt_sample": 0.01,
+        "initial_state": [
+          -3.451021909713745
+        ],
+        "observables": [
+          "state"
+        ],
+        "time_unit": "model time",
+        "n_observations": 2401,
+        "time_start": -16.0,
+        "time_end": 8.0
+      },
+      "control_selection": {
+        "selection": "first accepted control",
+        "selection_context_samples": 300,
+        "root_seed": 42,
+        "attempt": 1
+      },
       "marker_index": 1709,
       "marker_time": 1.0900001525878906,
       "indicator_input_slice": [
@@ -1301,151 +1461,646 @@
   },
   "model_previews": {
     "b_harvesting": {
-      "observed_columns": [
-        0
-      ],
+      "observed_column": 0,
       "display_time_interval": [
         0.0,
         1399.0
       ],
-      "n_displayed": 1400,
       "reference_time": 1171.0,
-      "reference_line": "model reference event, not an estimated jump time",
-      "simulation": "overview.b_harvesting"
+      "simulation": "overview.b_harvesting",
+      "control": {
+        "model": "MayHarvestingModel",
+        "parameters": {
+          "r": 1.0,
+          "k": 1.0,
+          "s": 0.1,
+          "h_min": 0.15,
+          "h_max": 0.27,
+          "h_bifurcation": null,
+          "null_initial_mean": 0.75,
+          "null_initial_std": 0.1,
+          "sigma": 0.01,
+          "dt": 0.01,
+          "t_start": 0.0,
+          "t_end": 100.0,
+          "initial_state_min": 0.5,
+          "initial_state_max": 1.0
+        },
+        "arguments": {
+          "n": 1400,
+          "noise": 1.0,
+          "null_simulation": true
+        },
+        "seed": 42,
+        "dt": 0.01,
+        "dt_sample": 1.0,
+        "initial_state": [
+          0.8105763792991638
+        ],
+        "observables": [
+          "biomass"
+        ],
+        "time_unit": "model time",
+        "n_observations": 1400,
+        "time_start": 0.0,
+        "time_end": 1399.0
+      },
+      "control_selection": {
+        "selection": "first accepted control",
+        "selection_context_samples": 300,
+        "root_seed": 42,
+        "attempt": 1
+      }
     },
     "b_rosenzweig_macarthur_tc": {
-      "observed_columns": [
-        0,
-        1
-      ],
+      "observed_column": 1,
       "display_time_interval": [
         0.0,
         1799.0
       ],
-      "n_displayed": 89951,
-      "reference_time": 1587.3599853515625,
-      "reference_line": "model reference event, not an estimated jump time",
-      "simulation": "overview.b_rosenzweig_macarthur_tc"
+      "reference_time": 793.6799926757812,
+      "simulation": "overview.b_rosenzweig_macarthur_tc",
+      "control": {
+        "model": "RosenzweigMacArthurModel",
+        "parameters": {
+          "r": 4.0,
+          "k": 1.7,
+          "e": 0.5,
+          "h": 0.15,
+          "m": 2.0,
+          "sigma1": 0.01,
+          "sigma2": 0.01,
+          "bifurcation_type": "transcritical",
+          "a_transcritical_null": null,
+          "a_transcritical_min": 2.0,
+          "a_transcritical_max": 10.0,
+          "a_transcritical_bifurcation": null,
+          "a_hopf_null": null,
+          "a_hopf_min": 12.0,
+          "a_hopf_max": 17.0,
+          "a_hopf_bifurcation": null,
+          "dt": 0.01,
+          "t_start": 0.0,
+          "t_end": 100.0
+        },
+        "arguments": {
+          "n": 89951,
+          "dt_sample": 0.02,
+          "noise": 1.0,
+          "null_simulation": true
+        },
+        "seed": 42,
+        "dt": 0.01,
+        "dt_sample": 0.02,
+        "initial_state": [
+          1.4376566410064697,
+          0.02893168292939663
+        ],
+        "observables": [
+          "resource",
+          "consumer"
+        ],
+        "time_unit": "model time",
+        "n_observations": 89951,
+        "time_start": 0.0,
+        "time_end": 1799.0
+      },
+      "control_selection": {
+        "selection": "first accepted control",
+        "selection_context_samples": 300,
+        "root_seed": 42,
+        "attempt": 1
+      }
     },
     "b_rosenzweig_macarthur_hopf": {
-      "observed_columns": [
-        0,
-        1
-      ],
-      "display_time_interval": [
-        1195.760009765625,
-        1215.760009765625
-      ],
-      "n_displayed": 1001,
-      "reference_time": 1205.760009765625,
-      "reference_line": "model reference event, not an estimated jump time",
-      "simulation": "overview.b_rosenzweig_macarthur_hopf"
-    },
-    "b_seirx_tc": {
-      "observed_columns": [
-        0
-      ],
+      "observed_column": 0,
       "display_time_interval": [
         0.0,
         1799.0
       ],
-      "n_displayed": 1800,
+      "reference_time": 1205.760009765625,
+      "simulation": "overview.b_rosenzweig_macarthur_hopf",
+      "control": {
+        "model": "RosenzweigMacArthurModel",
+        "parameters": {
+          "r": 4.0,
+          "k": 1.7,
+          "e": 0.5,
+          "h": 0.15,
+          "m": 2.0,
+          "sigma1": 0.01,
+          "sigma2": 0.01,
+          "bifurcation_type": "hopf",
+          "a_transcritical_null": null,
+          "a_transcritical_min": 2.0,
+          "a_transcritical_max": 6.0,
+          "a_transcritical_bifurcation": null,
+          "a_hopf_null": null,
+          "a_hopf_min": 12.0,
+          "a_hopf_max": 17.0,
+          "a_hopf_bifurcation": null,
+          "dt": 0.01,
+          "t_start": 0.0,
+          "t_end": 100.0
+        },
+        "arguments": {
+          "n": 89951,
+          "dt_sample": 0.02,
+          "noise": 1.0,
+          "null_simulation": true
+        },
+        "seed": 42,
+        "dt": 0.01,
+        "dt_sample": 0.02,
+        "initial_state": [
+          0.7961273193359375,
+          0.37277016043663025
+        ],
+        "observables": [
+          "resource",
+          "consumer"
+        ],
+        "time_unit": "model time",
+        "n_observations": 89951,
+        "time_start": 0.0,
+        "time_end": 1799.0
+      },
+      "control_selection": {
+        "selection": "first accepted control",
+        "selection_context_samples": 300,
+        "root_seed": 42,
+        "attempt": 1
+      }
+    },
+    "b_seirx_tc": {
+      "observed_column": 0,
+      "display_time_interval": [
+        0.0,
+        1799.0
+      ],
       "reference_time": 818.0,
-      "reference_line": "model reference event, not an estimated jump time",
-      "simulation": "overview.b_seirx_tc"
+      "simulation": "overview.b_seirx_tc",
+      "control": {
+        "model": "SEIRxModel",
+        "parameters": {
+          "N": 100000.0,
+          "mu": 0.0003846153846153846,
+          "beta": 10.5,
+          "epsilon": 0.7000000000000001,
+          "gamma": 0.7000000000000001,
+          "kappa": 0.007,
+          "delta": 50.0,
+          "sigma_S": 5.0,
+          "sigma_E": 5.0,
+          "sigma_I": 5.0,
+          "sigma_x": 0.0005,
+          "omega_null": null,
+          "omega_min": 0.0,
+          "omega_max": 100.0,
+          "omega_bifurcation": null,
+          "dt": 0.01,
+          "t_start": 0.0,
+          "t_end": 100.0
+        },
+        "arguments": {
+          "n": 1800,
+          "noise": 0.01,
+          "null_simulation": true
+        },
+        "seed": 42,
+        "dt": 0.01,
+        "dt_sample": 1.0,
+        "initial_state": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "observables": [
+          "infectious",
+          "vaccinator_fraction"
+        ],
+        "time_unit": "week",
+        "n_observations": 1800,
+        "time_start": 0.0,
+        "time_end": 1799.0
+      },
+      "control_selection": {
+        "selection": "first accepted control",
+        "selection_context_samples": 300,
+        "root_seed": 42,
+        "attempt": 1
+      }
     },
     "b_amoc": {
-      "observed_columns": [
-        0
-      ],
+      "observed_column": 0,
       "display_time_interval": [
         0.0,
         5200.0
       ],
-      "n_displayed": 1041,
       "reference_time": 4730.0,
-      "reference_line": "model reference event, not an estimated jump time",
-      "simulation": "overview.b_amoc"
+      "simulation": "overview.b_amoc",
+      "control": {
+        "model": "AMOCFoldModel",
+        "parameters": {
+          "physics": {
+            "S0": 0.035,
+            "alpha": 0.12,
+            "beta": 790.0,
+            "seconds_per_year": 31500000.0,
+            "V_N": 3.683e+16,
+            "V_T": 5.418e+16,
+            "V_S": 6.097e+16,
+            "V_IP": 1.486e+17,
+            "V_B": 9.925e+17,
+            "T_S": 7.919,
+            "T_0": 3.87,
+            "total_salt": 4.4735e+16,
+            "lambda_q": 16200000.0,
+            "gamma": 0.36,
+            "mu": 2.2e-07,
+            "K_N": 1762000.0,
+            "K_S": 1872000.0,
+            "S_S": 0.034427,
+            "S_B": 0.034538,
+            "F_N0": 0.486,
+            "F_NH": 0.1311,
+            "F_T0": -0.997,
+            "F_TH": 0.6961
+          },
+          "initial_SN": 0.0324,
+          "initial_ST": 0.1434,
+          "H0": 0.0,
+          "H_fold": 0.4236,
+          "delta_cap": 0.05,
+          "sigma_SN": 0.0001,
+          "sigma_ST": 0.0001,
+          "sigma_ic": 0.01,
+          "dt": 5.0,
+          "t_start": 0.0,
+          "t_end": 5200.0,
+          "dt_inner": 0.2
+        },
+        "arguments": {
+          "noise": 0.01,
+          "null_simulation": true
+        },
+        "seed": 42,
+        "dt": 0.2,
+        "dt_sample": 5.0,
+        "initial_state": [
+          0.024958796799182892,
+          0.15861709415912628
+        ],
+        "observables": [
+          "amoc_strength",
+          "north_salinity_anomaly",
+          "tropical_salinity_anomaly"
+        ],
+        "time_unit": "year",
+        "n_observations": 1041,
+        "time_start": 0.0,
+        "time_end": 5200.0
+      },
+      "control_selection": {
+        "selection": "first accepted control",
+        "selection_context_samples": 300,
+        "root_seed": 42,
+        "attempt": 1
+      }
     },
     "r_saddle_node": {
-      "observed_columns": [
-        0
-      ],
+      "observed_column": 0,
       "display_time_interval": [
         -8.0,
         1.3199996948242188
       ],
-      "n_displayed": 933,
       "reference_time": 1.0900001525878906,
-      "reference_line": "model reference event, not an estimated jump time",
-      "simulation": "overview.r_saddle_node"
+      "simulation": "overview.r_saddle_node",
+      "control": {
+        "model": "SaddleNodeModel",
+        "parameters": {
+          "epsilon": 1.4,
+          "lambda_max": 3.0,
+          "null_rate_factor": 0.5,
+          "dt": 0.01,
+          "t_start": -16.0,
+          "t_end": 8.0,
+          "initial_state_min": -10.0,
+          "initial_state_max": -1.0,
+          "tip_threshold": 0.0
+        },
+        "arguments": {
+          "noise": 0.01,
+          "null_simulation": true
+        },
+        "seed": 42,
+        "dt": 0.01,
+        "dt_sample": 0.01,
+        "initial_state": [
+          -3.451021909713745
+        ],
+        "observables": [
+          "state"
+        ],
+        "time_unit": "model time",
+        "n_observations": 2401,
+        "time_start": -16.0,
+        "time_end": 8.0
+      },
+      "control_selection": {
+        "selection": "first accepted control",
+        "selection_context_samples": 300,
+        "root_seed": 42,
+        "attempt": 1
+      }
     },
     "r_bautin": {
-      "observed_columns": [
-        0,
-        1
-      ],
+      "observed_column": 0,
       "display_time_interval": [
         -15.0,
-        -3.510000228881836
+        -3.270200004577637
       ],
-      "n_displayed": 1150,
       "reference_time": -3.5,
-      "reference_line": "model reference event, not an estimated jump time",
-      "simulation": "overview.r_bautin"
+      "simulation": "overview.r_bautin",
+      "control": {
+        "model": "BautinModel",
+        "parameters": {
+          "r": 0.1,
+          "lambda_max": 8.0,
+          "a": 0.1,
+          "omega": 3.0,
+          "b": 1.0,
+          "D2": 20,
+          "null_rate_factor": 0.5,
+          "dt": 0.01,
+          "t_start": -15.0,
+          "t_end": 15.0,
+          "initial_state_min": -1.0,
+          "initial_state_max": 1.0,
+          "tip_threshold": 10.0
+        },
+        "arguments": {
+          "noise": 0.01,
+          "null_simulation": true
+        },
+        "seed": 43,
+        "dt": 0.01,
+        "dt_sample": 0.01,
+        "initial_state": [
+          0.8027443885803223,
+          -0.27760744094848633
+        ],
+        "observables": [
+          "x",
+          "y"
+        ],
+        "time_unit": "model time",
+        "n_observations": 3001,
+        "time_start": -15.0,
+        "time_end": 15.0
+      },
+      "control_selection": {
+        "selection": "first accepted control",
+        "selection_context_samples": 300,
+        "root_seed": 42,
+        "attempt": 2
+      }
     },
     "r_compost_bomb": {
-      "observed_columns": [
-        1
-      ],
+      "observed_column": 1,
       "display_time_interval": [
         0.0,
-        55.25
+        55.355
       ],
-      "n_displayed": 1105,
       "reference_time": 54.25,
-      "reference_line": "model reference event, not an estimated jump time",
-      "simulation": "overview.r_compost_bomb"
+      "simulation": "overview.r_compost_bomb",
+      "control": {
+        "model": "CompostBombModel",
+        "parameters": {
+          "v": 0.15,
+          "D3": 50,
+          "Pi": 1.055,
+          "r0": 0.01,
+          "alpha": 0.0916290731874155,
+          "mu": 2500000.0,
+          "A": 39000000.0,
+          "lambda_param": 5049000.0,
+          "null_rate_factor": 0.95,
+          "dt": 0.05,
+          "t_start": 0.0,
+          "t_end": 100.0,
+          "initial_state_min": 0,
+          "initial_state_max": 0,
+          "T_ref": 0.0,
+          "tip_threshold": 30.0
+        },
+        "arguments": {
+          "noise": 0.01,
+          "null_simulation": true
+        },
+        "seed": 42,
+        "dt": 0.05,
+        "dt_sample": 0.05,
+        "initial_state": [
+          0.0,
+          0.0
+        ],
+        "observables": [
+          "soil_carbon",
+          "soil_temperature"
+        ],
+        "time_unit": "year",
+        "n_observations": 2001,
+        "time_start": 0.0,
+        "time_end": 100.0
+      },
+      "control_selection": {
+        "selection": "first accepted control",
+        "selection_context_samples": 300,
+        "root_seed": 42,
+        "attempt": 1
+      }
     },
     "r_amoc": {
-      "observed_columns": [
-        0
-      ],
+      "observed_column": 0,
       "display_time_interval": [
         -2505.0,
         3200.0
       ],
-      "n_displayed": 1142,
       "reference_time": 0.0,
-      "reference_line": "model reference event, not an estimated jump time",
-      "simulation": "overview.r_amoc"
+      "simulation": "overview.r_amoc",
+      "control": {
+        "model": "AMOCRateModel",
+        "parameters": {
+          "physics": {
+            "S0": 0.035,
+            "alpha": 0.12,
+            "beta": 790.0,
+            "seconds_per_year": 31500000.0,
+            "V_N": 3.683e+16,
+            "V_T": 5.418e+16,
+            "V_S": 6.097e+16,
+            "V_IP": 1.486e+17,
+            "V_B": 9.925e+17,
+            "T_S": 7.919,
+            "T_0": 3.87,
+            "total_salt": 4.4735e+16,
+            "lambda_q": 16200000.0,
+            "gamma": 0.36,
+            "mu": 2.2e-07,
+            "K_N": 1762000.0,
+            "K_S": 1872000.0,
+            "S_S": 0.034427,
+            "S_B": 0.034538,
+            "F_N0": 0.486,
+            "F_NH": 0.1311,
+            "F_T0": -0.997,
+            "F_TH": 0.6961
+          },
+          "initial_SN": 0.0324,
+          "initial_ST": 0.1434,
+          "H0": 0.0,
+          "dH": 0.365,
+          "r_slow": 0.005,
+          "r_fast": 0.017,
+          "sigma_SN": 0.0001,
+          "sigma_ST": 0.0001,
+          "sigma_ic": 0.01,
+          "dt": 5.0,
+          "dt_inner": 0.2,
+          "t_start": -2505.0,
+          "t_end": 3200.0,
+          "Q_collapse_threshold": 0.0
+        },
+        "arguments": {
+          "noise": 0.01,
+          "null_simulation": true
+        },
+        "seed": 42,
+        "dt": 0.2,
+        "dt_sample": 5.0,
+        "initial_state": [
+          0.03845763951539993,
+          0.1513904333114624
+        ],
+        "observables": [
+          "amoc_strength",
+          "north_salinity_anomaly",
+          "tropical_salinity_anomaly"
+        ],
+        "time_unit": "year",
+        "n_observations": 1142,
+        "time_start": -2505.0,
+        "time_end": 3200.0
+      },
+      "control_selection": {
+        "selection": "first accepted control",
+        "selection_context_samples": 300,
+        "root_seed": 42,
+        "attempt": 1
+      }
     },
     "b_ricker": {
-      "observed_columns": [
-        0
-      ],
+      "observed_column": 0,
       "display_time_interval": [
         0.0,
         599.0
       ],
-      "n_displayed": 600,
       "reference_time": 364.0,
-      "reference_line": "model reference event, not an estimated jump time",
-      "simulation": "overview.b_ricker"
+      "simulation": "overview.b_ricker",
+      "control": {
+        "model": "RickerModel",
+        "parameters": {
+          "r_start": 0.2,
+          "r_end": -0.1,
+          "r_null": 0.2,
+          "density_dependence": 0.002,
+          "sigma": 0.2,
+          "initial_population": 100.0,
+          "dt": 1.0,
+          "t_start": 0.0,
+          "t_end": 500.0
+        },
+        "arguments": {
+          "n": 600,
+          "noise": 1.0,
+          "null_simulation": true
+        },
+        "seed": 42,
+        "dt": 1.0,
+        "dt_sample": 1.0,
+        "initial_state": [
+          4.605170249938965
+        ],
+        "observables": [
+          "population"
+        ],
+        "time_unit": "model time",
+        "n_observations": 600,
+        "time_start": 0.0,
+        "time_end": 599.0
+      },
+      "control_selection": {
+        "selection": "first accepted control",
+        "selection_context_samples": 300,
+        "root_seed": 42,
+        "attempt": 1
+      }
     },
     "b_thermoacoustic": {
-      "observed_columns": [
-        0,
-        2
-      ],
+      "observed_column": 0,
       "display_time_interval": [
         0.0,
         1.100000023841858
       ],
-      "n_displayed": 11001,
       "reference_time": 0.44999998807907104,
-      "reference_line": "model reference event, not an estimated jump time",
-      "simulation": "overview.b_thermoacoustic"
+      "simulation": "overview.b_thermoacoustic",
+      "control": {
+        "model": "ThermoacousticModel",
+        "parameters": {
+          "frequency": 120.0,
+          "kappa": 8.0,
+          "mu": 2.0,
+          "Gamma": 1000000.0,
+          "nu_start": -4.5,
+          "nu_end": 5.5,
+          "nu_null": -4.5,
+          "initial_pressure": 0.1,
+          "initial_scaled_velocity": 0.0,
+          "dt": 0.0001,
+          "t_start": 0.0,
+          "t_end": 1.1
+        },
+        "arguments": {
+          "n": 11001,
+          "dt_sample": 0.0001,
+          "noise": 1.0,
+          "null_simulation": true
+        },
+        "seed": 42,
+        "dt": 0.0001,
+        "dt_sample": 0.0001,
+        "initial_state": [
+          0.10000000149011612,
+          0.0
+        ],
+        "observables": [
+          "pressure",
+          "scaled_velocity",
+          "amplitude"
+        ],
+        "time_unit": "s",
+        "n_observations": 11001,
+        "time_start": 0.0,
+        "time_end": 1.100000023841858
+      },
+      "control_selection": {
+        "selection": "first accepted control",
+        "selection_context_samples": 300,
+        "root_seed": 42,
+        "attempt": 1
+      }
     }
   }
 }

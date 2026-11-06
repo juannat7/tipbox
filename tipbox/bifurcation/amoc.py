@@ -46,7 +46,7 @@ def _bifurcation_ramp_cap_params(
 
 @register_dataclass_pytree
 @dataclass(frozen=True)
-class AMOCConfig:
+class AMOCFoldConfig:
     """Configuration for AMOC 2-box model (bifurcation-induced)."""
 
     physics: AMOCPhysics = parameter(
@@ -81,7 +81,7 @@ class AMOCConfig:
     )
     sigma_ic: float = parameter(
         0.01,
-        "Initial-state standard deviation in make_trajectory; legacy simulate uses the configured mean.",
+        "Initial-state standard deviation in make_trajectory; simulate uses the configured mean.",
         "state",
     )
     dt: float = parameter(
@@ -102,14 +102,14 @@ class AMOCConfig:
     dt_inner: float = parameter(0.2, "AMOC RK4 integration step.", "year")
 
     @classmethod
-    def default(cls) -> "AMOCConfig":
+    def default(cls) -> "AMOCFoldConfig":
         return cls()
 
 
-class AMOCModel(BoxModel):
+class AMOCFoldModel(BoxModel):
     """AMOC 2-box model, bifurcation-induced (H(t) ramp with fold at H_fold)."""
 
-    config_class = AMOCConfig
+    config_class = AMOCFoldConfig
 
     @property
     def critical_parameter(self):

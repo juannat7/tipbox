@@ -25,3 +25,18 @@ table.catalog-table p { line-height: 1.5; }
 @media (max-width: 48rem) {
   table.catalog-table { min-width: 34rem; }
 }
+
+.sidebar-brand { flex-direction: row; align-items: center; gap: .6rem; }
+.sidebar-logo-container { flex: 0 0 2.75rem; margin: 0; background: white; border-radius: .3rem; }
+.sidebar-logo { width: 2.75rem; height: 2.75rem; }
+.sidebar-brand-text { margin: 0; }
+#tipbox > h1::before, .mobile-header .brand::before {
+  content: "";
+  display: inline-block;
+  width: 1.35em;
+  height: 1.35em;
+  margin-right: .25em;
+  vertical-align: middle;
+  background: white url("tipbox-icon-300ppi.png") center / contain no-repeat;
+  border-radius: .15em;
+}

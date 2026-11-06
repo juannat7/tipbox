@@ -11,16 +11,25 @@ Usage
    from tipbox.models import SaddleNode
 
    model = SaddleNode(epsilon=1.4)
-   result = model.make_trajectory(n=2401, noise=0.01, seed=43)
+   result = model.make_trajectory(
+       n=2401,
+       noise=0.01,
+       seed=43,
+   )
    state = result.trajectory[:, 0]
 
+   control = model.make_trajectory(
+       n=2401,
+       noise=0.01,
+       seed=42,
+       null_simulation=True,
+   )
+
 .. figure:: ../_static/figures/r_saddle_node.png
-   :alt: A trajectory leaving the moving stable branch. The view ends at state 5; dashed lines mark the configured state threshold.
+   :target: ../_static/figures/r_saddle_node.png
+   :alt: State trajectories for tipping and control. The dashed line marks the first threshold-crossing time.
 
-   A trajectory leaving the moving stable branch. The view ends at state 5; dashed lines mark the configured state threshold.
-
-``n`` counts sampled observations. See :doc:`../usage` for integration,
-sampling, noise, and custom-forcing controls.
+   State trajectories for tipping and control. The dashed line marks the first threshold-crossing time.
 
 Equations and forcing
 ---------------------
@@ -39,8 +48,7 @@ near zero. Initial states are uniform on the configured interval.
 
 Here ``noise`` is :math:`\eta`, a diffusion intensity. Its per-step scale is
 :math:`\sqrt{2\eta\,dt}`. The tipping marker is the first state crossing of
-``tip_threshold``. Scalar observations have one column in ``make_trajectory``;
-the historical simulator retains its dummy second column.
+``tip_threshold``.
 
 For the deterministic tracking solution with ``lambda_max=3``, the rate
 threshold is ``epsilon_c=4/3``. The configured ``epsilon=1.25`` is below it;

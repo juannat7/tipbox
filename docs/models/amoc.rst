@@ -1,58 +1,70 @@
 Atlantic meridional overturning circulation
 ===========================================
 
-``b_amoc`` and ``r_amoc`` · ``tipbox.models.AMOC`` and ``AMOCRate``
+``b_amoc`` and ``r_amoc`` · ``tipbox.models.AMOCFold`` and ``AMOCRate``
 
-Usage
------
+.. _amoc-fold:
+
+AMOCFold
+--------
 
 .. code-block:: python
 
-   from tipbox.models import AMOC
+   from tipbox.models import AMOCFold
 
-   model = AMOC()
-   result = model.make_trajectory(n=1041, noise=0.01, seed=42)
+   model = AMOCFold()
+   result = model.make_trajectory(
+       n=1041,
+       noise=0.01,
+       seed=42,
+   )
    transport = result.trajectory[:, 0]
 
+   control = model.make_trajectory(
+       n=1041,
+       noise=0.01,
+       seed=42,
+       null_simulation=True,
+   )
+
 .. figure:: ../_static/figures/b_amoc.png
+   :target: ../_static/figures/b_amoc.png
    :alt: Overturning strength under increasing freshwater input. Dashed lines mark the calibrated fold.
 
    Overturning strength under increasing freshwater input. Dashed lines mark the calibrated fold.
 
-For a rate-induced scenario, use ``AMOCRate``:
+.. _amoc-rate:
+
+AMOCRate
+--------
 
 .. code-block:: python
 
    from tipbox.models import AMOCRate
 
    model = AMOCRate()
-   result = model.make_trajectory(n=1142, noise=0.01, seed=42)
+   result = model.make_trajectory(
+       n=1142,
+       noise=0.01,
+       seed=42,
+   )
    transport = result.trajectory[:, 0]
 
+   control = model.make_trajectory(
+       n=1142,
+       noise=0.01,
+       seed=42,
+       null_simulation=True,
+   )
+
 .. figure:: ../_static/figures/r_amoc.png
-   :alt: Overturning strength during rapid hosing. The reference at time zero follows a collapse-outcome check; it is not a fold crossing.
+   :target: ../_static/figures/r_amoc.png
+   :alt: Overturning strength for rapid and slow hosing. The dashed line marks the start of the hosing plateau.
 
-   Overturning strength during rapid hosing. The reference at time zero follows a collapse-outcome check; it is not a fold crossing.
-
-``n`` counts sampled observations. See :doc:`../usage` for integration,
-sampling, noise, and custom-forcing controls.
+   Overturning strength for rapid and slow hosing. The dashed line marks the start of the hosing plateau.
 
 Equations and forcing
 ---------------------
-
-Both classes accept a nested ``AMOCPhysics`` configuration. Table names such
-as ``physics.K_N`` identify fields on that object:
-
-.. code-block:: python
-
-   from tipbox.models import AMOC, AMOCPhysics
-
-   physics = AMOCPhysics(K_N=1.762e6)  # Gyre transport in m^3/s; the default.
-   model = AMOC(physics=physics, sigma_SN=1e-4)
-
-Changing physical coefficients requires reconsidering the calibrated fold
-marker. Constructor keywords such as ``sigma_SN`` control the simulation
-configuration; nested physical coefficients belong in ``AMOCPhysics``.
 
 Both scenarios use the same two-state reduction of a five-box ocean model.
 The physical coordinates :math:`z_N,z_T` are scaled salinity anomalies:
@@ -100,10 +112,8 @@ Then the implemented stochastic salt balance is
    dz_T&=\frac{100Y}{V_T}[A_T+K_S(s-u)+K_N(n-u)-F_TS_0]dt
           +\eta\sigma_{ST}\,dW_T.
 
-Here :math:`Y` is ``physics.seconds_per_year``. **Time is measured in years.**
-The separate factor of 100 converts mass-fraction derivatives to the scaled
-anomaly coordinates. This preserves the original MATLAB factor
-``100*3.15e7`` without interpreting a simulation time unit as a century.
+Here :math:`Y` is ``physics.seconds_per_year``; time is measured in years.
+The factor of 100 converts mass fractions to the scaled anomaly coordinates.
 
 Bifurcation scenario
 --------------------
@@ -136,7 +146,7 @@ The forcing is a smooth ramp followed by a plateau:
    \end{cases}
 
 Forced and null runs use ``r_fast`` and ``r_slow`` respectively. This schedule
-uses absolute time, with its plateau beginning at zero. The legacy simulator
+uses absolute time, with its plateau beginning at zero. The simulator
 checks for transport below ``Q_collapse_threshold`` and uses the forcing's
 zero-time point as its extraction marker. The marker and actual collapse time
 are distinct quantities.
@@ -150,18 +160,24 @@ Both models integrate drift using RK4 with true midpoint forcing values in the
 new interface, then add independent Gaussian salinity increments. No positivity
 projection is applied to salinity anomalies. ``make_trajectory`` samples its
 initial state from the configured Gaussian mean and ``sigma_ic``; explicit
-``initial_state`` overrides that distribution. The legacy simulator retains the
-configured mean when no initial state is supplied.
+``initial_state`` overrides that distribution.
 
 Observed columns are :math:`(Q,z_N,z_T)`. All physical constants are exposed
 through the shared immutable ``AMOCPhysics`` configuration, for example:
 
 .. code-block:: python
 
-   from tipbox.models import AMOC, AMOCPhysics
+   from tipbox.models import AMOCFold, AMOCPhysics
 
-   model = AMOC(physics=AMOCPhysics(K_N=1.8e6), sigma_ic=0)
-   result = model.make_trajectory(1000, noise=0.0, seed=42)
+   model = AMOCFold(
+       physics=AMOCPhysics(K_N=1.8e6),
+       sigma_ic=0,
+   )
+   result = model.make_trajectory(
+       n=1000,
+       noise=0.0,
+       seed=42,
+   )
 
 References: `Alkhayuon et al. (2019)
 <https://doi.org/10.1098/rspa.2019.0051>`_ and Appendix A4 of

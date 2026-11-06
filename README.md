@@ -1,6 +1,6 @@
-# TipBox
+# <img src="docs/tipbox-icon-300ppi.png" alt="" width="48" height="48" align="middle"> TipBox
 
-TipBox is a collection of tipping systems, combining stochastic box models, empirical observations, and simulation components for sim-to-real studies. It covers bifurcation- and rate-induced tipping and provides early-warning indicators, including lag-1 autocorrelation and variance, for studying their warning signals.
+TipBox is a collection of tipping models and empirical observations. It covers bifurcation- and rate-induced tipping in stochastic systems, with early-warning indicators such as lag-1 autocorrelation and variance.
 
 <div align="center">
 
@@ -13,7 +13,7 @@ TipBox is a collection of tipping systems, combining stochastic box models, empi
 - [Installation](#installation)
 - [Generate or load a time series](#generate-or-load-a-time-series)
 - [Early-warning indicators](#compute-early-warning-indicators)
-- [AUROC and batches](#evaluate-with-auroc)
+- [Benchmarking](#benchmarking)
 - [Systems](#systems)
 - [Notebook examples](#notebook-examples)
 - [Used in research](#used-in-research)
@@ -37,10 +37,31 @@ from tipbox.datasets import Microcosm
 
 # Bifurcation-induced tipping: n is the number of sampled observations.
 harvesting = MayHarvesting()
-bifurcation = harvesting.make_trajectory(n=1200, noise=1.0, seed=42)
+bifurcation = harvesting.make_trajectory(
+    n=1200,
+    noise=1.0,
+    seed=42,
+)
+bifurcation_control = harvesting.make_trajectory(
+    n=1200,
+    noise=1.0,
+    seed=42,
+    null_simulation=True,
+)
 
 # Rate-induced tipping: simulate 2,401 observations of a moving equilibrium.
-rate = SaddleNode(epsilon=1.4).make_trajectory(n=2401, noise=0.01, seed=43)
+rate_model = SaddleNode(epsilon=1.4)
+rate = rate_model.make_trajectory(
+    n=2401,
+    noise=0.01,
+    seed=43,
+)
+rate_control = rate_model.make_trajectory(
+    n=2401,
+    noise=0.01,
+    seed=42,
+    null_simulation=True,
+)
 
 # Empirical observations: Veraart et al. (2012), chemostats M1 and M2.
 observed = Microcosm().load()
@@ -61,21 +82,29 @@ from tipbox.indicators import rolling_ar1, rolling_variance
 
 before_fold = bifurcation.param_values < harvesting.critical_parameter
 signal = bifurcation.trajectory[before_fold, 0]
-ar1 = rolling_ar1(signal, window=200, detrend="linear")
-variance = rolling_variance(signal, window=200, detrend="linear")
+ar1 = rolling_ar1(
+    signal,
+    window=200,
+    detrend="linear",
+)
+variance = rolling_variance(
+    signal,
+    window=200,
+    detrend="linear",
+)
 ```
 
 Here `window=200` means 200 observations. The [indicator reference](https://juannat7.github.io/tipbox/indicators.html) also covers autocorrelation, skewness, and kurtosis.
 
 ![AR1 and variance for the same three time series](docs/_static/figures/indicators.png)
 
-## Evaluate with AUROC
+## Benchmarking
 
-Compare indicators across independent tipping and non-tipping trajectories using the area under the ROC curve (AUROC). Each trajectory contributes one indicator-trend score; the curve measures how well those scores distinguish the two classes.
+Evaluate indicator trends on tipping and control trajectories with the area under the ROC curve (AUROC). Each trajectory contributes one score.
 
 ### Generate a batch
 
-Generate labeled batches for repeated experiments or indicator comparisons:
+Batches support repeated experiments and indicator comparisons:
 
 ```python
 from tipbox.models import MayHarvesting
@@ -84,20 +113,44 @@ from tipbox.indicators import rolling_ar1, rolling_variance
 from tipbox.metrics import ensemble_roc, plot_roc
 
 batch = generate_dataset(
-    MayHarvesting(), n_tipping=50, n_null=50,
-    n=1000, num_timesteps=300, noise=1.0, seed=42,
+    MayHarvesting(),
+    n_tipping=50,
+    n_null=50,
+    n=1000,
+    num_timesteps=300,
+    noise=1.0,
+    seed=42,
 )
-signals = batch.observations[:, :, 0]  # 100 trajectories, 300 retained samples each.
+signals = batch.observations[
+    :, :, 0
+]  # 100 trajectories, 300 retained samples each.
 indicators = {
-    "AR1": [rolling_ar1(x, window=100, detrend="linear") for x in signals],
-    "Variance": [rolling_variance(x, window=100, detrend="linear") for x in signals],
+    "AR1": [
+        rolling_ar1(
+            x,
+            window=100,
+            detrend="linear",
+        )
+        for x in signals
+    ],
+    "Variance": [
+        rolling_variance(
+            x,
+            window=100,
+            detrend="linear",
+        )
+        for x in signals
+    ],
 }
 ```
 
 Score the indicator trend in each trajectory and plot the ROC curves:
 
 ```python
-report = ensemble_roc(batch.labels, indicators)
+report = ensemble_roc(
+    batch.labels,
+    indicators,
+)
 print(report.curves["Variance"].auroc)
 ax = plot_roc(report)
 ```
@@ -109,31 +162,29 @@ ax = plot_roc(report)
 ## Systems
 
 Import model classes from `tipbox.models` and observation classes from `tipbox.datasets`.
-Each system links to a runnable example, equations, and parameter defaults.
+Model links include equations and defaults; observation links describe `.load()`.
 
 | System | Class / call | Mechanism / observable |
 |---|---|---|
-| **Box models** | | |
+| **Models** | | |
 | [May harvesting](https://juannat7.github.io/tipbox/models/harvesting.html) | `MayHarvesting` | Fold |
 | [Rosenzweig–MacArthur](https://juannat7.github.io/tipbox/models/consumer_resource.html) | `RosenzweigMacArthur` | Transcritical / Hopf |
 | [Disease and vaccination](https://juannat7.github.io/tipbox/models/seirx.html) | `SEIRx` | Transcritical |
-| [Ocean overturning](https://juannat7.github.io/tipbox/models/amoc.html) | `AMOC` | Fold |
+| [Ocean overturning](https://juannat7.github.io/tipbox/models/amoc.html#amoc-fold) | `AMOCFold` | Fold |
 | [Moving saddle-node](https://juannat7.github.io/tipbox/models/saddle_node.html) | `SaddleNode` | Rate-induced |
 | [Moving Bautin](https://juannat7.github.io/tipbox/models/bautin.html) | `Bautin` | Rate-induced |
 | [Compost bomb](https://juannat7.github.io/tipbox/models/compost.html) | `CompostBomb` | Rate-induced |
-| [Ocean overturning](https://juannat7.github.io/tipbox/models/amoc.html) | `AMOCRate` | Rate-induced |
-| **Sim-to-real components** | **Simulations; observation loaders pending** | |
-| [Daphnia surrogate](https://juannat7.github.io/tipbox/models/ricker.html) | `Ricker` | Population decline |
+| [Ocean overturning](https://juannat7.github.io/tipbox/models/amoc.html#amoc-rate) | `AMOCRate` | Rate-induced |
+| [Ricker population map](https://juannat7.github.io/tipbox/models/ricker.html) | `Ricker` | Population decline |
 | [Combustion oscillator](https://juannat7.github.io/tipbox/models/thermoacoustic.html) | `Thermoacoustic` | Subcritical Hopf |
 | **Empirical observations** | | |
-| [Microcosm · M1 and M2](https://juannat7.github.io/tipbox/datasets.html#original-microcosm-source) | `Microcosm().load()` | Light attenuation |
-| [Microcosm · aggregated M1](https://juannat7.github.io/tipbox/datasets.html#cases-and-example-settings) | `load_empirical("microcosm")` | Light attenuation |
-| [Voice onset](https://juannat7.github.io/tipbox/datasets.html#tipbox.datasets.VoiceOnset) | `VoiceOnset().load()` | Subglottal pressure |
-| [Cellular ATP](https://juannat7.github.io/tipbox/datasets.html#tipbox.datasets.CellularATP) | `CellularATP().load()` | Fluorescence ratio |
-| [Paleoclimate](https://juannat7.github.io/tipbox/datasets.html#tipbox.datasets.Paleoclimate) | `Paleoclimate().load()` | CaCO₃ |
-| [Electrical blackout](https://juannat7.github.io/tipbox/datasets.html#tipbox.datasets.ElectricalBlackout) | `ElectricalBlackout().load()` | Frequency |
+| [Microcosm · M1 and M2](https://juannat7.github.io/tipbox/api.html#tipbox.datasets.Microcosm) | `Microcosm().load()` | Light attenuation |
+| [Voice onset](https://juannat7.github.io/tipbox/api.html#tipbox.datasets.VoiceOnset) | `VoiceOnset().load()` | Subglottal pressure |
+| [Cellular ATP](https://juannat7.github.io/tipbox/api.html#tipbox.datasets.CellularATP) | `CellularATP().load()` | Fluorescence ratio |
+| [Paleoclimate](https://juannat7.github.io/tipbox/api.html#tipbox.datasets.Paleoclimate) | `Paleoclimate().load()` | CaCO₃ |
+| [Electrical blackout](https://juannat7.github.io/tipbox/api.html#tipbox.datasets.ElectricalBlackout) | `ElectricalBlackout().load()` | Frequency |
 
-The [full catalog](https://juannat7.github.io/tipbox/systems.html) includes discovery commands and source links.
+Full reference: [system catalog](https://juannat7.github.io/tipbox/models/index.html).
 
 ![Phase portraits and simulated trajectories, with start and end markers](docs/_static/figures/overview.png)
 
@@ -149,34 +200,20 @@ The [full catalog](https://juannat7.github.io/tipbox/systems.html) includes disc
 
 ## Citation
 
-BibTeX for the two studies above is also available in [references.bib](references.bib).
-Cite individual model and data sources when using them; their reference pages list the original works.
-
-<details>
-<summary>KEWS and TipPFN BibTeX</summary>
+If you use TipBox's code or datasets, we would appreciate citations to these works:
 
 ```bibtex
 @article{nathaniel2026koopman,
-  title = {Koopman early warning signals for bifurcation and rate-induced tipping},
-  author = {Nathaniel, Juan and Roesch, Carla and DeSantis, Derek and
-            Kooloth, Parvathi and Fan, Hang and Lucarini, Valerio and
-            Romanou, Anastasia and Gentine, Pierre},
-  journal = {arXiv preprint arXiv:2608.14716},
-  year = {2026},
-  doi = {10.48550/arXiv.2608.14716},
-  url = {https://arxiv.org/abs/2608.14716}
+  title={Koopman early warning signals for bifurcation and rate-induced tipping},
+  author={Nathaniel, Juan and Roesch, Carla and DeSantis, Derek and Kooloth, Parvathi and Fan, Hang and Lucarini, Valerio and Romanou, Anastasia and Gentine, Pierre},
+  journal={arXiv preprint arXiv:2608.14716},
+  year={2026}
 }
 
-@inproceedings{sevinchan2026tippfn,
-  title = {In-context learning to predict critical transitions in dynamical systems},
-  author = {Sevinchan, Yunus and Nathaniel, Juan and Ueltzh{\"o}ffer, Kai and
-            Roesch, Carla and Weber, Tobias and Laschos, Vaios and Fan, Hang and
-            Ramien, Gregor and Haux, Johannes and Gentine, Pierre and Herdeanu, Benjamin},
-  booktitle = {Advances in Neural Information Processing Systems},
-  year = {2026},
-  doi = {10.48550/arXiv.2605.12308},
-  url = {https://arxiv.org/abs/2605.12308}
+@article{sevinchan2026context,
+  title={In-context learning to predict critical transitions in dynamical systems},
+  author={Sevinchan, Yunus and Nathaniel, Juan and Ueltzh{\"o}ffer, Kai and Roesch, Carla and Weber, Tobias and Laschos, Vaios and Fan, Hang and Ramien, Gregor and Haux, Johannes and Gentine, Pierre and others},
+  journal={arXiv preprint arXiv:2605.12308},
+  year={2026}
 }
 ```
-
-</details>

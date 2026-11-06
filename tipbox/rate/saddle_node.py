@@ -49,7 +49,7 @@ class SaddleNodeConfig:
         -1.0, "Upper bound for the default uniform initial-state sampler.", "state"
     )
     tip_threshold: float = parameter(
-        0.0, "State threshold used by the legacy tipping classifier.", "state"
+        0.0, "State threshold used by the tipping classifier.", "state"
     )
 
     @classmethod

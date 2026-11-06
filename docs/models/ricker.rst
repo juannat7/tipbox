@@ -2,9 +2,7 @@ Stochastic Ricker population map
 ================================
 
 ``Ricker`` implements a density-dependent population map in log-population
-coordinates. It is a reusable simulation component for population-decline
-studies such as the Daphnia sim-to-real case discussed in :doc:`../sim_to_real`.
-Its defaults are illustrative; they are not fitted Daphnia coefficients.
+coordinates, with a declining growth rate and illustrative default coefficients.
 
 Usage
 -----
@@ -14,16 +12,25 @@ Usage
    from tipbox.models import Ricker
 
    model = Ricker()
-   result = model.make_trajectory(n=600, noise=1.0, seed=42)
+   result = model.make_trajectory(
+       n=600,
+       noise=1.0,
+       seed=42,
+   )
    population = result.trajectory[:, 0]
 
+   control = model.make_trajectory(
+       n=600,
+       noise=1.0,
+       seed=42,
+       null_simulation=True,
+   )
+
 .. figure:: ../_static/figures/b_ricker.png
+   :target: ../_static/figures/b_ricker.png
    :alt: Population under declining log growth. Dashed lines mark zero log growth, not an observed extinction.
 
    Population under declining log growth. Dashed lines mark zero log growth, not an observed extinction.
-
-``n`` counts sampled observations. See :doc:`../usage` for integration,
-sampling, noise, and custom-forcing controls.
 
 Equations and coordinates
 -------------------------
@@ -63,8 +70,7 @@ Time, forcing, and markers
 ``dt`` assigns a time interval to one map update. Changing it changes the
 number of updates per unit time; it is not an ODE refinement setting.
 ``dt_sample`` defaults to the configuration's ``dt`` and may be an integer
-multiple of the update spacing. No conversion from model time to Daphnia days
-is inferred.
+multiple of the update spacing. Time is measured in model updates.
 
 Forced log growth decreases linearly from ``r_start`` to ``r_end`` over the
 simulated duration divided by ``param_end_multiplier`` (default 1.1), then
@@ -85,4 +91,4 @@ Reference
 Ricker (1954), *Stock and recruitment*,
 `doi:10.1139/f54-039 <https://doi.org/10.1139/f54-039>`_. The noise model,
 forcing protocol, and illustrative coefficients above are explicit TipBox
-choices rather than a reconstruction of a private experimental calibration.
+choices.

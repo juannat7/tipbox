@@ -11,16 +11,25 @@ Usage
    from tipbox.models import CompostBomb
 
    model = CompostBomb()
-   result = model.make_trajectory(n=2001, noise=0.01, seed=45)
+   result = model.make_trajectory(
+       n=2001,
+       noise=0.01,
+       seed=45,
+   )
    carbon, temperature = result.trajectory.T
 
+   control = model.make_trajectory(
+       n=2001,
+       noise=0.01,
+       seed=42,
+       null_simulation=True,
+   )
+
 .. figure:: ../_static/figures/r_compost_bomb.png
-   :alt: Soil temperature during warming. The view ends at 150 degrees Celsius; dashed lines mark the configured temperature threshold.
+   :target: ../_static/figures/r_compost_bomb.png
+   :alt: Soil temperature for tipping and control. The dashed line marks the threshold-crossing time.
 
-   Soil temperature during warming. The view ends at 150 degrees Celsius; dashed lines mark the configured temperature threshold.
-
-``n`` counts sampled observations. See :doc:`../usage` for integration,
-sampling, noise, and custom-forcing controls.
+   Soil temperature for tipping and control. The dashed line marks the threshold-crossing time.
 
 Equations and forcing
 ---------------------
@@ -41,7 +50,7 @@ step's temperature drift. Noise acts directly on temperature after division of
 the deterministic heat balance by :math:`\mu`.
 
 Initial carbon and temperature are independently sampled from the configured
-uniform interval; its default zero-width interval sets both to zero. The legacy
+uniform interval; its default zero-width interval sets both to zero. The
 transition marker is the first soil-temperature crossing of ``tip_threshold``.
 
 Parameters and defaults

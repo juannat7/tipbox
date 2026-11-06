@@ -57,7 +57,7 @@ class RickerModel(BoxModel):
     with observed population exp(z). dt is the time represented by one update;
     it is not a substep accuracy control. There is no sqrt(dt) noise scaling.
     Initial-state overrides must be log population, matching state_names.
-    The default coefficients are illustrative, rather than a Daphnia calibration.
+    The default coefficients are illustrative.
     """
 
     config_class = RickerConfig
