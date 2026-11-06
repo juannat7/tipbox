@@ -35,14 +35,26 @@ The named box models require no external continuation software. The former rando
 | `r_saddle_node` | Saddle-node normal form | Ashwin et al. 2012 |
 | `r_amoc` | AMOC 2-box model (rate-induced) | Ritchie et al. 2023; Alkhayuon et al. 2019 |
 
+## Model API
+
+```python
+from tipbox.models import MayHarvesting
+
+model = MayHarvesting(r=1.0, k=1.0, s=0.1)
+result = model.make_trajectory(1000, noise=0.01, seed=42)
+print(model.get_parameters())
+```
+
+Every model exposes typed configuration, physical state and observable names, and an exact-grid trajectory method. See the [model reference](docs/index.rst) for equations, units, defaults, numerical conventions, and historical compatibility. To build the documentation locally, install `pip install -e ".[docs]"` and run `python -m sphinx -b html docs docs/_build/html`.
+
 ## Quickstart
 
 ```python
 import jax
-from tipbox import generate
+from tipbox.generate import generate
 
 # Generate a tipping trajectory
-full, part, info = generate.generate(
+full, part, info = generate(
     key=jax.random.PRNGKey(42),
     tipping_type='b_harvesting',          # or 'b_harvesting', 'r_compost_bomb', etc.
     null_simulation=False,           # True for non-tipping trajectory
@@ -52,7 +64,8 @@ full, part, info = generate.generate(
 
 # full.trajectory  - complete simulation
 # part.trajectory  - extracted pre-transition segment
-# info             - metadata (transition_index, sigma, etc.)
+# info             - metadata (transition_index, system_name, etc.)
+# full.sigma       - integration-step noise scale
 ```
 
 The SEIRx simulator now applies `sigma_tilde` to its configured noise amplitudes, as documented. To reproduce its former noise level, use `sigma_tilde=1.0`; the high-level default is `0.01`. Rate models use their configured time grid; change their typed configuration to adjust integration steps or physical parameters.
@@ -69,3 +82,10 @@ The SEIRx simulator now applies `sigma_tilde` to its configured noise amplitudes
 - [ ] Add three-species chaotic food chain model (Hopf) — Zhuge 2025
 - [ ] Add Plant-herbivore model (Rate) — Ritchie 2023
 - [ ] Add AMOC 5-box model (Rate) — Ritchie 2023
+
+## Used in research
+
+- Nathaniel et al. (2026), [Koopman early warning signals for bifurcation and rate-induced tipping](https://arxiv.org/abs/2608.14716), with the [KEWS implementation](https://github.com/juannat7/kews).
+- Sevinchan et al. (2026), [In-context learning to predict critical transitions in dynamical systems](https://arxiv.org/abs/2605.12308).
+
+These studies used earlier versions; the [compatibility reference](docs/compatibility.rst) records numerical corrections and historical settings.

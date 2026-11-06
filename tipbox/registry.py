@@ -10,7 +10,10 @@ from .rate.bautin import BautinConfig, BautinModel
 from .rate.compost_bomb import CompostBombConfig, CompostBombModel
 from .rate.saddle_node import SaddleNodeConfig, SaddleNodeModel
 from .bifurcation.may_harvesting import MayHarvestingConfig, MayHarvestingModel
-from .bifurcation.rosenzweig_macarthur import RosenzweigMacArthurConfig, RosenzweigMacArthurModel
+from .bifurcation.rosenzweig_macarthur import (
+    RosenzweigMacArthurConfig,
+    RosenzweigMacArthurModel,
+)
 from .bifurcation.seirx import SEIRxConfig, SEIRxModel
 from .bifurcation.amoc import AMOCConfig, AMOCModel
 from .rate.amoc import AMOCRateConfig, AMOCRateModel
@@ -18,13 +21,14 @@ from .rate.amoc import AMOCRateConfig, AMOCRateModel
 
 class SystemType(Enum):
     """Types of tipping mechanisms."""
+
     BIFURCATION = "bifurcation"
     RATE = "rate"
 
 
 class SystemSpec:
     """Unified specification for a tipping point system."""
-    
+
     def __init__(
         self,
         name: str,
@@ -44,13 +48,13 @@ class SystemSpec:
         self.bifurcation_system = bifurcation_system
         self.rate_system = rate_system
         self.config_kwargs = config_kwargs or {}
-    
+
     def default_config(self) -> Any:
         """Create default configuration for this system."""
         if self.config_cls is None:
             raise ValueError(f"System '{self.name}' does not have a config class")
         return self.config_cls(**self.config_kwargs)
-    
+
     def create_model(self, config: Optional[Any] = None) -> BoxModel:
         """Create model instance for this system."""
         if self.model_cls is None:
@@ -100,7 +104,6 @@ SYSTEM_REGISTRY: Dict[str, SystemSpec] = {
         model_cls=AMOCRateModel,
         description="AMOC 2-box model (rate-induced)",
     ),
-
     # Semi-real bifurcation systems (for validation)
     "b_harvesting": SystemSpec(
         name="b_harvesting",
@@ -110,7 +113,6 @@ SYSTEM_REGISTRY: Dict[str, SystemSpec] = {
         model_cls=MayHarvestingModel,
         description="May's harvesting model (semi-real bifurcation)",
     ),
-    
     # Rosenzweig-MacArthur consumer-resource model (Bury et al. 2021)
     # Supports both transcritical and Hopf bifurcations
     "b_rosenzweig_macarthur_tc": SystemSpec(
@@ -131,7 +133,6 @@ SYSTEM_REGISTRY: Dict[str, SystemSpec] = {
         description="Rosenzweig-MacArthur consumer-resource model (Hopf bifurcation)",
         config_kwargs={"bifurcation_type": "hopf"},
     ),
-
     # SEIRx behaviour–disease model (Bury et al. 2021) — transcritical bifurcation
     "b_seirx_tc": SystemSpec(
         name="b_seirx_tc",
@@ -141,7 +142,6 @@ SYSTEM_REGISTRY: Dict[str, SystemSpec] = {
         model_cls=SEIRxModel,
         description="SEIRx disease dynamics with vaccinator behaviour (transcritical bifurcation)",
     ),
-
     # AMOC 2-box model (Ritchie et al. 2023; Alkhayuon et al. 2019) — bifurcation-induced
     "b_amoc": SystemSpec(
         name="b_amoc",
@@ -158,12 +158,12 @@ def normalize_system_name(name: str) -> str:
     """Resolve a registered name or the legacy ``rate`` alias."""
     if name in SYSTEM_REGISTRY:
         return name
-    
+
     legacy_map = {"rate": "r_bautin"}
 
     if name in legacy_map:
         return legacy_map[name]
-    
+
     raise ValueError(
         f"Unknown system name: {name}. "
         f"Available systems: {list(SYSTEM_REGISTRY.keys())}. "

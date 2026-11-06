@@ -25,6 +25,9 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 
+[project.optional-dependencies]
+docs = ["sphinx>=7,<9"]
+
 [tool.setuptools.packages.find]
 include = ["tipbox*"]
 
