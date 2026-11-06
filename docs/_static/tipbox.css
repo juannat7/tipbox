@@ -13,5 +13,15 @@ table.parameter-table td:first-child { font-family: var(--font-stack--monospace)
 table.parameter-table p { line-height: 1.5; }
 table.contract-table td { overflow-wrap: anywhere; }
 @media (max-width: 48rem) {
+  h1 { font-size: 1.9rem; line-height: 1.15; }
   table.parameter-table { min-width: 36rem; }
+}
+
+.sidebar-repository { display: block; margin: -.5rem 1rem .75rem; font-size: .875rem; }
+figure figcaption p { font-size: .85rem; line-height: 1.5; color: var(--color-foreground-secondary); }
+table.catalog-table { width: 100%; table-layout: fixed; font-size: .9rem; }
+table.catalog-table td, table.catalog-table th { vertical-align: top; overflow-wrap: anywhere; }
+table.catalog-table p { line-height: 1.5; }
+@media (max-width: 48rem) {
+  table.catalog-table { min-width: 34rem; }
 }

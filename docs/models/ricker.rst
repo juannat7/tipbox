@@ -6,12 +6,24 @@ coordinates. It is a reusable simulation component for population-decline
 studies such as the Daphnia sim-to-real case discussed in :doc:`../sim_to_real`.
 Its defaults are illustrative; they are not fitted Daphnia coefficients.
 
+Usage
+-----
+
 .. code-block:: python
 
    from tipbox.models import Ricker
 
-   result = Ricker(density_dependence=0.002).make_trajectory(500, noise=1, seed=42)
+   model = Ricker()
+   result = model.make_trajectory(n=600, noise=1.0, seed=42)
    population = result.trajectory[:, 0]
+
+.. figure:: ../_static/figures/b_ricker.png
+   :alt: Population under declining log growth. Dashed lines mark zero log growth, not an observed extinction.
+
+   Population under declining log growth. Dashed lines mark zero log growth, not an observed extinction.
+
+``n`` counts sampled observations. See :doc:`../usage` for integration,
+sampling, noise, and custom-forcing controls.
 
 Equations and coordinates
 -------------------------

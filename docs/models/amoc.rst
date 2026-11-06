@@ -3,6 +3,43 @@ Atlantic meridional overturning circulation
 
 ``b_amoc`` and ``r_amoc`` · ``tipbox.models.AMOC`` and ``AMOCRate``
 
+Usage
+-----
+
+.. code-block:: python
+
+   from tipbox.models import AMOC
+
+   model = AMOC()
+   result = model.make_trajectory(n=1041, noise=0.01, seed=42)
+   transport = result.trajectory[:, 0]
+
+.. figure:: ../_static/figures/b_amoc.png
+   :alt: Overturning strength under increasing freshwater input. Dashed lines mark the calibrated fold.
+
+   Overturning strength under increasing freshwater input. Dashed lines mark the calibrated fold.
+
+For a rate-induced scenario, use ``AMOCRate``:
+
+.. code-block:: python
+
+   from tipbox.models import AMOCRate
+
+   model = AMOCRate()
+   result = model.make_trajectory(n=1142, noise=0.01, seed=42)
+   transport = result.trajectory[:, 0]
+
+.. figure:: ../_static/figures/r_amoc.png
+   :alt: Overturning strength during rapid hosing. The reference at time zero follows a collapse-outcome check; it is not a fold crossing.
+
+   Overturning strength during rapid hosing. The reference at time zero follows a collapse-outcome check; it is not a fold crossing.
+
+``n`` counts sampled observations. See :doc:`../usage` for integration,
+sampling, noise, and custom-forcing controls.
+
+Equations and forcing
+---------------------
+
 Both classes accept a nested ``AMOCPhysics`` configuration. Table names such
 as ``physics.K_N`` identify fields on that object:
 

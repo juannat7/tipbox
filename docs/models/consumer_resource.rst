@@ -4,12 +4,43 @@ Rosenzweig–MacArthur consumer-resource model
 ``b_rosenzweig_macarthur_tc`` and ``b_rosenzweig_macarthur_hopf`` ·
 ``tipbox.models.RosenzweigMacArthur``
 
+Usage
+-----
+
 .. code-block:: python
 
    from tipbox.models import RosenzweigMacArthur
 
-   invasion = RosenzweigMacArthur(bifurcation_type="transcritical")
-   oscillation = RosenzweigMacArthur(bifurcation_type="hopf")
+   model = RosenzweigMacArthur(bifurcation_type="transcritical")
+   result = model.make_trajectory(
+       n=89951, dt_sample=0.02, noise=1.0, seed=42,
+   )
+   resource, consumer = result.trajectory.T
+
+.. figure:: ../_static/figures/b_rosenzweig_macarthur_tc.png
+   :alt: Resource and consumer populations. Dashed lines mark the transcritical threshold.
+
+   Resource and consumer populations. Dashed lines mark the transcritical threshold.
+
+Select ``"hopf"`` for the oscillatory scenario:
+
+.. code-block:: python
+
+   model = RosenzweigMacArthur(bifurcation_type="hopf")
+   result = model.make_trajectory(
+       n=89951, dt_sample=0.02, noise=1.0, seed=42,
+   )
+
+.. figure:: ../_static/figures/b_rosenzweig_macarthur_hopf.png
+   :alt: Resource and consumer over 20 time units around the Hopf threshold. The parameter strip shows the full schedule and shades the displayed interval.
+
+   Resource and consumer over 20 time units around the Hopf threshold. The parameter strip shows the full schedule and shades the displayed interval.
+
+``n`` counts sampled observations. See :doc:`../usage` for integration,
+sampling, noise, and custom-forcing controls.
+
+Equations and forcing
+---------------------
 
 Resource :math:`x` and consumer :math:`y` obey
 
@@ -46,15 +77,13 @@ but the default simulation protocols differ.
 Markers are continuous-system thresholds. At finite Euler–Maruyama step sizes,
 numerical oscillation onset can shift; refine ``dt`` when studying a Hopf onset.
 
-Transcritical defaults
-----------------------
+Parameters and defaults
+-----------------------
+
+Both modes share these constructor defaults. ``bifurcation_type`` selects the
+``a_transcritical_*`` or ``a_hopf_*`` forcing fields and analytic threshold.
 
 .. model-parameters:: b_rosenzweig_macarthur_tc
-
-Hopf defaults
--------------
-
-.. model-parameters:: b_rosenzweig_macarthur_hopf
 
 Reference: `Rosenzweig and MacArthur (1963)
 <https://doi.org/10.1086/282272>`_; benchmark parameterization follows

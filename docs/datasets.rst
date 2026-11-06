@@ -1,5 +1,39 @@
-Empirical records
-=================
+Empirical observations
+======================
+
+The :doc:`system catalog <systems>` lists all model classes and observation loaders.
+
+Use a system-named class, then call ``load()``:
+
+.. code-block:: python
+
+   from tipbox.datasets import Microcosm, Paleoclimate
+
+   microcosm = Microcosm().load()       # Original M1 and M2 chemostats.
+   climate = Paleoclimate().load()     # CaCO3 and signed geological ages.
+   print(climate.time.shape, climate.observations.shape)
+
+.. list-table:: Observation classes
+   :header-rows: 1
+   :widths: 38 62
+   :class: catalog-table
+
+   * - Class
+     - Record
+   * - ``Microcosm``
+     - Original Veraart et al. (2012) chemostats, M1 and M2
+   * - ``VoiceOnset``
+     - Subglottal pressure
+   * - ``CellularATP``
+     - Fluorescence ratio; unresolved physical time scale
+   * - ``Paleoclimate``
+     - Greenhouse Earth CaCO3
+   * - ``ElectricalBlackout``
+     - Electrical frequency
+
+All classes are imported from ``tipbox.datasets``. ``load()`` accepts the same
+cache and offline controls as the corresponding function below. Functional
+loaders, including ``load_veraart2012``, remain available.
 
 TipBox loads the five empirical cases used in
 `KEWS <https://github.com/juannat7/kews/tree/main/experiments/empirical>`_. They
@@ -11,7 +45,7 @@ Coupled GISS AMOC is outside this initial collection.
 
 .. code-block:: python
 
-   from tipbox.datasets import get_empirical_info, list_empirical, load_empirical
+   from tipbox.datasets import VoiceOnset, get_empirical_info, list_empirical
 
    print(list_empirical())
    print(get_empirical_info("voice"))  # Inspect reference settings offline.
@@ -130,11 +164,11 @@ context, and score the specified trend interval. Voice has regular timestamps:
 
 .. code-block:: python
 
-   from tipbox.datasets import load_empirical
+   from tipbox.datasets import VoiceOnset
    from tipbox.indicators import rolling_ar1, rolling_variance
    from tipbox.metrics import kendall_tau
 
-   record = load_empirical("voice")
+   record = VoiceOnset().load()
    metadata = record.metadata
    before = record.time < metadata["transition_time"]
    time = record.time[before]
@@ -164,7 +198,7 @@ lagged pairs across separate recoveries:
 
 .. code-block:: python
 
-   from tipbox.datasets import load_empirical
+   from tipbox.datasets import VoiceOnset
    from tipbox.indicators import rolling_variance
 
    record = load_empirical("microcosm")
@@ -184,17 +218,17 @@ than a correction silently performed by TipBox.
 Veraart et al. (2012)
 ---------------------
 
-``load_veraart2012`` reads the full-precision Veraart et al. (2012) deposit,
+``Microcosm().load()`` reads the full-precision Veraart et al. (2012) deposit,
 `doi:10.17026/dans-ztg-93aw <https://doi.org/10.17026/dans-ztg-93aw>`_. It
 retains full-precision times and both measured chemostats, ``M1`` and ``M2``.
-``load_microcosm_original`` remains an alias; ``load_empirical("microcosm")``
-loads the rounded, single-chemostat archive copy instead:
+``load_veraart2012`` and ``load_microcosm_original`` read the same source.
+``load_empirical("microcosm")`` loads the rounded, single-chemostat archive copy instead:
 
 .. code-block:: python
 
-   from tipbox.datasets import load_veraart2012
+   from tipbox.datasets import Microcosm
 
-   record = load_veraart2012()
+   record = Microcosm().load()
    time = record.time                         # (7914,), days
    m1, m2 = record.observations.T             # light attenuation, m^-1
    print(record.metadata["sampling_by_observable"])
@@ -265,6 +299,25 @@ the Zenodo record also supplies MD5 ``0e7977de28d1f22f33da38325a8c8a43``.
 
 API
 ---
+
+.. autoclass:: tipbox.datasets.Microcosm
+   :members: load
+
+.. autoclass:: tipbox.datasets.VoiceOnset
+   :inherited-members: load
+
+.. autoclass:: tipbox.datasets.CellularATP
+   :inherited-members: load
+
+.. autoclass:: tipbox.datasets.Paleoclimate
+   :inherited-members: load
+
+.. autoclass:: tipbox.datasets.ElectricalBlackout
+   :inherited-members: load
+
+Functional loaders
+~~~~~~~~~~~~~~~~~~
+
 
 .. automodule:: tipbox.datasets.empirical
    :members: EmpiricalSpec, EmpiricalRecord, list_empirical, get_empirical_info, load_empirical

@@ -3,7 +3,7 @@ TipBox
 
 TipBox collects stochastic tipping models, empirical observations, and simulation
 components for sim-to-real studies. It covers bifurcation- and rate-induced
-tipping, classical warning indicators, and trajectory-level ROC/AUROC.
+tipping, early-warning indicators, and trajectory-level ROC/AUROC.
 
 .. code-block:: python
 
@@ -27,6 +27,7 @@ reference event. Defaults are generated from the live configurations.
    :maxdepth: 1
    :caption: Reference
 
+   systems
    models/index
    indicators
    benchmarks
@@ -40,8 +41,10 @@ reference event. Defaults are generated from the live configurations.
    figures
    sim_to_real
    compatibility
+   citations
 
-Research using earlier versions:
+Research using TipBox:
 `KEWS <https://arxiv.org/abs/2608.14716>`_ and
 `TipPFN <https://arxiv.org/abs/2605.12308>`_.
+See :doc:`citations` for BibTeX.
 A `plain-text documentation index <llms.txt>`_ is available for coding assistants.

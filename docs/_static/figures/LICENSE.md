@@ -1,11 +1,12 @@
 # Figure attribution and licenses
 
 `overview.{png,svg,pdf}` and `roc.{png,svg,pdf}` contain only TipBox simulations
-and are covered by the repository's MIT license. `examples/figures.py` and
+and are covered by the repository's MIT license. The model-page previews
+(`b_*.{png,svg,pdf}` and `r_*.{png,svg,pdf}`) use the same simulation-only terms. `examples/figures.py` and
 `manifest.json` are also covered by that license.
 
 `trajectories.{png,svg,pdf}` and `indicators.{png,svg,pdf}` include a visualization of the original chemostat
-observations and is distributed under **CC BY-NC 4.0**:
+observations and are distributed under **CC BY-NC 4.0**:
 https://creativecommons.org/licenses/by-nc/4.0/
 
 Source: Veraart et al. (2012), *Recovery rates reflect distance to a tipping

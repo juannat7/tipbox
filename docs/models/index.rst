@@ -1,6 +1,9 @@
 Model collection
 ================
 
+The :doc:`master catalog <../systems>` groups models, sim-to-real components,
+and empirical observations.
+
 Choose a model by its physical observable and reference event. The eleven
 registered configurations cover ten classes; Rosenzweig–MacArthur supports
 transcritical and Hopf scenarios. Import classes from ``tipbox.models``.
@@ -55,7 +58,7 @@ transcritical and Hopf scenarios. Import classes from ``tipbox.models``.
      - Pressure, scaled velocity, phase-plane amplitude
      - Linear growth reaches zero
 
-Each page states its equation, time unit, noise convention, initial-state rule,
+Each page starts with a runnable call and its trajectory, then states its equation, time unit, noise convention, initial-state rule,
 and numerical constraints. Parameter tables come from the live typed
 configurations. “Automatic” marks an override calculated from other coefficients;
 parameters for another selected mode are identified in their descriptions.

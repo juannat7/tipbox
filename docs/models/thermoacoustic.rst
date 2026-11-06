@@ -6,14 +6,27 @@ Thermoacoustic subcritical Hopf oscillator
 calibration and query preprocessing are separate steps described in
 :doc:`../sim_to_real`.
 
+Usage
+-----
+
 .. code-block:: python
 
    from tipbox.models import Thermoacoustic
 
    model = Thermoacoustic()
-   result = model.make_trajectory(noise=1, seed=42)
+   result = model.make_trajectory(
+       n=11001, dt_sample=0.0001, noise=1.0, seed=42,
+   )
    pressure = result.trajectory[:, 0]
    amplitude = result.trajectory[:, 2]
+
+.. figure:: ../_static/figures/b_thermoacoustic.png
+   :alt: Pressure and instantaneous phase-plane amplitude. Dashed lines mark the linear Hopf threshold; a noise-driven switch can occur earlier.
+
+   Pressure and instantaneous phase-plane amplitude. Dashed lines mark the linear Hopf threshold; a noise-driven switch can occur earlier.
+
+``n`` counts sampled observations. See :doc:`../usage` for integration,
+sampling, noise, and custom-forcing controls.
 
 Pressure equation
 -----------------

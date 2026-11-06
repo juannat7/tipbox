@@ -3,6 +3,28 @@ SEIRx disease and vaccination behaviour
 
 ``b_seirx_tc`` · ``tipbox.models.SEIRx``
 
+Usage
+-----
+
+.. code-block:: python
+
+   from tipbox.models import SEIRx
+
+   model = SEIRx()
+   result = model.make_trajectory(n=1800, noise=0.01, seed=42)
+   infectious, vaccinators = result.trajectory.T
+
+.. figure:: ../_static/figures/b_seirx_tc.png
+   :alt: Infectious population under changing vaccination risk. Dashed lines mark the behavioural threshold.
+
+   Infectious population under changing vaccination risk. Dashed lines mark the behavioural threshold.
+
+``n`` counts sampled observations. See :doc:`../usage` for integration,
+sampling, noise, and custom-forcing controls.
+
+Equations and forcing
+---------------------
+
 The physical state is susceptible :math:`S`, exposed :math:`E`, infectious
 :math:`I`, and vaccinator fraction :math:`x`. Recovered individuals are implicit
 in the total population :math:`N`:
@@ -29,6 +51,9 @@ floor seeds tiny exposed and infectious populations even with ``noise=0``;
 the implemented disease-free boundary is therefore approximate.
 Observations contain :math:`(I,x)`; all four sampled physical coordinates remain
 in result metadata.
+
+Parameters and defaults
+-----------------------
 
 .. model-parameters:: b_seirx_tc
 

@@ -1,0 +1,24 @@
+Citations
+=========
+
+Research using TipBox
+---------------------
+
+* **[In revision]** Nathaniel et al. (2026),
+  `Koopman early warning signals for bifurcation and rate-induced tipping
+  <https://arxiv.org/abs/2608.14716>`_.
+  Code: `KEWS <https://github.com/juannat7/kews>`_.
+* **[NeurIPS 2026]** Sevinchan, Nathaniel, et al. (2026),
+  `In-context learning to predict critical transitions in dynamical systems
+  <https://arxiv.org/abs/2605.12308>`_.
+
+Cite the original model and data sources for the systems you use; their
+reference pages list the relevant works.
+
+BibTeX
+------
+
+:download:`Download both entries <../references.bib>`.
+
+.. literalinclude:: ../references.bib
+   :language: bibtex

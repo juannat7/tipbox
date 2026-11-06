@@ -23,7 +23,7 @@ import scipy
 from matplotlib.lines import Line2D
 
 import tipbox
-from tipbox.datasets import generate_dataset, load_veraart2012
+from tipbox.datasets import Microcosm, generate_dataset
 from tipbox.indicators import rolling_ar1, rolling_variance
 from tipbox.metrics import ensemble_roc, plot_roc
 from tipbox.models import (
@@ -40,10 +40,10 @@ from tipbox.models import (
 )
 
 INK = "#222222"
-BLUE = "#356f9c"
-ORANGE = "#ac592b"
-RED = "#9c443b"
-GRAY = "#b3b3b3"
+BLUE = "#176b78"
+ORANGE = "#b7653b"
+RED = "#a34a43"
+GRAY = "#b8babd"
 STYLE = {
     "font.family": "DejaVu Sans",
     "font.size": 9,
@@ -52,6 +52,11 @@ STYLE = {
     "axes.linewidth": 0.6,
     "axes.titlesize": 10,
     "axes.labelsize": 9,
+    "axes.labelcolor": INK,
+    "axes.edgecolor": "#666666",
+    "text.color": INK,
+    "xtick.color": INK,
+    "ytick.color": INK,
     "axes.prop_cycle": mpl.cycler(color=[BLUE, ORANGE]),
     "xtick.labelsize": 8,
     "ytick.labelsize": 8,
@@ -183,13 +188,13 @@ def _clean(ax):
     ax.margins(x=0.02)
 
 
-def gallery(seed):
+def gallery(runs):
     fig, axes = plt.subplots(4, 3, figsize=(12.8, 10.2), layout="constrained")
     manifest = {}
     for index, (name, model, title, arguments, horizontal, vertical) in enumerate(
         GALLERY
     ):
-        result, selection = _tipping_example(model, arguments, seed)
+        result, selection = runs[name]
         observations = np.asarray(result.trajectory)
         coordinates = {"forcing": result.param_values, "time": result.time}
         names = {"forcing": model.forcing_name, "time": f"time ({model.time_unit})"}
@@ -223,7 +228,7 @@ def gallery(seed):
             start, stop = VIEW_WINDOWS[name]
             valid &= (time >= time[marker] + start) & (time <= time[marker] + stop)
         ax = axes.flat[index]
-        ax.plot(x[valid], y[valid], color=BLUE, linewidth=1.15)
+        ax.plot(x[valid], y[valid], color=BLUE, linewidth=1.35)
         ax.plot(
             x[valid][0],
             y[valid][0],
@@ -275,6 +280,83 @@ def gallery(seed):
     labels.append("Critical parameter")
     axes.flat[-1].legend(handles, labels, loc="upper left", fontsize=9)
     return fig, manifest
+
+
+def model_preview(name, model, result):
+    """Time-domain companion to a phase portrait, using the same simulation."""
+    time = np.asarray(result.time)
+    values = np.asarray(result.trajectory)
+    control = np.asarray(result.param_values)
+    marker = model.locate_transition(values, False, param_values=control, time=time)
+    columns = {
+        "b_rosenzweig_macarthur_tc": (0, 1),
+        "b_rosenzweig_macarthur_hopf": (0, 1),
+        "r_bautin": (0, 1),
+        "r_compost_bomb": (1,),
+        "b_thermoacoustic": (0, 2),
+    }.get(name, (0,))
+    display = np.isfinite(values[:, columns]).all(axis=1)
+    if name == "r_saddle_node":
+        display &= (time >= -8) & (values[:, 0] <= 5)
+    if name == "r_bautin":
+        display &= np.linalg.norm(values[:, :2], axis=1) <= model.config.tip_threshold
+    if name == "r_compost_bomb":
+        display &= values[:, 1] <= 150
+    if name == "b_rosenzweig_macarthur_hopf":
+        display &= (time >= time[marker] - 10) & (time <= time[marker] + 10)
+    fig, (parameter, ax) = plt.subplots(
+        2,
+        1,
+        figsize=(6.8, 3.4),
+        height_ratios=(1, 3),
+        layout="constrained",
+    )
+    for column in columns:
+        ax.plot(
+            time[display],
+            values[display, column],
+            linewidth=1.1,
+            label=model.observable_names[column].replace("_", " "),
+        )
+    ax.axvline(time[marker], color=RED, linestyle="--", linewidth=0.9)
+    ax.set(
+        xlabel=f"Time ({model.time_unit})",
+        ylabel=" / ".join(
+            model.observable_names[column].replace("_", " ") for column in columns
+        ),
+    )
+    if len(columns) > 1:
+        ax.set_ylabel("Population" if name.startswith("b_rosenzweig") else "State")
+        ax.legend(
+            loc="lower left", bbox_to_anchor=(0, 1), ncol=len(columns), borderaxespad=0
+        )
+    ax.locator_params(nbins=5)
+    _clean(ax)
+    parameter.plot(time, control, color=INK, linewidth=1)
+    critical = model.critical_parameter
+    if critical is not None:
+        parameter.axhline(float(critical), color=RED, linestyle="--", linewidth=0.8)
+    parameter.axvline(time[marker], color=RED, linestyle="--", linewidth=0.8)
+    parameter.set_ylabel("Parameter")
+    parameter.set_title(model.forcing_name.replace("_", " "), loc="left", fontsize=9)
+    parameter.locator_params(axis="y", nbins=2)
+    ax.set_xlim(float(time[display][0]), float(time[display][-1]))
+    if name == "b_rosenzweig_macarthur_hopf":
+        parameter.axvspan(time[display][0], time[display][-1], color=BLUE, alpha=0.12)
+    else:
+        parameter.set_xlim(ax.get_xlim())
+    parameter.tick_params(
+        labelbottom=name == "b_rosenzweig_macarthur_hopf", labelsize=7
+    )
+    _clean(parameter)
+    return fig, {
+        "observed_columns": list(columns),
+        "display_time_interval": [float(time[display][0]), float(time[display][-1])],
+        "n_displayed": int(display.sum()),
+        "reference_time": float(time[marker]),
+        "reference_line": "model reference event, not an estimated jump time",
+        "simulation": f"overview.{name}",
+    }
 
 
 def example_data(seed, record):
@@ -334,7 +416,7 @@ def example_data(seed, record):
     return simulations, record, metadata
 
 
-RECOVERY_COLORS = ("#0072b2", "#d55e00", "#009e73", "#a05d8b", "#a66b00", "#46566b")
+RECOVERY_COLORS = (BLUE, ORANGE, "#647d49", "#8b6b8f", "#9d852d", "#596579")
 RECOVERY_MARKERS = ("o", "s", "^", "D", "v", "X")
 
 
@@ -379,7 +461,7 @@ def trajectory_examples(examples):
         )
     axes[2].axvline(27, color=RED, linestyle="--", linewidth=0.8)
     axes[2].set(
-        title="(c) Veraart2012 · M1",
+        title="(c) Microcosm · M1",
         xlabel="Time (day)",
         ylabel=r"Light attenuation (m$^{-1}$)",
         xlim=(0, 29),
@@ -431,7 +513,7 @@ def indicator_examples(examples):
                 linewidth=1.1,
                 label=label,
             )
-    axes[0, 2].set(title="(c) Veraart2012 · M1", ylabel="AR1 slope")
+    axes[0, 2].set(title="(c) Microcosm · M1", ylabel="AR1 slope")
     axes[1, 2].set(xlabel="Time within recovery (day)", ylabel=r"Variance (m$^{-2}$)")
     fig.legend(
         *axes[0, 2].get_legend_handles_labels(),
@@ -452,70 +534,63 @@ def indicator_examples(examples):
 
 
 def roc_examples(seed, n_per_class):
-    fig, axes = plt.subplots(1, 2, figsize=(8.0, 3.8), layout="constrained")
+    fig, ax = plt.subplots(figsize=(4.2, 3.6), layout="constrained")
     manifest = {}
-    for ax, model, arguments, title in (
-        (
-            axes[0],
-            MayHarvesting(),
-            {"n": 1000, "noise": 1.0},
-            "(a) May harvesting",
-        ),
-        (axes[1], SaddleNode(epsilon=1.4), {"noise": 0.01}, "(b) Saddle-node"),
-    ):
-        data = generate_dataset(
-            model,
-            num_timesteps=300,
-            n_tipping=n_per_class,
-            n_null=n_per_class,
-            lead_steps=1,
-            seed=seed,
-            **arguments,
-        )
-        indicators = {
-            "AR1": [
-                rolling_ar1(x, window=100, detrend="linear")
-                for x in data.observations[:, :, 0]
-            ],
-            "Variance": [
-                rolling_variance(x, window=100, detrend="linear")
-                for x in data.observations[:, :, 0]
-            ],
-        }
-        result = ensemble_roc(data.labels, indicators)
-        plot_roc(result, ax=ax)
-        ax.set_title(title, loc="left", pad=12)
-        ax.legend(loc="lower right", fontsize=8)
-        _clean(ax)
-        leads = [metadata["lead_time"] for metadata in data.metadata]
-        manifest[type(model).__name__] = {
-            "parameters": model.get_parameters(),
-            "arguments": arguments,
-            "root_seed": seed,
-            "n_per_class": n_per_class,
-            "num_timesteps": 300,
-            "lead_steps": 1,
-            "physical_lead_min": float(min(leads)),
-            "physical_lead_max": float(max(leads)),
-            "window": 100,
-            "detrend": "linear",
-            "score": "Kendall tau-b, increasing direction declared for both indicators",
-            "accepted_seeds": [metadata["seed"] for metadata in data.metadata],
-            "attempts": [metadata["attempt"] for metadata in data.metadata],
-            "curves": {
-                name: {
-                    key: getattr(curve, key)
-                    for key in (
-                        "auroc",
-                        "n_valid",
-                        "n_missing",
-                        "n_positive",
-                        "n_negative",
-                    )
-                }
-                for name, curve in result.curves.items()
-            },
-        }
+    model = MayHarvesting()
+    arguments = {"n": 1000, "noise": 1.0}
+    data = generate_dataset(
+        model,
+        num_timesteps=300,
+        n_tipping=n_per_class,
+        n_null=n_per_class,
+        lead_steps=1,
+        seed=seed,
+        **arguments,
+    )
+    indicators = {
+        "AR1": [
+            rolling_ar1(x, window=100, detrend="linear")
+            for x in data.observations[:, :, 0]
+        ],
+        "Variance": [
+            rolling_variance(x, window=100, detrend="linear")
+            for x in data.observations[:, :, 0]
+        ],
+    }
+    result = ensemble_roc(data.labels, indicators)
+    plot_roc(result, ax=ax)
+    ax.set_title("May harvesting", loc="left", pad=12)
+    ax.legend(loc="lower right", fontsize=8)
+    _clean(ax)
+    leads = [metadata["lead_time"] for metadata in data.metadata]
+    manifest[type(model).__name__] = {
+        "parameters": model.get_parameters(),
+        "arguments": arguments,
+        "root_seed": seed,
+        "n_per_class": n_per_class,
+        "num_timesteps": 300,
+        "lead_steps": 1,
+        "physical_lead_min": float(min(leads)),
+        "physical_lead_max": float(max(leads)),
+        "window": 100,
+        "detrend": "linear",
+        "score": "Kendall tau-b, increasing direction declared for both indicators",
+        "accepted_seeds": [metadata["seed"] for metadata in data.metadata],
+        "attempts": [metadata["attempt"] for metadata in data.metadata],
+        "curves": {
+            name: {
+                key: getattr(curve, key)
+                for key in (
+                    "auroc",
+                    "n_valid",
+                    "n_missing",
+                    "n_positive",
+                    "n_negative",
+                )
+            }
+            for name, curve in result.curves.items()
+        },
+    }
     return fig, manifest
 
 
@@ -562,7 +637,7 @@ def main():
     if args.n_per_class < 1:
         parser.error("--n-per-class must be positive")
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    record = load_veraart2012(cache_dir=args.cache_dir, source_path=args.source_path)
+    record = Microcosm().load(cache_dir=args.cache_dir, source_path=args.source_path)
     manifest = {
         "versions": {
             "python": platform.python_version(),
@@ -582,9 +657,13 @@ def main():
         },
     }
     examples = example_data(args.seed, record)
+    runs = {
+        name: _tipping_example(model, arguments, args.seed)
+        for name, model, _, arguments, _, _ in GALLERY
+    }
     with mpl.rc_context(STYLE):
         for name, render in (
-            ("overview", partial(gallery, args.seed)),
+            ("overview", partial(gallery, runs)),
             ("trajectories", partial(trajectory_examples, examples)),
             ("indicators", partial(indicator_examples, examples)),
             ("roc", partial(roc_examples, args.seed, args.n_per_class)),
@@ -594,6 +673,11 @@ def main():
             _save(fig, name, args.output_dir, args.formats)
             manifest[name] = metadata
             print(f"Rendered {name}", flush=True)
+        manifest["model_previews"] = {}
+        for name, model, _, _, _, _ in GALLERY:
+            fig, metadata = model_preview(name, model, runs[name][0])
+            _save(fig, name, args.output_dir, args.formats)
+            manifest["model_previews"][name] = metadata
     (args.output_dir / "manifest.json").write_text(
         json.dumps(manifest, indent=2, allow_nan=False) + "\n"
     )

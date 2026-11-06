@@ -3,6 +3,28 @@ May harvesting
 
 ``b_harvesting`` · ``tipbox.models.MayHarvesting``
 
+Usage
+-----
+
+.. code-block:: python
+
+   from tipbox.models import MayHarvesting
+
+   model = MayHarvesting()
+   result = model.make_trajectory(n=1400, noise=1.0, seed=42)
+   biomass = result.trajectory[:, 0]
+
+.. figure:: ../_static/figures/b_harvesting.png
+   :alt: Biomass under increasing harvesting. Dashed lines mark the upper fold.
+
+   Biomass under increasing harvesting. Dashed lines mark the upper fold.
+
+``n`` counts sampled observations. See :doc:`../usage` for integration,
+sampling, noise, and custom-forcing controls.
+
+Equations and forcing
+---------------------
+
 The biomass :math:`x` follows logistic growth with saturating harvesting:
 
 .. math::
@@ -39,6 +61,9 @@ capped null ramp and sampled initial states without burn-in; that paper uses
 fixed null harvesting ``h=0.15`` and a 100-time-unit burn-in. These are different
 benchmark protocols. Supply constant ``forcing`` and a separate warm-up when
 reproducing that protocol.
+
+Parameters and defaults
+-----------------------
 
 .. model-parameters:: b_harvesting
 
