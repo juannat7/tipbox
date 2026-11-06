@@ -20,7 +20,8 @@ class TrajectoryResult:
     ``make_trajectory`` always returns observations shaped ``(n_time, n_observables)``.
     The historical ``generate`` interface retains each model's original shape.
     ``sigma`` is the standard deviation of an integration-step noise increment,
-    including the square root of the integration step.
+    including the square root of the integration step for continuous-time models.
+    Discrete maps report their per-update state-noise scale instead.
     """
 
     time: jax.Array
@@ -262,9 +263,35 @@ class BoxModel(ABC):
     ):
         """Use the model's integration kernel; return physical path and noise scale."""
 
-    @abstractmethod
-    def simulate(self, key, total_len, **kwargs):
-        """Historical model-specific simulator used by generate."""
+    def simulate(
+        self,
+        key,
+        total_len,
+        sigma_tilde=0.01,
+        null_simulation=False,
+        initial_state=None,
+        noise=None,
+        **kwargs,
+    ):
+        """Adapt new models to generate; historical models keep their overrides.
+
+        The JAX key deterministically supplies a local uint32 seed. ``total_len``
+        is an observation count, ``sigma_tilde`` is the noise multiplier, and
+        ``noise`` supplies standard innovations in the shared two-dimensional
+        layout. Remaining grid and forcing arguments follow make_trajectory.
+        This eager adapter
+        is not JAX-transformable; differentiable model kernels remain separate.
+        """
+        result = self.make_trajectory(
+            total_len,
+            seed=int(jax.random.bits(key, dtype=jnp.uint32)),
+            noise=sigma_tilde,
+            null_simulation=null_simulation,
+            initial_state=initial_state,
+            innovations=noise,
+            **kwargs,
+        )
+        return result.time, result.trajectory, result.param_values, result.sigma
 
     @abstractmethod
     def is_tipped(self, trajectory, **kwargs):

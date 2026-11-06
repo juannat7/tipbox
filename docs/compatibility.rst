@@ -6,6 +6,8 @@ The implementation before this refactor is preserved at
 random-polynomial generators ``b_fold``, ``b_hopf``, and ``b_transcritical`` and
 their short aliases have been removed. All nine named model configurations
 remain available.
+The Ricker map and thermoacoustic oscillator add two named simulation components;
+their source and calibration boundaries are documented in :doc:`sim_to_real`.
 
 The established import ``from tipbox.generate import generate`` continues to
 work, as does ``from tipbox import generate; generate.generate(...)``.

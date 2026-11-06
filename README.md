@@ -25,6 +25,8 @@ The named box models require no external continuation software. The former rando
 | `b_rosenzweig_macarthur_hopf` | Semi-real | Consumer-resource model (Hopf) | Bury et al. 2021 |
 | `b_seirx_tc` | Semi-real | SEIRx disease–vaccination behaviour (transcritical) | Bury et al. 2021 |
 | `b_amoc` | Semi-real | AMOC 2-box model (bifurcation-induced) | Ritchie et al. 2023; Alkhayuon et al. 2019 |
+| `b_ricker` | Discrete map | Density-dependent population map (growth crosses zero) | Ricker 1954 |
+| `b_thermoacoustic` | Oscillator | Thermoacoustic subcritical Hopf | Bonciolini et al. 2018 |
 
 ### Rate-Induced Tipping
 
@@ -88,6 +90,8 @@ print(record.metadata["sampling"])
 ```
 
 Five cases are available: `microcosm`, `voice`, `mitochondria`, `climate`, and `blackout`. Records retain their original time axes, missing readings, and source metadata. Data download once into a user cache and are not bundled. The [dataset reference](docs/datasets.rst) explains analysis intervals, offline use, citations, and the upstream data-use terms, which are separate from TipBox's MIT software license.
+
+`Ricker` and `Thermoacoustic` provide simulation components for the Daphnia and TAC sim-to-real cases. The [paired-case reference](docs/sim_to_real.rst) identifies original observations, event conventions, and calibration requirements. Their raw Dryad archives could not be accessed from the development environment; automatic observation parsers and the private TipPFN calibration are not included.
 
 ## Quickstart
 

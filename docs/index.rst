@@ -24,6 +24,7 @@ integration kernels and forcing conventions of its tipping-point models.
    indicators
    benchmarks
    datasets
+   sim_to_real
    api
    compatibility
 

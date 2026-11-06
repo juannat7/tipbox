@@ -23,7 +23,8 @@ Named models
 ------------
 
 Import from ``tipbox.models``: ``MayHarvesting``, ``RosenzweigMacArthur``,
-``SEIRx``, ``AMOC``, ``SaddleNode``, ``Bautin``, ``CompostBomb``, and ``AMOCRate``.
+``SEIRx``, ``AMOC``, ``SaddleNode``, ``Bautin``, ``CompostBomb``, ``AMOCRate``,
+``Ricker``, and ``Thermoacoustic``.
 The corresponding ``*Config`` classes and shared ``AMOCPhysics`` dataclass are
 also exported. Each model inherits the shared interface above. Full parameter
 tables are in :doc:`models/index`.

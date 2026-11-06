@@ -16,6 +16,8 @@ from .bifurcation.rosenzweig_macarthur import (
 )
 from .bifurcation.seirx import SEIRxConfig, SEIRxModel
 from .bifurcation.amoc import AMOCConfig, AMOCModel
+from .bifurcation.ricker import RickerConfig, RickerModel
+from .bifurcation.thermoacoustic import ThermoacousticConfig, ThermoacousticModel
 from .rate.amoc import AMOCRateConfig, AMOCRateModel
 
 
@@ -71,6 +73,22 @@ class SystemSpec:
 
 # System registry with full specifications
 SYSTEM_REGISTRY: Dict[str, SystemSpec] = {
+    "b_ricker": SystemSpec(
+        name="b_ricker",
+        system_type=SystemType.BIFURCATION,
+        bifurcation_system="ricker",
+        config_cls=RickerConfig,
+        model_cls=RickerModel,
+        description="Stochastic Ricker map with a declining log-growth rate",
+    ),
+    "b_thermoacoustic": SystemSpec(
+        name="b_thermoacoustic",
+        system_type=SystemType.BIFURCATION,
+        bifurcation_system="thermoacoustic",
+        config_cls=ThermoacousticConfig,
+        model_cls=ThermoacousticModel,
+        description="Thermoacoustic pressure oscillator with a subcritical Hopf bifurcation",
+    ),
     # Rate-induced systems
     "r_bautin": SystemSpec(
         name="r_bautin",

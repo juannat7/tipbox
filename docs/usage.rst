@@ -27,6 +27,8 @@ the configured ``t_end`` determines the interval. The integration step ``dt`` an
 output spacing ``dt_sample`` are distinct; output spacing must be an integer
 multiple of the integration step. AMOC defaults to ``dt_inner`` for integration
 and its configuration's ``dt`` for output sampling.
+For the discrete Ricker map, ``dt`` is the time represented by one update;
+changing it is not an ODE accuracy refinement.
 
 Ecological bifurcation forcing is normalized to the simulated duration. Changing
 ``n`` at fixed sampling interval changes its ramp rate. Rate-induced forcing
@@ -50,9 +52,9 @@ Noise and initial states
 The argument ``noise`` has the historical ``sigma_tilde`` meaning. It multiplies
 the configured diffusion amplitudes, except in the saddle-node model, where it
 is a diffusion intensity and the amplitude is ``sqrt(2*noise)``. The model pages
-state the exact stochastic equations. ``result.sigma`` includes ``sqrt(dt)`` and
-therefore reports an integration-step scale rather than a continuous-time
-amplitude.
+state the exact stochastic equations. For continuous-time models,
+``result.sigma`` includes ``sqrt(dt)`` and reports an integration-step scale.
+For Ricker it is the per-update Gaussian log-growth scale, without ``sqrt(dt)``.
 
 ``noise=0`` disables process noise. An initial-state sampler can still depend on
 the seed; provide ``initial_state`` for a deterministic initial condition. The
@@ -76,6 +78,9 @@ states. Scalar models have one observed column.
 The sampled physical state is retained in ``result.metadata['state_trajectory']``.
 Initial states and innovations refer to physical dimensions, which can differ
 from the number of output columns.
+Ricker's state and initial-state override are log population, with population
+as the observable. Thermoacoustic state is pressure and scaled velocity, with
+their phase-plane amplitude included as a third observation.
 
 Transition markers and numerical methods
 ----------------------------------------
@@ -87,16 +92,18 @@ Rosenzweig–MacArthur and SEIRx; an explicit marker overrides that calculation.
 AMOC's fold marker is calibrated and must be reconsidered when changing its
 physical parameters.
 
-The ecological models and normal forms use Euler–Maruyama. Compost updates
-carbon before evaluating that step's temperature drift. AMOC uses RK4 drift with
-true forcing midpoints and then adds the diffusion increment. Population
-projections and numerical constraints are described on each model page.
+The continuous-time ecological models and normal forms use Euler–Maruyama.
+Compost updates carbon before evaluating that step's temperature drift. AMOC
+and the thermoacoustic oscillator use RK4 drift with true forcing midpoints,
+then add their diffusion increments. Ricker uses discrete map updates in log
+coordinates. Projections and numerical constraints are described on each model page.
 
 ``make_trajectory`` performs eager input validation and is not a JAX-transformable
-function. The underlying kernels remain JAX implementations. Use the low-level
-``simulate`` methods for differentiable workflows, as demonstrated in the
-parameter-sensitivity notebook; supported differentiation depends on the model
-and its parameterization.
+function. The underlying kernels remain JAX implementations. Historical models'
+low-level ``simulate`` methods support model-dependent differentiable workflows,
+as demonstrated in the parameter-sensitivity notebook. For Ricker and the
+thermoacoustic oscillator, ``simulate`` is an eager adapter to the shared method;
+derivatives require their underlying integration kernels.
 
 Generate benchmark segments
 ---------------------------
