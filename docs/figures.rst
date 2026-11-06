@@ -27,6 +27,13 @@ Model collection
    :target: _static/figures/overview.png
    :alt: Eleven simulated model trajectories in physical coordinates, with labeled axes.
 
+Parameter insets show the full forcing schedule, the critical level when
+defined, and a shaded display interval. The Rosenzweig–MacArthur panels use
+0.02-unit sampling and short intervals around their reference; the thermoacoustic
+phase portrait also uses a short reference-centered interval. Exact bounds
+are recorded in the manifest. Rate models without a critical forcing level
+have no horizontal threshold line.
+
 Each curve is the first accepted positive from root seed 42 with 300
 pre-reference observations available. Open/filled dots mark the displayed
 start/end. Coordinates keep their physical scale. Escaped saddle-node states

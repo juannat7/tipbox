@@ -8,7 +8,7 @@
   },
   "jax_backend": "cpu",
   "jax_enable_x64": false,
-  "script_sha256": "1ab26c62a4bd1b258b4efb3876ef15f1463c7c4f75a32a118136410fedbe7288",
+  "script_sha256": "24568192afb822281632f4b705839efeea85318ff72a5c2c101ad18860210af3",
   "package_sources_sha256": {
     "__init__.py": "3c6b12ed5bfaa65508d5ed1731a5ed26dad3a94a83ccde96ec2d916d5f0062eb",
     "_amoc.py": "3aa4751ec838a7d6041c782a9dfd9a5fbfb176b3efe08e1acb7c522f0e635add",
@@ -83,7 +83,15 @@
       "vertical": "biomass",
       "display_scaling": "physical coordinates; no min/max normalization",
       "display_filter": "finite points; saddle-node |state|<=5; Bautin radius<=tip_threshold; compost temperature<=150",
-      "n_displayed": 1400
+      "n_displayed": 1400,
+      "display_time_interval": [
+        0.0,
+        1399.0
+      ],
+      "reference_index": 1171,
+      "reference_time": 1171.0,
+      "critical_parameter": 0.2604365348815918,
+      "parameter_inset": "full forcing schedule; shading marks displayed interval; dashed line is the critical parameter when defined"
     },
     "b_rosenzweig_macarthur_tc": {
       "model": "RosenzweigMacArthurModel",
@@ -109,12 +117,13 @@
         "t_end": 100.0
       },
       "arguments": {
-        "n": 1800,
+        "n": 89951,
+        "dt_sample": 0.02,
         "noise": 1.0
       },
       "seed": 42,
       "dt": 0.01,
-      "dt_sample": 1.0,
+      "dt_sample": 0.02,
       "initial_state": [
         1.4376566410064697,
         0.02893168292939663
@@ -124,7 +133,7 @@
         "consumer"
       ],
       "time_unit": "model time",
-      "n_observations": 1800,
+      "n_observations": 89951,
       "time_start": 0.0,
       "time_end": 1799.0,
       "selection": "first accepted tipping trajectory from generate_dataset",
@@ -135,7 +144,15 @@
       "vertical": "consumer",
       "display_scaling": "physical coordinates; no min/max normalization",
       "display_filter": "finite points; saddle-node |state|<=5; Bautin radius<=tip_threshold; compost temperature<=150",
-      "n_displayed": 1800
+      "n_displayed": 76,
+      "display_time_interval": [
+        1586.8599853515625,
+        1588.3599853515625
+      ],
+      "reference_index": 79368,
+      "reference_time": 1587.3599853515625,
+      "critical_parameter": 5.88235294117647,
+      "parameter_inset": "full forcing schedule; shading marks displayed interval; dashed line is the critical parameter when defined"
     },
     "b_rosenzweig_macarthur_hopf": {
       "model": "RosenzweigMacArthurModel",
@@ -161,12 +178,13 @@
         "t_end": 100.0
       },
       "arguments": {
-        "n": 1800,
+        "n": 89951,
+        "dt_sample": 0.02,
         "noise": 1.0
       },
       "seed": 42,
       "dt": 0.01,
-      "dt_sample": 1.0,
+      "dt_sample": 0.02,
       "initial_state": [
         0.7961273193359375,
         0.37277016043663025
@@ -176,7 +194,7 @@
         "consumer"
       ],
       "time_unit": "model time",
-      "n_observations": 1800,
+      "n_observations": 89951,
       "time_start": 0.0,
       "time_end": 1799.0,
       "selection": "first accepted tipping trajectory from generate_dataset",
@@ -187,7 +205,15 @@
       "vertical": "consumer",
       "display_scaling": "physical coordinates; no min/max normalization",
       "display_filter": "finite points; saddle-node |state|<=5; Bautin radius<=tip_threshold; compost temperature<=150",
-      "n_displayed": 1800
+      "n_displayed": 301,
+      "display_time_interval": [
+        1203.760009765625,
+        1209.760009765625
+      ],
+      "reference_index": 60288,
+      "reference_time": 1205.760009765625,
+      "critical_parameter": 15.686274509803921,
+      "parameter_inset": "full forcing schedule; shading marks displayed interval; dashed line is the critical parameter when defined"
     },
     "b_seirx_tc": {
       "model": "SEIRxModel",
@@ -240,7 +266,15 @@
       "vertical": "vaccinator_fraction",
       "display_scaling": "physical coordinates; no min/max normalization",
       "display_filter": "finite points; saddle-node |state|<=5; Bautin radius<=tip_threshold; compost temperature<=150",
-      "n_displayed": 1800
+      "n_displayed": 1800,
+      "display_time_interval": [
+        0.0,
+        1799.0
+      ],
+      "reference_index": 818,
+      "reference_time": 818.0,
+      "critical_parameter": 50.0,
+      "parameter_inset": "full forcing schedule; shading marks displayed interval; dashed line is the critical parameter when defined"
     },
     "b_amoc": {
       "model": "AMOCModel",
@@ -310,7 +344,15 @@
       "vertical": "amoc_strength",
       "display_scaling": "physical coordinates; no min/max normalization",
       "display_filter": "finite points; saddle-node |state|<=5; Bautin radius<=tip_threshold; compost temperature<=150",
-      "n_displayed": 1041
+      "n_displayed": 1041,
+      "display_time_interval": [
+        0.0,
+        5200.0
+      ],
+      "reference_index": 946,
+      "reference_time": 4730.0,
+      "critical_parameter": 0.4236,
+      "parameter_inset": "full forcing schedule; shading marks displayed interval; dashed line is the critical parameter when defined"
     },
     "r_saddle_node": {
       "model": "SaddleNodeModel",
@@ -349,7 +391,15 @@
       "vertical": "state",
       "display_scaling": "physical coordinates; no min/max normalization",
       "display_filter": "finite points; saddle-node |state|<=5; Bautin radius<=tip_threshold; compost temperature<=150",
-      "n_displayed": 1723
+      "n_displayed": 1723,
+      "display_time_interval": [
+        -15.899999618530273,
+        1.3199996948242188
+      ],
+      "reference_index": 1709,
+      "reference_time": 1.0900001525878906,
+      "critical_parameter": null,
+      "parameter_inset": "full forcing schedule; shading marks displayed interval; dashed line is the critical parameter when defined"
     },
     "r_bautin": {
       "model": "BautinModel",
@@ -394,7 +444,15 @@
       "vertical": "y",
       "display_scaling": "physical coordinates; no min/max normalization",
       "display_filter": "finite points; saddle-node |state|<=5; Bautin radius<=tip_threshold; compost temperature<=150",
-      "n_displayed": 1150
+      "n_displayed": 1150,
+      "display_time_interval": [
+        -15.0,
+        -3.510000228881836
+      ],
+      "reference_index": 1150,
+      "reference_time": -3.5,
+      "critical_parameter": null,
+      "parameter_inset": "full forcing schedule; shading marks displayed interval; dashed line is the critical parameter when defined"
     },
     "r_compost_bomb": {
       "model": "CompostBombModel",
@@ -442,7 +500,15 @@
       "vertical": "soil_temperature",
       "display_scaling": "physical coordinates; no min/max normalization",
       "display_filter": "finite points; saddle-node |state|<=5; Bautin radius<=tip_threshold; compost temperature<=150",
-      "n_displayed": 1105
+      "n_displayed": 1105,
+      "display_time_interval": [
+        0.0,
+        55.25
+      ],
+      "reference_index": 1085,
+      "reference_time": 54.25,
+      "critical_parameter": null,
+      "parameter_inset": "full forcing schedule; shading marks displayed interval; dashed line is the critical parameter when defined"
     },
     "r_amoc": {
       "model": "AMOCRateModel",
@@ -514,7 +580,15 @@
       "vertical": "amoc_strength",
       "display_scaling": "physical coordinates; no min/max normalization",
       "display_filter": "finite points; saddle-node |state|<=5; Bautin radius<=tip_threshold; compost temperature<=150",
-      "n_displayed": 1142
+      "n_displayed": 1142,
+      "display_time_interval": [
+        -2505.0,
+        3200.0
+      ],
+      "reference_index": 501,
+      "reference_time": 0.0,
+      "critical_parameter": null,
+      "parameter_inset": "full forcing schedule; shading marks displayed interval; dashed line is the critical parameter when defined"
     },
     "b_ricker": {
       "model": "RickerModel",
@@ -554,7 +628,15 @@
       "vertical": "population",
       "display_scaling": "physical coordinates; no min/max normalization",
       "display_filter": "finite points; saddle-node |state|<=5; Bautin radius<=tip_threshold; compost temperature<=150",
-      "n_displayed": 600
+      "n_displayed": 600,
+      "display_time_interval": [
+        0.0,
+        599.0
+      ],
+      "reference_index": 364,
+      "reference_time": 364.0,
+      "critical_parameter": 0.0,
+      "parameter_inset": "full forcing schedule; shading marks displayed interval; dashed line is the critical parameter when defined"
     },
     "b_thermoacoustic": {
       "model": "ThermoacousticModel",
@@ -573,11 +655,13 @@
         "t_end": 1.1
       },
       "arguments": {
+        "n": 11001,
+        "dt_sample": 0.0001,
         "noise": 1.0
       },
       "seed": 42,
       "dt": 0.0001,
-      "dt_sample": 0.0005,
+      "dt_sample": 0.0001,
       "initial_state": [
         0.10000000149011612,
         0.0
@@ -588,7 +672,7 @@
         "amplitude"
       ],
       "time_unit": "s",
-      "n_observations": 2201,
+      "n_observations": 11001,
       "time_start": 0.0,
       "time_end": 1.100000023841858,
       "selection": "first accepted tipping trajectory from generate_dataset",
@@ -599,7 +683,15 @@
       "vertical": "scaled_velocity",
       "display_scaling": "physical coordinates; no min/max normalization",
       "display_filter": "finite points; saddle-node |state|<=5; Bautin radius<=tip_threshold; compost temperature<=150",
-      "n_displayed": 2201
+      "n_displayed": 301,
+      "display_time_interval": [
+        0.4399999976158142,
+        0.4699999988079071
+      ],
+      "reference_index": 4500,
+      "reference_time": 0.44999998807907104,
+      "critical_parameter": 0.0,
+      "parameter_inset": "full forcing schedule; shading marks displayed interval; dashed line is the critical parameter when defined"
     }
   },
   "trajectories": {

@@ -20,6 +20,7 @@ mpl.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy
+from matplotlib.lines import Line2D
 
 import tipbox
 from tipbox.datasets import generate_dataset, load_veraart2012
@@ -89,16 +90,16 @@ GALLERY = (
     (
         "b_rosenzweig_macarthur_tc",
         RosenzweigMacArthur(bifurcation_type="transcritical"),
-        "Rosenzweig–MacArthur: TC",
-        {"n": 1800, "noise": 1.0},
+        "Rosenzweig–\nMacArthur: TC",
+        {"n": 89951, "dt_sample": 0.02, "noise": 1.0},
         0,
         1,
     ),
     (
         "b_rosenzweig_macarthur_hopf",
         RosenzweigMacArthur(bifurcation_type="hopf"),
-        "Rosenzweig–MacArthur: Hopf",
-        {"n": 1800, "noise": 1.0},
+        "Rosenzweig–\nMacArthur: Hopf",
+        {"n": 89951, "dt_sample": 0.02, "noise": 1.0},
         0,
         1,
     ),
@@ -116,8 +117,23 @@ GALLERY = (
     ("r_compost_bomb", CompostBomb(), "Compost bomb", {"noise": 0.01}, 0, 1),
     ("r_amoc", AMOCRate(), "AMOC: rate", {"noise": 0.01}, "forcing", 0),
     ("b_ricker", Ricker(), "Ricker", {"n": 600, "noise": 1.0}, "time", 0),
-    ("b_thermoacoustic", Thermoacoustic(), "Thermoacoustic", {"noise": 1.0}, 0, 1),
+    (
+        "b_thermoacoustic",
+        Thermoacoustic(),
+        "Thermoacoustic",
+        {"n": 11001, "dt_sample": 0.0001, "noise": 1.0},
+        0,
+        1,
+    ),
 )
+
+
+# Physical-time offsets around each reference; resolve the dense oscillations.
+VIEW_WINDOWS = {
+    "b_rosenzweig_macarthur_tc": (-0.5, 1.0),
+    "b_rosenzweig_macarthur_hopf": (-2.0, 4.0),
+    "b_thermoacoustic": (-0.01, 0.02),
+}
 
 
 def _simulation_metadata(model, result, arguments):
@@ -168,7 +184,7 @@ def _clean(ax):
 
 
 def gallery(seed):
-    fig, axes = plt.subplots(3, 4, figsize=(12.8, 7.8), layout="constrained")
+    fig, axes = plt.subplots(4, 3, figsize=(12.8, 10.2), layout="constrained")
     manifest = {}
     for index, (name, model, title, arguments, horizontal, vertical) in enumerate(
         GALLERY
@@ -188,6 +204,11 @@ def gallery(seed):
             else model.observable_names[horizontal]
         )
         y = observations[:, vertical]
+        time = np.asarray(result.time)
+        control = np.asarray(result.param_values)
+        marker = model.locate_transition(
+            observations, False, param_values=control, time=time
+        )
         valid = np.isfinite(x) & np.isfinite(y)
         if name == "r_saddle_node":
             valid &= np.abs(y) <= 5
@@ -198,6 +219,9 @@ def gallery(seed):
             )
         if name == "r_compost_bomb":
             valid &= observations[:, 1] <= 150
+        if name in VIEW_WINDOWS:
+            start, stop = VIEW_WINDOWS[name]
+            valid &= (time >= time[marker] + start) & (time <= time[marker] + stop)
         ax = axes.flat[index]
         ax.plot(x[valid], y[valid], color=BLUE, linewidth=1.15)
         ax.plot(
@@ -222,6 +246,15 @@ def gallery(seed):
         )
         ax.locator_params(nbins=3)
         _clean(ax)
+        critical = model.critical_parameter
+        inset = ax.inset_axes([0.63, 1.04, 0.34, 0.27])
+        inset.plot(time, control, color=INK, linewidth=0.8)
+        inset.axvspan(time[valid][0], time[valid][-1], color=BLUE, alpha=0.15)
+        if critical is not None:
+            inset.axhline(float(critical), color=RED, linestyle="--", linewidth=0.7)
+        inset.set_title("Parameter", fontsize=8, pad=2)
+        inset.tick_params(labelsize=6, length=2, width=0.5)
+        inset.locator_params(nbins=2)
         manifest[name] = {
             **_simulation_metadata(model, result, arguments),
             **selection,
@@ -230,11 +263,17 @@ def gallery(seed):
             "display_scaling": "physical coordinates; no min/max normalization",
             "display_filter": "finite points; saddle-node |state|<=5; Bautin radius<=tip_threshold; compost temperature<=150",
             "n_displayed": int(valid.sum()),
+            "display_time_interval": [float(time[valid][0]), float(time[valid][-1])],
+            "reference_index": int(marker),
+            "reference_time": float(time[marker]),
+            "critical_parameter": None if critical is None else float(critical),
+            "parameter_inset": "full forcing schedule; shading marks displayed interval; dashed line is the critical parameter when defined",
         }
     axes.flat[-1].set_axis_off()
-    axes.flat[-1].legend(
-        *axes.flat[0].get_legend_handles_labels(), loc="upper left", fontsize=10
-    )
+    handles, labels = axes.flat[0].get_legend_handles_labels()
+    handles.append(Line2D([], [], color=RED, linestyle="--", linewidth=0.8))
+    labels.append("Critical parameter")
+    axes.flat[-1].legend(handles, labels, loc="upper left", fontsize=9)
     return fig, manifest
 
 
