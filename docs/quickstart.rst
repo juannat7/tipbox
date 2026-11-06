@@ -1,7 +1,8 @@
 Quickstart
 ==========
 
-Install with Python 3.10 or newer:
+Use Python 3.10 or newer. Source installation currently requires repository
+access; TipBox is not yet published on PyPI:
 
 .. code-block:: bash
 
@@ -78,10 +79,10 @@ Use measured data
 .. code-block:: python
 
    import numpy as np
-   from tipbox.datasets import load_microcosm_original
+   from tipbox.datasets import load_veraart2012
    from tipbox.indicators import rolling_variance
 
-   record = load_microcosm_original()
+   record = load_veraart2012()
    recovery = record.observations[161:411, 0]  # M1, first recovery
    variance = rolling_variance(recovery, window=200, step=5, detrend="linear")
    print(record.observations.shape)             # (7914, 2): M1, M2

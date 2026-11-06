@@ -6,7 +6,7 @@ From the repository root:
 .. code-block:: bash
 
    pip install -e .
-   JAX_PLATFORMS=cpu python examples/figures.py
+   python examples/figures.py
 
 This writes PNG, SVG, PDF, and ``manifest.json`` to ``docs/_static/figures``.
 The original microcosm ODS downloads once into the user cache. For offline use,
@@ -33,6 +33,16 @@ start/end. Coordinates keep their physical scale. Escaped saddle-node states
 above absolute value 5, Bautin radii above the configured threshold, compost
 temperatures above 150, and nonfinite points are omitted. Ricker is plotted
 against time; other panels use the labeled forcing or observable pair.
+
+Sample trajectories
+-------------------
+
+.. image:: _static/figures/trajectories.png
+   :target: _static/figures/trajectories.png
+   :alt: Three columns showing the two simulated trajectories and Veraart2012 M1.
+
+The two figures below and above share the exact same simulation results and
+observed record.
 
 Warning indicators
 ------------------

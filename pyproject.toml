@@ -34,4 +34,5 @@ include = ["tipbox*"]
 
 [project.urls]
 Homepage = "https://github.com/juannat7/tipbox"
+Documentation = "https://juannat7.github.io/tipbox/"
 Issues = "https://github.com/juannat7/tipbox/issues"

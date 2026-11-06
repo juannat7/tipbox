@@ -12,12 +12,12 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
     "sphinx.ext.mathjax",
-    "sphinx.ext.viewcode",
     "sphinx_copybutton",
     "model_parameters",
 ]
 html_theme = "furo"
 html_title = "TipBox"
+html_baseurl = "https://juannat7.github.io/tipbox/"
 html_theme_options = {
     "light_css_variables": {
         "color-brand-primary": "#216a76",

@@ -181,18 +181,20 @@ than a correction silently performed by TipBox.
 
 .. _original-microcosm-source:
 
-Original microcosm deposit
---------------------------
+Veraart et al. (2012)
+---------------------
 
-``load_microcosm_original`` reads the original Veraart et al. (2012) deposit,
+``load_veraart2012`` reads the full-precision Veraart et al. (2012) deposit,
 `doi:10.17026/dans-ztg-93aw <https://doi.org/10.17026/dans-ztg-93aw>`_. It
-retains full-precision times and both measured chemostats, ``M1`` and ``M2``:
+retains full-precision times and both measured chemostats, ``M1`` and ``M2``.
+``load_microcosm_original`` remains an alias; ``load_empirical("microcosm")``
+loads the rounded, single-chemostat archive copy instead:
 
 .. code-block:: python
 
-   from tipbox.datasets import load_microcosm_original
+   from tipbox.datasets import load_veraart2012
 
-   record = load_microcosm_original()
+   record = load_veraart2012()
    time = record.time                         # (7914,), days
    m1, m2 = record.observations.T             # light attenuation, m^-1
    print(record.metadata["sampling_by_observable"])
@@ -267,4 +269,4 @@ API
 .. automodule:: tipbox.datasets.empirical
    :members: EmpiricalSpec, EmpiricalRecord, list_empirical, get_empirical_info, load_empirical
 
-.. autofunction:: tipbox.datasets.load_microcosm_original
+.. autofunction:: tipbox.datasets.load_veraart2012
