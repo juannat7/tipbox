@@ -508,6 +508,7 @@ class RosenzweigMacArthurModel(BoxModel):
         null_simulation: bool,
         param_values: jnp.ndarray,
         param_end_multiplier: float = 1.1,
+        time=None,
     ):
         """Midpoint for null; first bifurcation crossing for forced, or None."""
         if null_simulation:

@@ -370,7 +370,7 @@ class MayHarvestingModel(BoxModel):
         trajectory: jnp.ndarray,
         param_values: jnp.ndarray,
     ):
-        """Check if the parameter crossed the bifurcation point (h = 0.26)."""
+        """Check if the forcing reached the configured or analytic upper fold."""
         return float(jnp.max(param_values)) >= self.critical_parameter
 
     def locate_transition(
@@ -378,6 +378,7 @@ class MayHarvestingModel(BoxModel):
         trajectory: jnp.ndarray,
         null_simulation: bool,
         param_values: jnp.ndarray,
+        time=None,
     ):
         """Midpoint for null; first fold crossing for forced, or None if absent."""
         if null_simulation:

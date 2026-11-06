@@ -225,9 +225,13 @@ class AMOCRateModel(BoxModel):
         param_values=None,
         **kwargs,
     ):
-        """True if Q collapsed (Q < 0, i.e. below Q_collapse_threshold)."""
+        """True if a finite Q falls below Q_collapse_threshold."""
         strength = trajectory[:, 0] if trajectory.ndim == 2 else trajectory
-        return bool(jnp.any(strength < self._config.Q_collapse_threshold))
+        return bool(
+            jnp.any(
+                jnp.isfinite(strength) & (strength < self._config.Q_collapse_threshold)
+            )
+        )
 
     def locate_transition(
         self,
@@ -240,9 +244,8 @@ class AMOCRateModel(BoxModel):
         """Transition = when t crosses 0 (H peaks and plateaus). Returns first index where time >= 0. Caller must pass time."""
         if null_simulation:
             return int(trajectory.shape[0] // 2)
-        if time is None:
+        if time is None or time[0] > 0 or time[-1] < 0:
             return None
         time = jnp.asarray(time)
         idx = jnp.searchsorted(time, 0.0, side="left")
-        idx = jnp.minimum(idx, time.shape[0] - 1)
         return int(idx)

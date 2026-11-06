@@ -1,5 +1,6 @@
 """Observed records and reproducible benchmark datasets."""
 
+from .benchmarks import BenchmarkDataset, generate_dataset
 from .empirical import (
     EmpiricalRecord,
     EmpiricalSpec,
@@ -9,8 +10,10 @@ from .empirical import (
 )
 
 __all__ = [
+    "BenchmarkDataset",
     "EmpiricalRecord",
     "EmpiricalSpec",
+    "generate_dataset",
     "get_empirical_info",
     "list_empirical",
     "load_empirical",
