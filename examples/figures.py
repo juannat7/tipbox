@@ -1,6 +1,6 @@
 """Reproduce the README figures from simulations and the original microcosm source.
 
-Run from the repository root with JAX_PLATFORMS=cpu for the reference backend.
+Run from the repository root. The manifest records the selected JAX backend.
 The manifest records all model coefficients, simulation/analysis settings,
 source checksums, software versions, and display transformations.
 """
@@ -20,9 +20,10 @@ mpl.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy
+from matplotlib.lines import Line2D
 
 import tipbox
-from tipbox.datasets import generate_dataset, load_microcosm_original
+from tipbox.datasets import generate_dataset, load_veraart2012
 from tipbox.indicators import rolling_ar1, rolling_variance
 from tipbox.metrics import ensemble_roc, plot_roc
 from tipbox.models import (
@@ -89,16 +90,16 @@ GALLERY = (
     (
         "b_rosenzweig_macarthur_tc",
         RosenzweigMacArthur(bifurcation_type="transcritical"),
-        "Rosenzweig–MacArthur: TC",
-        {"n": 1800, "noise": 1.0},
+        "Rosenzweig–\nMacArthur: TC",
+        {"n": 89951, "dt_sample": 0.02, "noise": 1.0},
         0,
         1,
     ),
     (
         "b_rosenzweig_macarthur_hopf",
         RosenzweigMacArthur(bifurcation_type="hopf"),
-        "Rosenzweig–MacArthur: Hopf",
-        {"n": 1800, "noise": 1.0},
+        "Rosenzweig–\nMacArthur: Hopf",
+        {"n": 89951, "dt_sample": 0.02, "noise": 1.0},
         0,
         1,
     ),
@@ -116,8 +117,23 @@ GALLERY = (
     ("r_compost_bomb", CompostBomb(), "Compost bomb", {"noise": 0.01}, 0, 1),
     ("r_amoc", AMOCRate(), "AMOC: rate", {"noise": 0.01}, "forcing", 0),
     ("b_ricker", Ricker(), "Ricker", {"n": 600, "noise": 1.0}, "time", 0),
-    ("b_thermoacoustic", Thermoacoustic(), "Thermoacoustic", {"noise": 1.0}, 0, 1),
+    (
+        "b_thermoacoustic",
+        Thermoacoustic(),
+        "Thermoacoustic",
+        {"n": 11001, "dt_sample": 0.0001, "noise": 1.0},
+        0,
+        1,
+    ),
 )
+
+
+# Physical-time offsets around each reference; resolve the dense oscillations.
+VIEW_WINDOWS = {
+    "b_rosenzweig_macarthur_tc": (-0.5, 1.0),
+    "b_rosenzweig_macarthur_hopf": (-2.0, 4.0),
+    "b_thermoacoustic": (-0.01, 0.02),
+}
 
 
 def _simulation_metadata(model, result, arguments):
@@ -168,7 +184,7 @@ def _clean(ax):
 
 
 def gallery(seed):
-    fig, axes = plt.subplots(3, 4, figsize=(12.8, 7.8), layout="constrained")
+    fig, axes = plt.subplots(4, 3, figsize=(12.8, 10.2), layout="constrained")
     manifest = {}
     for index, (name, model, title, arguments, horizontal, vertical) in enumerate(
         GALLERY
@@ -188,6 +204,11 @@ def gallery(seed):
             else model.observable_names[horizontal]
         )
         y = observations[:, vertical]
+        time = np.asarray(result.time)
+        control = np.asarray(result.param_values)
+        marker = model.locate_transition(
+            observations, False, param_values=control, time=time
+        )
         valid = np.isfinite(x) & np.isfinite(y)
         if name == "r_saddle_node":
             valid &= np.abs(y) <= 5
@@ -198,17 +219,23 @@ def gallery(seed):
             )
         if name == "r_compost_bomb":
             valid &= observations[:, 1] <= 150
+        if name in VIEW_WINDOWS:
+            start, stop = VIEW_WINDOWS[name]
+            valid &= (time >= time[marker] + start) & (time <= time[marker] + stop)
         ax = axes.flat[index]
-        ax.plot(x[valid], y[valid], color=BLUE, linewidth=0.75)
+        ax.plot(x[valid], y[valid], color=BLUE, linewidth=1.15)
         ax.plot(
             x[valid][0],
             y[valid][0],
             "o",
             color=BLUE,
             markerfacecolor="white",
-            markersize=3,
+            markersize=3.5,
+            label="Start",
         )
-        ax.plot(x[valid][-1], y[valid][-1], "o", color=BLUE, markersize=3)
+        ax.plot(
+            x[valid][-1], y[valid][-1], "o", color=BLUE, markersize=3.5, label="End"
+        )
         ax.set_title(f"({chr(97 + index)}) {title}", loc="left", y=1.12)
         ax.set(
             xlabel=xlabel.replace("_", " "),
@@ -219,6 +246,15 @@ def gallery(seed):
         )
         ax.locator_params(nbins=3)
         _clean(ax)
+        critical = model.critical_parameter
+        inset = ax.inset_axes([0.63, 1.04, 0.34, 0.27])
+        inset.plot(time, control, color=INK, linewidth=0.8)
+        inset.axvspan(time[valid][0], time[valid][-1], color=BLUE, alpha=0.15)
+        if critical is not None:
+            inset.axhline(float(critical), color=RED, linestyle="--", linewidth=0.7)
+        inset.set_title("Parameter", fontsize=8, pad=2)
+        inset.tick_params(labelsize=6, length=2, width=0.5)
+        inset.locator_params(nbins=2)
         manifest[name] = {
             **_simulation_metadata(model, result, arguments),
             **selection,
@@ -227,37 +263,29 @@ def gallery(seed):
             "display_scaling": "physical coordinates; no min/max normalization",
             "display_filter": "finite points; saddle-node |state|<=5; Bautin radius<=tip_threshold; compost temperature<=150",
             "n_displayed": int(valid.sum()),
+            "display_time_interval": [float(time[valid][0]), float(time[valid][-1])],
+            "reference_index": int(marker),
+            "reference_time": float(time[marker]),
+            "critical_parameter": None if critical is None else float(critical),
+            "parameter_inset": "full forcing schedule; shading marks displayed interval; dashed line is the critical parameter when defined",
         }
-    axes.flat[-1].remove()
+    axes.flat[-1].set_axis_off()
+    handles, labels = axes.flat[0].get_legend_handles_labels()
+    handles.append(Line2D([], [], color=RED, linestyle="--", linewidth=0.8))
+    labels.append("Critical parameter")
+    axes.flat[-1].legend(handles, labels, loc="upper left", fontsize=9)
     return fig, manifest
 
 
-def indicator_examples(seed, record):
-    fig, axes = plt.subplots(
-        3,
-        3,
-        figsize=(11.8, 7.3),
-        layout="constrained",
-        gridspec_kw={"height_ratios": [1.35, 1, 1]},
-    )
-    manifest = {}
-    model_cases = (
+def example_data(seed, record):
+    simulations = []
+    metadata = {}
+    for column, (model, arguments) in enumerate(
         (
-            MayHarvesting(),
-            {"n": 1200, "noise": 1.0},
-            "May harvesting",
-            "Population",
-            200,
-        ),
-        (
-            SaddleNode(epsilon=1.4),
-            {"noise": 0.01},
-            "Saddle-node",
-            "State",
-            200,
-        ),
-    )
-    for column, (model, arguments, title, ylabel, window) in enumerate(model_cases):
+            (MayHarvesting(), {"n": 1200, "noise": 1.0}),
+            (SaddleNode(epsilon=1.4), {"noise": 0.01}),
+        )
+    ):
         result, selection = _tipping_example(model, arguments, seed)
         marker = model.locate_transition(
             result.trajectory, False, param_values=result.param_values, time=result.time
@@ -267,134 +295,30 @@ def indicator_examples(seed, record):
         display = np.isfinite(values)
         if column == 1:
             display &= (time >= -8) & (values <= 5)
-        ax = axes[0, column]
-        ax.plot(time[display], values[display], color=GRAY, linewidth=0.9)
-        before = display & (np.arange(len(time)) < marker)
-        ax.plot(time[before], values[before], color=BLUE, linewidth=1.1)
-        ax.set_title(f"({chr(97 + column)}) {title}", loc="left")
-        ax.set_ylabel(ylabel)
         limits = (float(time[display].min()), float(time[display].max()))
-        indicator_display = time[:marker] >= limits[0]
-        for row, (function, label, color) in enumerate(
-            ((rolling_ar1, "AR1 slope", BLUE), (rolling_variance, "Variance", ORANGE)),
-            start=1,
-        ):
-            indicator = function(values[:marker], window=window, detrend="linear")
-            axes[row, column].plot(
-                time[:marker][indicator_display],
-                indicator[indicator_display],
-                color=color,
-                linewidth=1.3,
-            )
-            axes[row, column].set_ylabel(label)
-        for row in range(3):
-            axes[row, column].set_xlim(limits)
-            axes[row, column].axvline(
-                time[marker], color=RED, linestyle=(0, (3, 3)), linewidth=1
-            )
-            _clean(axes[row, column])
-        axes[0, column].text(
-            0.98,
-            1.02,
-            "Fold reference" if column == 0 else "State threshold",
-            transform=axes[0, column].transAxes,
-            ha="right",
-            va="bottom",
-            color=RED,
-            fontsize=8,
-        )
-        axes[2, column].set_xlabel(f"Time ({model.time_unit})")
-        manifest[type(model).__name__] = {
+        simulations.append((model, time, values, marker, display))
+        metadata[type(model).__name__] = {
             **_simulation_metadata(model, result, arguments),
             **selection,
             "marker_index": int(marker),
             "marker_time": float(time[marker]),
             "indicator_input_slice": [0, int(marker)],
-            "window": window,
+            "display_time_limits": limits,
+            "window": 200,
             "step": 1,
             "detrend": "linear",
-            "display_time_limits": limits,
         }
-    time, values = record.time, record.observations[:, 0]
-    axes[0, 2].plot(time, values, color=GRAY, linewidth=0.8)
-    colors = ("#0072b2", "#d55e00", "#009e73", "#a05d8b", "#a66b00", "#46566b")
-    markers = ("o", "s", "^", "D", "v", "X")
-    intervals = []
-    for (label, start, stop), color, shape in zip(RECOVERIES, colors, markers):
-        t, x = time[start:stop], values[start:stop]
-        axes[0, 2].plot(t, x, color=color, linewidth=1.4)
-        axes[0, 2].annotate(
-            label,
-            (float(t.mean()), float(x.max())),
-            xytext=(0, 6),
-            textcoords="offset points",
-            ha="center",
-            color=INK,
-            fontsize=7.5,
-        )
-        for row, function in enumerate((rolling_ar1, rolling_variance), start=1):
-            indicator = function(x, window=200, step=5, detrend="linear")
-            computed = np.isfinite(indicator)
-            axes[row, 2].plot(
-                (t - t[0])[computed],
-                indicator[computed],
-                color=color,
-                linewidth=1.1,
-                marker=shape,
-                markersize=3,
-                label=label,
-            )
-        intervals.append(
-            {
-                "label": label,
-                "rows": [start, stop],
-                "time_start": float(t[0]),
-                "time_stop": float(t[-1]),
-                "n": len(t),
-            }
-        )
-    axes[0, 2].set_title("(c) Microcosm (M1)", loc="left")
-    axes[0, 2].set_ylabel(r"Light attenuation (m$^{-1}$)")
-    axes[0, 2].set_xlabel("Experimental time (day)")
-    axes[0, 2].axvline(27, color=RED, linestyle=(0, (3, 3)), linewidth=1)
-    axes[0, 2].set_xlim(0, 29)
-    axes[0, 2].set_ylim(top=np.nanmax(values) + 8)
-    axes[0, 2].text(
-        0.98,
-        1.02,
-        "27-day reference",
-        transform=axes[0, 2].transAxes,
-        ha="right",
-        va="bottom",
-        color=RED,
-        fontsize=8,
-    )
-    axes[1, 2].set_ylabel("AR1 slope")
-    axes[2, 2].set_ylabel(r"Variance (m$^{-2}$)")
-    axes[1, 2].legend(
-        ncol=6,
-        loc="lower left",
-        bbox_to_anchor=(0, 1.02),
-        handlelength=1.0,
-        columnspacing=0.7,
-        fontsize=7.5,
-        borderaxespad=0,
-    )
-    for row in (1, 2):
-        axes[row, 2].set_xlabel("Time within recovery (day)")
-        axes[row, 2].set_xlim(0.69, 0.9)
-    for ax in axes[:, 2]:
-        _clean(ax)
-    for ax in axes[2]:
-        ax.ticklabel_format(axis="y", style="sci", scilimits=(-2, 2), useMathText=True)
-    fig.text(
-        0.01,
-        -0.025,
-        "Microcosm: M1, Veraart et al. (2012), doi:10.17026/dans-ztg-93aw · CC BY-NC 4.0. Recovery windows follow Grziwotz et al. (2023).",
-        fontsize=8,
-        color=INK,
-    )
-    manifest["microcosm"] = {
+    intervals = [
+        {
+            "label": label,
+            "rows": [start, stop],
+            "time_start": float(record.time[start]),
+            "time_stop": float(record.time[stop - 1]),
+            "n": stop - start,
+        }
+        for label, start, stop in RECOVERIES
+    ]
+    metadata["microcosm"] = {
         "source_doi": record.metadata["source_doi"],
         "source_sha256": record.metadata["source_sha256"],
         "license": record.metadata["license"],
@@ -402,13 +326,129 @@ def indicator_examples(seed, record):
         "reference_time": 27.0,
         "reference_source_doi": "10.5281/zenodo.7379358",
         "recovery_row_slices": intervals,
-        "slice_note": "row correspondence verified against the pinned aggregated copy; original times are not rounded",
         "window": 200,
         "step": 5,
         "detrend": "linear",
-        "plot_time": "raw experiment time above; elapsed time within each recovery below",
+        "plot_time": "experiment time for observations; elapsed time for separate recoveries",
     }
-    return fig, manifest
+    return simulations, record, metadata
+
+
+RECOVERY_COLORS = ("#0072b2", "#d55e00", "#009e73", "#a05d8b", "#a66b00", "#46566b")
+RECOVERY_MARKERS = ("o", "s", "^", "D", "v", "X")
+
+
+def _data_credit(fig):
+    fig.text(
+        0.01,
+        -0.04,
+        "Veraart et al. (2012) · doi:10.17026/dans-ztg-93aw · CC BY-NC 4.0",
+        fontsize=7,
+    )
+
+
+def trajectory_examples(examples):
+    simulations, record, metadata = examples
+    fig, axes = plt.subplots(1, 3, figsize=(11.8, 3.0), layout="constrained")
+    for column, ((model, time, values, marker, display), title, ylabel) in enumerate(
+        zip(simulations, ("May harvesting", "Saddle-node"), ("Population", "State"))
+    ):
+        ax = axes[column]
+        before = display & (np.arange(len(time)) < marker)
+        ax.plot(time[display], values[display], color=GRAY, linewidth=1.1)
+        ax.plot(time[before], values[before], color=BLUE, linewidth=1.2)
+        ax.axvline(time[marker], color=RED, linestyle="--", linewidth=0.8)
+        ax.set(
+            title=f"({chr(97 + column)}) {title}",
+            ylabel=ylabel,
+            xlabel=f"Time ({model.time_unit})",
+        )
+        ax.set_xlim(float(time[display].min()), float(time[display].max()))
+    time, values = record.time, record.observations[:, 0]
+    axes[2].plot(time, values, color=GRAY, linewidth=0.9)
+    for (label, start, stop), color in zip(RECOVERIES, RECOVERY_COLORS):
+        t, x = time[start:stop], values[start:stop]
+        axes[2].plot(t, x, color=color, linewidth=1.4)
+        axes[2].annotate(
+            label,
+            (float(t.mean()), float(x.max())),
+            xytext=(0, 5),
+            textcoords="offset points",
+            ha="center",
+            fontsize=7,
+        )
+    axes[2].axvline(27, color=RED, linestyle="--", linewidth=0.8)
+    axes[2].set(
+        title="(c) Veraart2012 · M1",
+        xlabel="Time (day)",
+        ylabel=r"Light attenuation (m$^{-1}$)",
+        xlim=(0, 29),
+    )
+    axes[2].set_ylim(top=np.nanmax(values) + 8)
+    for ax in axes:
+        _clean(ax)
+    _data_credit(fig)
+    return fig, metadata
+
+
+def indicator_examples(examples):
+    simulations, record, metadata = examples
+    fig, axes = plt.subplots(2, 3, figsize=(11.8, 4.5), layout="constrained")
+    for column, ((model, time, values, marker, display), title) in enumerate(
+        zip(simulations, ("May harvesting", "Saddle-node"))
+    ):
+        for row, (function, label, color) in enumerate(
+            ((rolling_ar1, "AR1 slope", BLUE), (rolling_variance, "Variance", ORANGE))
+        ):
+            indicator = function(values[:marker], window=200, detrend="linear")
+            limits = metadata[type(model).__name__]["display_time_limits"]
+            shown = time[:marker] >= limits[0]
+            axes[row, column].plot(
+                time[:marker][shown], indicator[shown], color=color, linewidth=1.3
+            )
+            axes[row, column].axvline(
+                time[marker], color=RED, linestyle="--", linewidth=0.8
+            )
+            axes[row, column].set_ylabel(label)
+            axes[row, column].set_xlim(
+                metadata[type(model).__name__]["display_time_limits"]
+            )
+        axes[0, column].set_title(f"({chr(97 + column)}) {title}")
+        axes[1, column].set_xlabel(f"Time ({model.time_unit})")
+    for (label, start, stop), color, shape in zip(
+        RECOVERIES, RECOVERY_COLORS, RECOVERY_MARKERS
+    ):
+        time, values = record.time[start:stop], record.observations[start:stop, 0]
+        for row, function in enumerate((rolling_ar1, rolling_variance)):
+            indicator = function(values, window=200, step=5, detrend="linear")
+            valid = np.isfinite(indicator)
+            axes[row, 2].plot(
+                (time - time[0])[valid],
+                indicator[valid],
+                color=color,
+                marker=shape,
+                markersize=3,
+                linewidth=1.1,
+                label=label,
+            )
+    axes[0, 2].set(title="(c) Veraart2012 · M1", ylabel="AR1 slope")
+    axes[1, 2].set(xlabel="Time within recovery (day)", ylabel=r"Variance (m$^{-2}$)")
+    fig.legend(
+        *axes[0, 2].get_legend_handles_labels(),
+        loc="outside upper right",
+        ncol=6,
+        handlelength=1,
+        columnspacing=0.6,
+        fontsize=7,
+    )
+    for row in (0, 1):
+        axes[row, 2].set_xlim(0.69, 0.9)
+    for ax in axes.flat:
+        _clean(ax)
+    for ax in axes[1]:
+        ax.ticklabel_format(axis="y", style="sci", scilimits=(-2, 2), useMathText=True)
+    _data_credit(fig)
+    return fig, metadata
 
 
 def roc_examples(seed, n_per_class):
@@ -522,9 +562,7 @@ def main():
     if args.n_per_class < 1:
         parser.error("--n-per-class must be positive")
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    record = load_microcosm_original(
-        cache_dir=args.cache_dir, source_path=args.source_path
-    )
+    record = load_veraart2012(cache_dir=args.cache_dir, source_path=args.source_path)
     manifest = {
         "versions": {
             "python": platform.python_version(),
@@ -543,10 +581,12 @@ def main():
             for path in sorted(Path(tipbox.__file__).parent.rglob("*.py"))
         },
     }
+    examples = example_data(args.seed, record)
     with mpl.rc_context(STYLE):
         for name, render in (
             ("overview", partial(gallery, args.seed)),
-            ("indicators", partial(indicator_examples, args.seed, record)),
+            ("trajectories", partial(trajectory_examples, examples)),
+            ("indicators", partial(indicator_examples, examples)),
             ("roc", partial(roc_examples, args.seed, args.n_per_class)),
         ):
             print(f"Rendering {name}...", flush=True)

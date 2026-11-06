@@ -35,7 +35,7 @@ independent trajectories.
      - ``tipbox.metrics.plot_roc``
      - Returns a Matplotlib ``Axes``. Undefined curves remain in the result and are omitted from the plot.
    * - Load observations
-     - ``tipbox.datasets.load_empirical`` or ``load_microcosm_original``
+     - ``tipbox.datasets.load_empirical`` or ``load_veraart2012``
      - ``EmpiricalRecord``: time ``(T,)``, observations ``(T,D)``, and source/sampling metadata. No class labels are inferred.
 
 See :doc:`indicators` for statistic definitions, :doc:`benchmarks` for batch

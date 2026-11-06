@@ -6,7 +6,7 @@ From the repository root:
 .. code-block:: bash
 
    pip install -e .
-   JAX_PLATFORMS=cpu python examples/figures.py
+   python examples/figures.py
 
 This writes PNG, SVG, PDF, and ``manifest.json`` to ``docs/_static/figures``.
 The original microcosm ODS downloads once into the user cache. For offline use,
@@ -27,12 +27,29 @@ Model collection
    :target: _static/figures/overview.png
    :alt: Eleven simulated model trajectories in physical coordinates, with labeled axes.
 
+Parameter insets show the full forcing schedule, the critical level when
+defined, and a shaded display interval. The Rosenzweig–MacArthur panels use
+0.02-unit sampling and short intervals around their reference; the thermoacoustic
+phase portrait also uses a short reference-centered interval. Exact bounds
+are recorded in the manifest. Rate models without a critical forcing level
+have no horizontal threshold line.
+
 Each curve is the first accepted positive from root seed 42 with 300
 pre-reference observations available. Open/filled dots mark the displayed
 start/end. Coordinates keep their physical scale. Escaped saddle-node states
 above absolute value 5, Bautin radii above the configured threshold, compost
 temperatures above 150, and nonfinite points are omitted. Ricker is plotted
 against time; other panels use the labeled forcing or observable pair.
+
+Sample trajectories
+-------------------
+
+.. image:: _static/figures/trajectories.png
+   :target: _static/figures/trajectories.png
+   :alt: Three columns showing the two simulated trajectories and Veraart2012 M1.
+
+The two figures below and above share the exact same simulation results and
+observed record.
 
 Warning indicators
 ------------------

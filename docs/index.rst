@@ -1,8 +1,9 @@
 TipBox
 ======
 
-Named stochastic box models, empirical time series, classical warning
-indicators, and trajectory-level ROC/AUROC.
+TipBox collects stochastic tipping models, empirical observations, and simulation
+components for sim-to-real studies. It covers bifurcation- and rate-induced
+tipping, classical warning indicators, and trajectory-level ROC/AUROC.
 
 .. code-block:: python
 

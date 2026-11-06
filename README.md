@@ -1,8 +1,16 @@
 # TipBox
 
-Named stochastic box models, empirical time series, and classical early-warning benchmarks. JAX integration kernels; no AUTO dependency. The model interface and gallery follow [dysts](https://github.com/GilpinLab/dysts).
+TipBox is a collection of tipping systems, combining stochastic box models, empirical observations, and simulation components for sim-to-real studies. It covers bifurcation- and rate-induced tipping and provides classical early-warning indicators, including lag-1 autocorrelation and variance, for studying their warning signals.
 
-## Install
+<div align="center">
+
+[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://juannat7.github.io/tipbox/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+</div>
+
+## Installation
 
 ```bash
 git clone https://github.com/juannat7/tipbox.git
@@ -10,21 +18,55 @@ cd tipbox
 pip install -e .
 ```
 
-Requires Python 3.10 or newer.
+## Generate or load a time series
 
-## Simulate
+TipBox provides a common interface to simulate tipping systems and load observations. See the [system collection](#systems) for available models and their documentation.
 
 ```python
-from tipbox.models import MayHarvesting
+from tipbox.models import MayHarvesting, SaddleNode
+from tipbox.datasets import load_veraart2012
 
-model = MayHarvesting(r=1, k=1, s=0.1)
-result = model.make_trajectory(1000, noise=1, seed=42)
-print(result.time.shape, result.trajectory.shape)  # (1000,) (1000, 1)
+# Bifurcation-induced tipping: n is the number of sampled observations.
+harvesting = MayHarvesting()
+bifurcation = harvesting.make_trajectory(n=1200, noise=1.0, seed=42)
+
+# Rate-induced tipping: simulate 2,401 observations of a moving equilibrium.
+rate = SaddleNode(epsilon=1.4).make_trajectory(n=2401, noise=0.01, seed=43)
+
+# Empirical observations: Veraart et al. (2012), chemostats M1 and M2.
+observed = load_veraart2012()
 ```
 
-Coefficients, initial states, forcing, noise, integration steps, and sampling are configurable. Each [model reference](docs/models/index.rst) gives the equation, defaults, units, and event rule. `noise=1` uses May's configured diffusion amplitude 0.01; noise conventions differ by model.
+Simulation results contain `time` and `trajectory` arrays; loaded observations contain `time` and `observations`. Equations, parameters, and simulation controls are in the [documentation](https://juannat7.github.io/tipbox/usage.html).
 
-## Evaluate indicators
+![Bifurcation-induced tipping, rate-induced tipping, and empirical observations](docs/_static/figures/trajectories.png)
+
+Empirical panels: [CC BY-NC 4.0](docs/_static/figures/LICENSE.md).
+
+## Compute early-warning indicators
+
+Choose an observable and apply a trailing-window statistic before the fold:
+
+```python
+from tipbox.indicators import rolling_ar1, rolling_variance
+
+before_fold = bifurcation.param_values < harvesting.critical_parameter
+signal = bifurcation.trajectory[before_fold, 0]
+ar1 = rolling_ar1(signal, window=200, detrend="linear")
+variance = rolling_variance(signal, window=200, detrend="linear")
+```
+
+Here `window=200` means 200 observations. The [indicator reference](https://juannat7.github.io/tipbox/indicators.html) also covers autocorrelation, skewness, and kurtosis.
+
+![AR1 and variance for the same three time series](docs/_static/figures/indicators.png)
+
+## Evaluate with AUROC
+
+Compare indicators across independent tipping and non-tipping trajectories using the area under the ROC curve (AUROC). Each trajectory contributes one indicator-trend score; the curve measures how well those scores distinguish the two classes.
+
+### Generate a batch
+
+Generate labeled batches for repeated experiments or indicator comparisons:
 
 ```python
 from tipbox.models import MayHarvesting
@@ -33,10 +75,10 @@ from tipbox.indicators import rolling_ar1, rolling_variance
 from tipbox.metrics import ensemble_roc, plot_roc
 
 batch = generate_dataset(
-    MayHarvesting(), num_timesteps=300, n_tipping=5, n_null=5,
-    n=1000, noise=1, lead_steps=1, seed=42,
+    MayHarvesting(), n_tipping=5, n_null=5,
+    n=1000, num_timesteps=300, noise=1.0, seed=42,
 )
-signals = batch.observations[:, :, 0]  # (10, 300)
+signals = batch.observations[:, :, 0]  # 10 trajectories, 300 retained samples each.
 indicators = {
     "AR1": [rolling_ar1(x, window=100, detrend="linear") for x in signals],
     "Variance": [rolling_variance(x, window=100, detrend="linear") for x in signals],
@@ -46,58 +88,47 @@ print(report.curves["Variance"].auroc)
 ax = plot_roc(report)
 ```
 
-Each trajectory contributes one Kendall trend score. Larger scores mean tipping; directions are fixed before evaluation. Results include missing-score and class counts. These [outcome-conditioned batches](docs/benchmarks.rst) do not estimate natural tipping probabilities or universal detection performance.
+`n` controls the full simulation length; `num_timesteps` selects the context retained before each reference event. See the [benchmark guide](https://juannat7.github.io/tipbox/benchmarks.html) for labels, trend scores, and evaluation conventions.
 
-![May harvesting, rate-driven saddle-node, and observed microcosm with trailing AR1 and variance](docs/_static/figures/indicators.png)
+## Systems
 
-Simulated indicators end before their fold or state-threshold reference. Microcosm recoveries are analyzed separately. Data: Veraart et al. (2012), [DANS](https://doi.org/10.17026/dans-ztg-93aw), CC BY-NC 4.0; intervals follow Grziwotz et al. (2023). [Settings and reproduction](docs/figures.rst) · [Figure license](docs/_static/figures/LICENSE.md).
+Each model name links to its equations, defaults, and usage.
 
-## Load observations
+| Model | Tipping mechanism | Reference |
+|---|---|---|
+| [MayHarvesting](https://juannat7.github.io/tipbox/models/harvesting.html) | Fold | May (1977) |
+| [Rosenzweig<br>MacArthur](https://juannat7.github.io/tipbox/models/consumer_resource.html) | Transcritical / Hopf | Bury et al. (2021) |
+| [SEIRx](https://juannat7.github.io/tipbox/models/seirx.html) | Transcritical | Bury et al. (2021) |
+| [AMOC](https://juannat7.github.io/tipbox/models/amoc.html) | Fold | Alkhayuon et al. (2019) |
+| [SaddleNode](https://juannat7.github.io/tipbox/models/saddle_node.html) | Rate-induced | Ashwin et al. (2012) |
+| [Bautin](https://juannat7.github.io/tipbox/models/bautin.html) | Rate-induced | Huang et al. (2024) |
+| [CompostBomb](https://juannat7.github.io/tipbox/models/compost.html) | Rate-induced | Wieczorek et al. (2011) |
+| [AMOCRate](https://juannat7.github.io/tipbox/models/amoc.html) | Rate-induced | Alkhayuon et al. (2019) |
+| [Ricker](https://juannat7.github.io/tipbox/models/ricker.html) | Transcritical | Ricker (1954) |
+| [Thermoacoustic](https://juannat7.github.io/tipbox/models/thermoacoustic.html) | Subcritical Hopf | Bonciolini et al. (2018) |
 
-```python
-from tipbox.datasets import load_microcosm_original
+![Phase portraits and simulated trajectories, with start and end markers](docs/_static/figures/overview.png)
 
-record = load_microcosm_original()
-print(record.observations.shape)  # (7914, 2): M1, M2
-```
+Empirical cases include the microcosm, voice onset, cellular ATP, paleoclimate, and electrical blackout records. The [dataset guide](https://juannat7.github.io/tipbox/datasets.html) lists sources and loaders; the [sim-to-real guide](https://juannat7.github.io/tipbox/sim_to_real.html) covers Daphnia and thermoacoustic studies.
 
-`load_empirical(name)` also loads the five [KEWS](https://github.com/juannat7/kews) cases: `microcosm`, `voice`, `mitochondria`, `climate`, and `blackout`. Downloads are cached; original times and missing readings are preserved. See [sources and offline controls](docs/datasets.rst). Daphnia/TAC [simulation components](docs/sim_to_real.rst) are included; original observation import and fitted calibration remain pending.
+## Documentation and examples
 
-## Models
+[Quickstart](https://juannat7.github.io/tipbox/quickstart.html) · [API](https://juannat7.github.io/tipbox/api.html) · [Figure reproduction](https://juannat7.github.io/tipbox/figures.html)
 
-| Model | Registry name | Mechanism | Reference |
-|---|---|---|---|
-| `MayHarvesting` | `b_harvesting` | Fold | May 1977 |
-| `RosenzweigMacArthur(bifurcation_type="transcritical")` | `b_rosenzweig_macarthur_tc` | Transcritical | Bury et al. 2021 |
-| `RosenzweigMacArthur(bifurcation_type="hopf")` | `b_rosenzweig_macarthur_hopf` | Hopf | Bury et al. 2021 |
-| `SEIRx` | `b_seirx_tc` | Transcritical | Bury et al. 2021 |
-| `AMOC` | `b_amoc` | Fold | Alkhayuon et al. 2019; Ritchie et al. 2023 |
-| `Ricker` | `b_ricker` | Transcritical population map | Ricker 1954 |
-| `Thermoacoustic` | `b_thermoacoustic` | Subcritical Hopf | Bonciolini et al. 2018 |
-| `SaddleNode` | `r_saddle_node` | Rate-induced | Ashwin et al. 2012 |
-| `Bautin` | `r_bautin` | Rate-induced | Ritchie et al. 2023 |
-| `CompostBomb` | `r_compost_bomb` | Rate-induced | Wieczorek et al. 2011 |
-| `AMOCRate` | `r_amoc` | Rate-induced | Alkhayuon et al. 2019; Ritchie et al. 2023 |
-
-![Simulated model trajectories in physical coordinates](docs/_static/figures/overview.png)
-
-Open/filled dots mark displayed start/end. The [manifest and figure guide](docs/figures.rst) record coefficients, seeds, grids, and display limits. Model equations follow the cited sources; forcing, initialization, and null protocols can differ. These differences are stated on the model pages.
-
-## Documentation
-
-[Quickstart](docs/quickstart.rst) · [Model controls](docs/usage.rst) · [API](docs/api.rst) · [Indicators](docs/indicators.rst) · [Compatibility](docs/compatibility.rst) · [AI index](docs/llms.txt)
+To build the documentation or reproduce the figures locally:
 
 ```bash
 pip install -e ".[docs]"
 python -m sphinx -b html docs docs/_build/html
-JAX_PLATFORMS=cpu python examples/figures.py
+python examples/figures.py
 ```
 
-Runnable notebooks: [generation and evaluation](notebook/01_generate_batch.ipynb), [parameter sensitivity](notebook/02_sensitivity_analysis.ipynb).
+Runnable notebooks:
+
+- [Generation and evaluation](notebook/01_generate_batch.ipynb)
+- [Parameter sensitivity](notebook/02_sensitivity_analysis.ipynb)
 
 ## Used in research
 
-- Nathaniel et al. (2026), [Koopman early warning signals for bifurcation and rate-induced tipping](https://arxiv.org/abs/2608.14716), with [KEWS code](https://github.com/juannat7/kews).
-- Sevinchan et al. (2026), [In-context learning to predict critical transitions in dynamical systems](https://arxiv.org/abs/2605.12308).
-
-Both used earlier TipBox versions; see the compatibility reference for numerical changes.
+- Nathaniel et al. (2026), [Koopman early warning signals for bifurcation and rate-induced tipping](https://arxiv.org/abs/2608.14716). Code: [KEWS](https://github.com/juannat7/kews).
+- Sevinchan, Nathaniel, et al. (2026), [In-context learning to predict critical transitions in dynamical systems](https://arxiv.org/abs/2605.12308). NeurIPS 2026.

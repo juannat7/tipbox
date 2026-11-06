@@ -10,6 +10,8 @@ from .empirical import (
 )
 from .microcosm import load_microcosm_original
 
+load_veraart2012 = load_microcosm_original
+
 __all__ = [
     "BenchmarkDataset",
     "EmpiricalRecord",
@@ -19,4 +21,5 @@ __all__ = [
     "list_empirical",
     "load_empirical",
     "load_microcosm_original",
+    "load_veraart2012",
 ]

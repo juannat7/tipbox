@@ -1,14 +1,14 @@
 {
   "versions": {
     "python": "3.11.14",
-    "numpy": "2.3.5",
-    "jax": "0.9.0.1",
-    "scipy": "1.16.3",
-    "matplotlib": "3.10.8"
+    "numpy": "2.4.6",
+    "jax": "0.10.2",
+    "scipy": "1.17.1",
+    "matplotlib": "3.11.2"
   },
   "jax_backend": "cpu",
   "jax_enable_x64": false,
-  "script_sha256": "41da93ba43193482e83da2684446c2799afdbc23d2663dd46f9d614e67cbcdc5",
+  "script_sha256": "24568192afb822281632f4b705839efeea85318ff72a5c2c101ad18860210af3",
   "package_sources_sha256": {
     "__init__.py": "3c6b12ed5bfaa65508d5ed1731a5ed26dad3a94a83ccde96ec2d916d5f0062eb",
     "_amoc.py": "3aa4751ec838a7d6041c782a9dfd9a5fbfb176b3efe08e1acb7c522f0e635add",
@@ -20,7 +20,7 @@
     "bifurcation/rosenzweig_macarthur.py": "b0a46559eff3ce920d1b061382640a1b4bca626f1f4e18e16dc858ef91a799e3",
     "bifurcation/seirx.py": "bca1ebbd253f1c21d00e0e4b4f6bc602d75436a5a4edca557d3fa2c68e8fafa4",
     "bifurcation/thermoacoustic.py": "02d79356a8ee971ec631869e4d4f5449955e08157034bb94c8d404ab14c5c6d3",
-    "datasets/__init__.py": "57117cb3f38fc40553164f1c0a64856220c0472ae06097cb6833b45b599f5dd0",
+    "datasets/__init__.py": "e1c3d1537d4023bf206d2a9bdd4cd320ffbc349a541f97fe365bf4f917f6429f",
     "datasets/_cache.py": "76f8fe6b0fe2a377aaaef63b3e7e75cd0d7cc43c81bf8eb338ef1947c1e250f2",
     "datasets/benchmarks.py": "890d254db9f8e2ee8be8ef7fe3448afbea501f0344a5d1456bd5b6dee5195ddb",
     "datasets/empirical.py": "48ac517f1cb343572e3cc0f20e3d58bc51e3f6ef546d5fed8e716475e2e3ccc9",
@@ -83,7 +83,15 @@
       "vertical": "biomass",
       "display_scaling": "physical coordinates; no min/max normalization",
       "display_filter": "finite points; saddle-node |state|<=5; Bautin radius<=tip_threshold; compost temperature<=150",
-      "n_displayed": 1400
+      "n_displayed": 1400,
+      "display_time_interval": [
+        0.0,
+        1399.0
+      ],
+      "reference_index": 1171,
+      "reference_time": 1171.0,
+      "critical_parameter": 0.2604365348815918,
+      "parameter_inset": "full forcing schedule; shading marks displayed interval; dashed line is the critical parameter when defined"
     },
     "b_rosenzweig_macarthur_tc": {
       "model": "RosenzweigMacArthurModel",
@@ -109,12 +117,13 @@
         "t_end": 100.0
       },
       "arguments": {
-        "n": 1800,
+        "n": 89951,
+        "dt_sample": 0.02,
         "noise": 1.0
       },
       "seed": 42,
       "dt": 0.01,
-      "dt_sample": 1.0,
+      "dt_sample": 0.02,
       "initial_state": [
         1.4376566410064697,
         0.02893168292939663
@@ -124,7 +133,7 @@
         "consumer"
       ],
       "time_unit": "model time",
-      "n_observations": 1800,
+      "n_observations": 89951,
       "time_start": 0.0,
       "time_end": 1799.0,
       "selection": "first accepted tipping trajectory from generate_dataset",
@@ -135,7 +144,15 @@
       "vertical": "consumer",
       "display_scaling": "physical coordinates; no min/max normalization",
       "display_filter": "finite points; saddle-node |state|<=5; Bautin radius<=tip_threshold; compost temperature<=150",
-      "n_displayed": 1800
+      "n_displayed": 76,
+      "display_time_interval": [
+        1586.8599853515625,
+        1588.3599853515625
+      ],
+      "reference_index": 79368,
+      "reference_time": 1587.3599853515625,
+      "critical_parameter": 5.88235294117647,
+      "parameter_inset": "full forcing schedule; shading marks displayed interval; dashed line is the critical parameter when defined"
     },
     "b_rosenzweig_macarthur_hopf": {
       "model": "RosenzweigMacArthurModel",
@@ -161,12 +178,13 @@
         "t_end": 100.0
       },
       "arguments": {
-        "n": 1800,
+        "n": 89951,
+        "dt_sample": 0.02,
         "noise": 1.0
       },
       "seed": 42,
       "dt": 0.01,
-      "dt_sample": 1.0,
+      "dt_sample": 0.02,
       "initial_state": [
         0.7961273193359375,
         0.37277016043663025
@@ -176,7 +194,7 @@
         "consumer"
       ],
       "time_unit": "model time",
-      "n_observations": 1800,
+      "n_observations": 89951,
       "time_start": 0.0,
       "time_end": 1799.0,
       "selection": "first accepted tipping trajectory from generate_dataset",
@@ -187,7 +205,15 @@
       "vertical": "consumer",
       "display_scaling": "physical coordinates; no min/max normalization",
       "display_filter": "finite points; saddle-node |state|<=5; Bautin radius<=tip_threshold; compost temperature<=150",
-      "n_displayed": 1800
+      "n_displayed": 301,
+      "display_time_interval": [
+        1203.760009765625,
+        1209.760009765625
+      ],
+      "reference_index": 60288,
+      "reference_time": 1205.760009765625,
+      "critical_parameter": 15.686274509803921,
+      "parameter_inset": "full forcing schedule; shading marks displayed interval; dashed line is the critical parameter when defined"
     },
     "b_seirx_tc": {
       "model": "SEIRxModel",
@@ -240,7 +266,15 @@
       "vertical": "vaccinator_fraction",
       "display_scaling": "physical coordinates; no min/max normalization",
       "display_filter": "finite points; saddle-node |state|<=5; Bautin radius<=tip_threshold; compost temperature<=150",
-      "n_displayed": 1800
+      "n_displayed": 1800,
+      "display_time_interval": [
+        0.0,
+        1799.0
+      ],
+      "reference_index": 818,
+      "reference_time": 818.0,
+      "critical_parameter": 50.0,
+      "parameter_inset": "full forcing schedule; shading marks displayed interval; dashed line is the critical parameter when defined"
     },
     "b_amoc": {
       "model": "AMOCModel",
@@ -310,7 +344,15 @@
       "vertical": "amoc_strength",
       "display_scaling": "physical coordinates; no min/max normalization",
       "display_filter": "finite points; saddle-node |state|<=5; Bautin radius<=tip_threshold; compost temperature<=150",
-      "n_displayed": 1041
+      "n_displayed": 1041,
+      "display_time_interval": [
+        0.0,
+        5200.0
+      ],
+      "reference_index": 946,
+      "reference_time": 4730.0,
+      "critical_parameter": 0.4236,
+      "parameter_inset": "full forcing schedule; shading marks displayed interval; dashed line is the critical parameter when defined"
     },
     "r_saddle_node": {
       "model": "SaddleNodeModel",
@@ -349,7 +391,15 @@
       "vertical": "state",
       "display_scaling": "physical coordinates; no min/max normalization",
       "display_filter": "finite points; saddle-node |state|<=5; Bautin radius<=tip_threshold; compost temperature<=150",
-      "n_displayed": 1723
+      "n_displayed": 1723,
+      "display_time_interval": [
+        -15.899999618530273,
+        1.3199996948242188
+      ],
+      "reference_index": 1709,
+      "reference_time": 1.0900001525878906,
+      "critical_parameter": null,
+      "parameter_inset": "full forcing schedule; shading marks displayed interval; dashed line is the critical parameter when defined"
     },
     "r_bautin": {
       "model": "BautinModel",
@@ -394,7 +444,15 @@
       "vertical": "y",
       "display_scaling": "physical coordinates; no min/max normalization",
       "display_filter": "finite points; saddle-node |state|<=5; Bautin radius<=tip_threshold; compost temperature<=150",
-      "n_displayed": 1150
+      "n_displayed": 1150,
+      "display_time_interval": [
+        -15.0,
+        -3.510000228881836
+      ],
+      "reference_index": 1150,
+      "reference_time": -3.5,
+      "critical_parameter": null,
+      "parameter_inset": "full forcing schedule; shading marks displayed interval; dashed line is the critical parameter when defined"
     },
     "r_compost_bomb": {
       "model": "CompostBombModel",
@@ -442,7 +500,15 @@
       "vertical": "soil_temperature",
       "display_scaling": "physical coordinates; no min/max normalization",
       "display_filter": "finite points; saddle-node |state|<=5; Bautin radius<=tip_threshold; compost temperature<=150",
-      "n_displayed": 1105
+      "n_displayed": 1105,
+      "display_time_interval": [
+        0.0,
+        55.25
+      ],
+      "reference_index": 1085,
+      "reference_time": 54.25,
+      "critical_parameter": null,
+      "parameter_inset": "full forcing schedule; shading marks displayed interval; dashed line is the critical parameter when defined"
     },
     "r_amoc": {
       "model": "AMOCRateModel",
@@ -514,7 +580,15 @@
       "vertical": "amoc_strength",
       "display_scaling": "physical coordinates; no min/max normalization",
       "display_filter": "finite points; saddle-node |state|<=5; Bautin radius<=tip_threshold; compost temperature<=150",
-      "n_displayed": 1142
+      "n_displayed": 1142,
+      "display_time_interval": [
+        -2505.0,
+        3200.0
+      ],
+      "reference_index": 501,
+      "reference_time": 0.0,
+      "critical_parameter": null,
+      "parameter_inset": "full forcing schedule; shading marks displayed interval; dashed line is the critical parameter when defined"
     },
     "b_ricker": {
       "model": "RickerModel",
@@ -554,7 +628,15 @@
       "vertical": "population",
       "display_scaling": "physical coordinates; no min/max normalization",
       "display_filter": "finite points; saddle-node |state|<=5; Bautin radius<=tip_threshold; compost temperature<=150",
-      "n_displayed": 600
+      "n_displayed": 600,
+      "display_time_interval": [
+        0.0,
+        599.0
+      ],
+      "reference_index": 364,
+      "reference_time": 364.0,
+      "critical_parameter": 0.0,
+      "parameter_inset": "full forcing schedule; shading marks displayed interval; dashed line is the critical parameter when defined"
     },
     "b_thermoacoustic": {
       "model": "ThermoacousticModel",
@@ -573,11 +655,13 @@
         "t_end": 1.1
       },
       "arguments": {
+        "n": 11001,
+        "dt_sample": 0.0001,
         "noise": 1.0
       },
       "seed": 42,
       "dt": 0.0001,
-      "dt_sample": 0.0005,
+      "dt_sample": 0.0001,
       "initial_state": [
         0.10000000149011612,
         0.0
@@ -588,7 +672,7 @@
         "amplitude"
       ],
       "time_unit": "s",
-      "n_observations": 2201,
+      "n_observations": 11001,
       "time_start": 0.0,
       "time_end": 1.100000023841858,
       "selection": "first accepted tipping trajectory from generate_dataset",
@@ -599,10 +683,18 @@
       "vertical": "scaled_velocity",
       "display_scaling": "physical coordinates; no min/max normalization",
       "display_filter": "finite points; saddle-node |state|<=5; Bautin radius<=tip_threshold; compost temperature<=150",
-      "n_displayed": 2201
+      "n_displayed": 301,
+      "display_time_interval": [
+        0.4399999976158142,
+        0.4699999988079071
+      ],
+      "reference_index": 4500,
+      "reference_time": 0.44999998807907104,
+      "critical_parameter": 0.0,
+      "parameter_inset": "full forcing schedule; shading marks displayed interval; dashed line is the critical parameter when defined"
     }
   },
-  "indicators": {
+  "trajectories": {
     "MayHarvestingModel": {
       "model": "MayHarvestingModel",
       "parameters": {
@@ -648,13 +740,13 @@
         0,
         1004
       ],
-      "window": 200,
-      "step": 1,
-      "detrend": "linear",
       "display_time_limits": [
         0.0,
         1199.0
-      ]
+      ],
+      "window": 200,
+      "step": 1,
+      "detrend": "linear"
     },
     "SaddleNodeModel": {
       "model": "SaddleNodeModel",
@@ -695,13 +787,13 @@
         0,
         1709
       ],
-      "window": 200,
-      "step": 1,
-      "detrend": "linear",
       "display_time_limits": [
         -8.0,
         1.3199996948242188
-      ]
+      ],
+      "window": 200,
+      "step": 1,
+      "detrend": "linear"
     },
     "microcosm": {
       "source_doi": "10.17026/dans-ztg-93aw",
@@ -772,11 +864,186 @@
           "n": 250
         }
       ],
-      "slice_note": "row correspondence verified against the pinned aggregated copy; original times are not rounded",
       "window": 200,
       "step": 5,
       "detrend": "linear",
-      "plot_time": "raw experiment time above; elapsed time within each recovery below"
+      "plot_time": "experiment time for observations; elapsed time for separate recoveries"
+    }
+  },
+  "indicators": {
+    "MayHarvestingModel": {
+      "model": "MayHarvestingModel",
+      "parameters": {
+        "r": 1.0,
+        "k": 1.0,
+        "s": 0.1,
+        "h_min": 0.15,
+        "h_max": 0.27,
+        "h_bifurcation": null,
+        "null_initial_mean": 0.75,
+        "null_initial_std": 0.1,
+        "sigma": 0.01,
+        "dt": 0.01,
+        "t_start": 0.0,
+        "t_end": 100.0,
+        "initial_state_min": 0.5,
+        "initial_state_max": 1.0
+      },
+      "arguments": {
+        "n": 1200,
+        "noise": 1.0
+      },
+      "seed": 42,
+      "dt": 0.01,
+      "dt_sample": 1.0,
+      "initial_state": [
+        0.8638321161270142
+      ],
+      "observables": [
+        "biomass"
+      ],
+      "time_unit": "model time",
+      "n_observations": 1200,
+      "time_start": 0.0,
+      "time_end": 1199.0,
+      "selection": "first accepted tipping trajectory from generate_dataset",
+      "selection_context_samples": 300,
+      "root_seed": 42,
+      "attempt": 1,
+      "marker_index": 1004,
+      "marker_time": 1004.0,
+      "indicator_input_slice": [
+        0,
+        1004
+      ],
+      "display_time_limits": [
+        0.0,
+        1199.0
+      ],
+      "window": 200,
+      "step": 1,
+      "detrend": "linear"
+    },
+    "SaddleNodeModel": {
+      "model": "SaddleNodeModel",
+      "parameters": {
+        "epsilon": 1.4,
+        "lambda_max": 3.0,
+        "null_rate_factor": 0.5,
+        "dt": 0.01,
+        "t_start": -16.0,
+        "t_end": 8.0,
+        "initial_state_min": -10.0,
+        "initial_state_max": -1.0,
+        "tip_threshold": 0.0
+      },
+      "arguments": {
+        "noise": 0.01
+      },
+      "seed": 43,
+      "dt": 0.01,
+      "dt_sample": 0.01,
+      "initial_state": [
+        -9.749342918395996
+      ],
+      "observables": [
+        "state"
+      ],
+      "time_unit": "model time",
+      "n_observations": 2401,
+      "time_start": -16.0,
+      "time_end": 8.0,
+      "selection": "first accepted tipping trajectory from generate_dataset",
+      "selection_context_samples": 300,
+      "root_seed": 42,
+      "attempt": 2,
+      "marker_index": 1709,
+      "marker_time": 1.0900001525878906,
+      "indicator_input_slice": [
+        0,
+        1709
+      ],
+      "display_time_limits": [
+        -8.0,
+        1.3199996948242188
+      ],
+      "window": 200,
+      "step": 1,
+      "detrend": "linear"
+    },
+    "microcosm": {
+      "source_doi": "10.17026/dans-ztg-93aw",
+      "source_sha256": "cec2680a8af7cc13e8afe31f92b9315d9c481b23523d73f9c47b552f75132f3e",
+      "license": "CC-BY-NC-4.0",
+      "observable": "M1",
+      "reference_time": 27.0,
+      "reference_source_doi": "10.5281/zenodo.7379358",
+      "recovery_row_slices": [
+        {
+          "label": "P1",
+          "rows": [
+            161,
+            411
+          ],
+          "time_start": 0.5709219858155947,
+          "time_stop": 1.4539007092198375,
+          "n": 250
+        },
+        {
+          "label": "P2",
+          "rows": [
+            1283,
+            1533
+          ],
+          "time_start": 4.549645390070857,
+          "time_stop": 5.4326241134751,
+          "n": 250
+        },
+        {
+          "label": "P3",
+          "rows": [
+            3001,
+            3251
+          ],
+          "time_start": 10.641843971631054,
+          "time_stop": 11.524822695035297,
+          "n": 250
+        },
+        {
+          "label": "P4",
+          "rows": [
+            4076,
+            4326
+          ],
+          "time_start": 14.453900709219653,
+          "time_stop": 15.336879432623896,
+          "n": 250
+        },
+        {
+          "label": "P5",
+          "rows": [
+            5273,
+            5523
+          ],
+          "time_start": 19.49858156028367,
+          "time_stop": 20.381560283687914,
+          "n": 250
+        },
+        {
+          "label": "P6",
+          "rows": [
+            6684,
+            6934
+          ],
+          "time_start": 24.50212765957438,
+          "time_stop": 25.385106382978623,
+          "n": 250
+        }
+      ],
+      "window": 200,
+      "step": 5,
+      "detrend": "linear",
+      "plot_time": "experiment time for observations; elapsed time for separate recoveries"
     }
   },
   "roc": {

@@ -4,7 +4,7 @@
 and are covered by the repository's MIT license. `examples/figures.py` and
 `manifest.json` are also covered by that license.
 
-`indicators.{png,svg,pdf}` includes a visualization of the original chemostat
+`trajectories.{png,svg,pdf}` and `indicators.{png,svg,pdf}` include a visualization of the original chemostat
 observations and is distributed under **CC BY-NC 4.0**:
 https://creativecommons.org/licenses/by-nc/4.0/
 
