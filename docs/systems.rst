@@ -40,11 +40,11 @@ Box models
      - Rate-induced
      - Alkhayuon et al. (2019)
 
-Sim-to-real components
-----------------------
+Sim-to-real models
+------------------
 
-These entries provide simulations. Original observation loaders and verified
-experimental calibration are pending; see :doc:`sim_to_real` for source archives.
+These entries provide simulations. Experimental recordings must be obtained
+separately; see :doc:`sim_to_real` for data sources and calibration details.
 
 .. list-table::
    :header-rows: 1
@@ -64,9 +64,8 @@ experimental calibration are pending; see :doc:`sim_to_real` for source archives
 Empirical observations
 ----------------------
 
-The first loader reads the original Veraart et al. (2012) M1 and M2 records;
-``load_empirical("microcosm")`` reads the rounded, one-column M1 aggregate.
-The other cases come from the Grziwotz et al. (2023) archive used by KEWS.
+``Microcosm`` loads the original M1 and M2 chemostat observations. The other
+cases come from the Grziwotz et al. (2023) archive used by KEWS.
 See :doc:`datasets` for sampling, provenance, source terms, and cache controls.
 
 .. list-table::
@@ -77,11 +76,8 @@ See :doc:`datasets` for sampling, provenance, source terms, and cache controls.
    * - Record
      - Class / call
      - Observed quantity
-   * - Veraart2012 · M1 and M2
+   * - Microcosm · M1 and M2
      - :meth:`Microcosm().load() <tipbox.datasets.Microcosm.load>`
-     - Light attenuation
-   * - Microcosm · aggregated M1
-     - ``load_empirical("microcosm")``
      - Light attenuation
    * - Voice onset
      - :meth:`VoiceOnset().load() <tipbox.datasets.VoiceOnset.load>`
@@ -102,14 +98,7 @@ Discover from Python
 .. code-block:: python
 
    from tipbox import list_systems, get_system_info
-   from tipbox.datasets import list_empirical, get_empirical_info
 
    print(list_systems())                # Eleven configurations, ten model classes.
    model = get_system_info("b_harvesting").create_model()
    print(model.get_parameters())
-   print(list_empirical())              # Five aggregated cases; no download.
-   print(get_empirical_info("voice"))    # Source labels and reference settings.
-
-``Microcosm().load()`` reads the original M1/M2 source, outside the five
-aggregated names returned by ``list_empirical``. The functional loaders
-``load_veraart2012`` and ``load_empirical`` remain supported.

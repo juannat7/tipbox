@@ -12,13 +12,12 @@ Research using TipBox
   `In-context learning to predict critical transitions in dynamical systems
   <https://arxiv.org/abs/2605.12308>`_.
 
-Cite the original model and data sources for the systems you use; their
-reference pages list the relevant works.
+Citation
+--------
 
-BibTeX
-------
-
-:download:`Download both entries <../references.bib>`.
+If you use TipBox's code or datasets in your work, we would appreciate a citation to:
 
 .. literalinclude:: ../references.bib
    :language: bibtex
+
+:download:`Download BibTeX <../references.bib>`.

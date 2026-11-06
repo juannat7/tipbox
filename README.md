@@ -122,12 +122,11 @@ Each system links to a runnable example, equations, and parameter defaults.
 | [Moving Bautin](https://juannat7.github.io/tipbox/models/bautin.html) | `Bautin` | Rate-induced |
 | [Compost bomb](https://juannat7.github.io/tipbox/models/compost.html) | `CompostBomb` | Rate-induced |
 | [Ocean overturning](https://juannat7.github.io/tipbox/models/amoc.html) | `AMOCRate` | Rate-induced |
-| **Sim-to-real components** | **Simulations; observation loaders pending** | |
+| **Sim-to-real models (simulation only)** | | |
 | [Daphnia surrogate](https://juannat7.github.io/tipbox/models/ricker.html) | `Ricker` | Population decline |
 | [Combustion oscillator](https://juannat7.github.io/tipbox/models/thermoacoustic.html) | `Thermoacoustic` | Subcritical Hopf |
 | **Empirical observations** | | |
 | [Microcosm · M1 and M2](https://juannat7.github.io/tipbox/datasets.html#original-microcosm-source) | `Microcosm().load()` | Light attenuation |
-| [Microcosm · aggregated M1](https://juannat7.github.io/tipbox/datasets.html#cases-and-example-settings) | `load_empirical("microcosm")` | Light attenuation |
 | [Voice onset](https://juannat7.github.io/tipbox/datasets.html#tipbox.datasets.VoiceOnset) | `VoiceOnset().load()` | Subglottal pressure |
 | [Cellular ATP](https://juannat7.github.io/tipbox/datasets.html#tipbox.datasets.CellularATP) | `CellularATP().load()` | Fluorescence ratio |
 | [Paleoclimate](https://juannat7.github.io/tipbox/datasets.html#tipbox.datasets.Paleoclimate) | `Paleoclimate().load()` | CaCO₃ |
@@ -149,11 +148,7 @@ The [full catalog](https://juannat7.github.io/tipbox/systems.html) includes disc
 
 ## Citation
 
-BibTeX for the two studies above is also available in [references.bib](references.bib).
-Cite individual model and data sources when using them; their reference pages list the original works.
-
-<details>
-<summary>KEWS and TipPFN BibTeX</summary>
+If you use TipBox's code or datasets in your work, we would appreciate a citation to:
 
 ```bibtex
 @article{nathaniel2026koopman,
@@ -166,17 +161,4 @@ Cite individual model and data sources when using them; their reference pages li
   doi = {10.48550/arXiv.2608.14716},
   url = {https://arxiv.org/abs/2608.14716}
 }
-
-@inproceedings{sevinchan2026tippfn,
-  title = {In-context learning to predict critical transitions in dynamical systems},
-  author = {Sevinchan, Yunus and Nathaniel, Juan and Ueltzh{\"o}ffer, Kai and
-            Roesch, Carla and Weber, Tobias and Laschos, Vaios and Fan, Hang and
-            Ramien, Gregor and Haux, Johannes and Gentine, Pierre and Herdeanu, Benjamin},
-  booktitle = {Advances in Neural Information Processing Systems},
-  year = {2026},
-  doi = {10.48550/arXiv.2605.12308},
-  url = {https://arxiv.org/abs/2605.12308}
-}
 ```
-
-</details>

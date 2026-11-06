@@ -19,7 +19,7 @@ Use `from tipbox.datasets import Microcosm, Paleoclimate` and `Microcosm().load(
 ## Scientific reference
 
 - [Master system catalog](_sources/systems.rst.txt): Every public model class, sim-to-real simulation component, and observation class, grouped by dataset type.
-- [Citations](_sources/citations.rst.txt): KEWS and TipPFN references with BibTeX.
+- [Citations](_sources/citations.rst.txt): Suggested KEWS citation and research using TipBox.
 - [Model collection](models/index.html): Equations, generated default-parameter tables, units, and reference-event rules.
 - [Indicator definitions](_sources/indicators.rst.txt): AR1 versus Pearson correlation, variance, population moments, detrending, and missingness.
 - [Benchmark protocol](_sources/benchmarks.rst.txt): Outcome-conditioned labels, seed allocation, reference alignment, and ROC conventions.
