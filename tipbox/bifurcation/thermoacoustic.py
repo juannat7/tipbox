@@ -47,7 +47,7 @@ class ThermoacousticConfig:
     dt: float = parameter(1e-4, "RK4 drift integration step.", "s")
     t_start: float = parameter(0.0, "First observation time.", "s")
     t_end: float = parameter(
-        1.1, "End time when n is omitted; default ramp reaches its cap at 1 s.", "s"
+        1.1, "End time when num_samples is omitted; default ramp reaches its cap at 1 s.", "s"
     )
 
     def __post_init__(self):

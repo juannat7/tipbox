@@ -96,7 +96,7 @@ class AMOCFoldConfig:
     )
     t_end: float = parameter(
         5200.0,
-        "End time when make_trajectory is called without n; explicit n sets the end time.",
+        "End time when make_trajectory is called without num_samples; explicit num_samples sets the end time.",
         "year",
     )
     dt_inner: float = parameter(0.2, "AMOC RK4 integration step.", "year")

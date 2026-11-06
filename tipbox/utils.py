@@ -46,7 +46,7 @@ def convert_scalar_trajectory(x: jnp.ndarray) -> jnp.ndarray:
 
 
 def calculate_total_len(
-    series_len: int, buffer_size: int, param_end_multiplier: float = 1.1
+    context_samples: int, buffer_samples: int, param_end_multiplier: float = 1.1
 ) -> int:
     """Calculate total simulation length with optional extension.
 
@@ -55,9 +55,9 @@ def calculate_total_len(
 
     Parameters
     ----------
-    series_len : int
+    context_samples : int
         Desired output trajectory length
-    buffer_size : int
+    buffer_samples : int
         Extra samples simulated prior to the transition
     param_end_multiplier : float, default=1.1
         Multiplier for extending simulation time beyond transition
@@ -67,7 +67,7 @@ def calculate_total_len(
     int
         Total simulation length (extended if param_end_multiplier > 1.0)
     """
-    base_len = series_len + buffer_size
+    base_len = context_samples + buffer_samples
     if param_end_multiplier > 1.0:
         return int(base_len * param_end_multiplier)
     return base_len
@@ -78,23 +78,23 @@ def extract_segment(
     trajectory: jnp.ndarray,
     params: jnp.ndarray,
     transition_idx: int,
-    steps_before_transition: int,
-    series_len: int,
+    excluded_samples: int,
+    context_samples: int,
 ) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray, int, bool]:
-    """Extract a segment mirroring bifurcation.extract_pre_transition_series."""
+    """Extract context ending excluded_samples + 1 samples before the reference."""
 
-    gap = max(steps_before_transition, 0)
+    gap = max(excluded_samples, 0)
     end_idx = transition_idx - gap
-    start_idx = end_idx - series_len
-    success = (end_idx > 0) and (end_idx >= series_len) and (start_idx >= 0)
+    start_idx = end_idx - context_samples
+    success = (end_idx > 0) and (end_idx >= context_samples) and (start_idx >= 0)
 
     if success:
         time_out = time[start_idx:end_idx] - time[start_idx]
         trajectory_out = trajectory[start_idx:end_idx]
         params_out = params[start_idx:end_idx]
     else:
-        time_out = time[:series_len] - time[0]
-        trajectory_out = trajectory[:series_len]
-        params_out = params[:series_len]
+        time_out = time[:context_samples] - time[0]
+        trajectory_out = trajectory[:context_samples]
+        params_out = params[:context_samples]
 
     return time_out, trajectory_out, params_out, transition_idx, success

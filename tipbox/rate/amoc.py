@@ -74,7 +74,7 @@ class AMOCRateConfig:
     )
     t_end: float = parameter(
         3200.0,
-        "End time when make_trajectory is called without n; explicit n sets the end time.",
+        "End time when make_trajectory is called without num_samples; explicit num_samples sets the end time.",
         "year",
     )
     # Tipped when Q (AMOC strength in Sv) < 0 (collapsed / reversed).

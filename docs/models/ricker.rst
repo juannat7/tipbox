@@ -12,19 +12,10 @@ Usage
    from tipbox.models import Ricker
 
    model = Ricker()
-   result = model.make_trajectory(
-       n=600,
-       noise=1.0,
-       seed=42,
-   )
+   result = model.make_trajectory(num_samples=600, noise=1.0, seed=43)
    population = result.trajectory[:, 0]
 
-   control = model.make_trajectory(
-       n=600,
-       noise=1.0,
-       seed=42,
-       null_simulation=True,
-   )
+   control = model.make_trajectory(num_samples=600, noise=1.0, seed=43, null_simulation=True)
 
 .. figure:: ../_static/figures/b_ricker.png
    :target: ../_static/figures/b_ricker.png
@@ -75,7 +66,7 @@ multiple of the update spacing. Time is measured in model updates.
 Forced log growth decreases linearly from ``r_start`` to ``r_end`` over the
 simulated duration divided by ``param_end_multiplier`` (default 1.1), then
 remains capped. Null forcing is constant ``r_null``. As for other normalized
-ramps, changing ``n`` changes the forcing rate unless a custom callable is given.
+ramps, changing ``num_samples`` changes the forcing rate unless a custom callable is given.
 The classifier tests whether growth reaches or falls below zero; the positive
 reference is its first such sample. The null reference is the temporal midpoint.
 These are growth/bifurcation references, not observed extinction times.

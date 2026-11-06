@@ -13,11 +13,11 @@ import numpy as np
 from numpy.lib.stride_tricks import sliding_window_view
 
 
-def window_size(n: int, window: float) -> int:
+def window_size(num_samples: int, window: float) -> int:
     """Resolve a window to samples: integer count, or float fraction in (0, 1].
 
     Fractions are rounded down, allowing one floating-point step at integer
-    boundaries (e.g. 0.29 * 100). Require at least two samples and at most n.
+    boundaries (e.g. 0.29 * 100). Require at least two samples and at most num_samples.
     In particular, ``1`` is a one-sample count (invalid), while ``1.0`` selects
     the full series. Noninteger absolute counts such as ``10.5`` are invalid.
     """
@@ -26,11 +26,11 @@ def window_size(n: int, window: float) -> int:
     if isinstance(window, Integral):
         size = int(window)
     elif np.isfinite(window) and 0 < window <= 1:
-        size = int(np.nextafter(window * n, np.inf))
+        size = int(np.nextafter(window * num_samples, np.inf))
     else:
         raise ValueError("a fractional window must be finite and in (0, 1]")
-    if not 2 <= size <= n:
-        raise ValueError(f"window must resolve to between 2 and {n} samples")
+    if not 2 <= size <= num_samples:
+        raise ValueError(f"window must resolve to between 2 and {num_samples} samples")
     return size
 
 
@@ -90,7 +90,7 @@ def rolling_variance(data, window=0.5, *, ddof=0, step=1, detrend=None):
 
     Parameters
     ----------
-    data : array-like, shape (n,)
+    data : array-like, shape (num_samples,)
         One scalar signal, sampled at regular intervals. Analyze separate recovery
         segments separately; no interpolation or missing-value removal is applied.
     window : int or float, default=0.5
@@ -105,7 +105,7 @@ def rolling_variance(data, window=0.5, *, ddof=0, step=1, detrend=None):
 
     Returns
     -------
-    numpy.ndarray, shape (n,)
+    numpy.ndarray, shape (num_samples,)
         Values at the right edge of each evaluated window; NaN elsewhere.
         Constant finite windows have variance zero.
     """

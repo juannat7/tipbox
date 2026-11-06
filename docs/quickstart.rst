@@ -17,14 +17,10 @@ Simulate
    from tipbox.models import MayHarvesting
 
    model = MayHarvesting()
-   result = model.make_trajectory(
-       n=1200,
-       noise=1.0,
-       seed=42,
-   )
+   # num_samples: sampled observations; noise: process-noise strength; seed: random seed.
+   result = model.make_trajectory(num_samples=1200, noise=1.0, seed=43)
 
-``n`` is the number of sampled observations. Choose other models from the
-:doc:`catalog <models/index>`.
+Choose other models from the :doc:`catalog <models/index>`.
 
 Compute an indicator
 --------------------
@@ -38,15 +34,8 @@ Use the observations before the fold:
 
    before_fold = result.param_values < model.critical_parameter
    signal = result.trajectory[before_fold, 0]
-   ar1 = rolling_ar1(
-       signal,
-       window=200,
-       detrend="linear",
-   )
-   plt.plot(
-       result.time[before_fold],
-       ar1,
-   )
+   ar1 = rolling_ar1(signal, window=200, detrend="linear")
+   plt.plot(result.time[before_fold], ar1)
    plt.show()
 
 The window contains 200 observations. The first 199 results are ``NaN``.

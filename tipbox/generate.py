@@ -14,9 +14,9 @@ def generate(
     key: jax.Array,
     tipping_type: str = "b_harvesting",
     null_simulation: bool = False,
-    num_timesteps: int = 500,
-    steps_before_transition: int = 1,
-    buffer_size: int = 1000,
+    context_samples: int = 500,
+    excluded_samples: int = 1,
+    buffer_samples: int = 1000,
     dt_sample: float | None = None,
     sigma_tilde: float = 0.01,
     max_attempts: int = 100,
@@ -32,11 +32,13 @@ def generate(
         Named system from :func:`tipbox.registry.list_systems`.
     null_simulation : bool, default=False
         Request a non-tipping trajectory using the model's null forcing.
-    num_timesteps : int, default=500
+    context_samples : int, default=500
         Number of samples in the extracted segment.
-    steps_before_transition : int, default=1
-        Number of samples excluded before the model's transition marker.
-    buffer_size : int, default=1000
+    excluded_samples : int, default=1
+        Additional samples skipped before the reference. Zero ends immediately
+        before the reference; one leaves one further observation out.
+        Equivalent batch distance: lead_samples = excluded_samples + 1.
+    buffer_samples : int, default=1000
         Additional simulation context. Its effect on physical duration is
         model-specific; fixed-duration rate models retain their own time grid.
     dt_sample : float or None, default=None
@@ -65,10 +67,10 @@ def generate(
     RuntimeError
         If every simulation is rejected or lacks the requested context.
     """
-    if num_timesteps < 1 or max_attempts < 1:
-        raise ValueError("num_timesteps and max_attempts must be positive")
-    if not 0 <= steps_before_transition <= buffer_size:
-        raise ValueError("Require 0 <= steps_before_transition <= buffer_size")
+    if context_samples < 1 or max_attempts < 1:
+        raise ValueError("context_samples and max_attempts must be positive")
+    if not 0 <= excluded_samples <= buffer_samples:
+        raise ValueError("Require 0 <= excluded_samples <= buffer_samples")
     if not isfinite(sigma_tilde) or sigma_tilde < 0:
         raise ValueError("sigma_tilde must be finite and nonnegative")
     if dt_sample is not None:
@@ -84,9 +86,9 @@ def generate(
         key, subkey = jax.random.split(key)
         result = simulators[spec.system_type](
             subkey,
-            series_len=num_timesteps,
-            steps_before_transition=steps_before_transition,
-            buffer_size=buffer_size,
+            context_samples=context_samples,
+            excluded_samples=excluded_samples,
+            buffer_samples=buffer_samples,
             null_simulation=null_simulation,
             sigma_tilde=sigma_tilde,
             system_name=system_name,

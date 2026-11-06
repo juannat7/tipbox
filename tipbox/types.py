@@ -73,7 +73,7 @@ class BoxModel(ABC):
 
     def make_trajectory(
         self,
-        n: int | None = None,
+        num_samples: int | None = None,
         *,
         dt: float | None = None,
         dt_sample: float | None = None,
@@ -85,14 +85,14 @@ class BoxModel(ABC):
         param_end_multiplier: float = 1.1,
         forcing: Callable | None = None,
     ) -> TrajectoryResult:
-        """Integrate exactly ``n`` observations from the configured start time.
+        """Integrate exactly ``num_samples`` observations from the configured start time.
 
         Parameters
         ----------
-        n : int or None, default=None
+        num_samples : int or None, default=None
             Number of returned samples, including the initial state; at least 2.
             None uses the configured start/end interval and output spacing.
-            An explicit n overrides the configured end time.
+            An explicit num_samples overrides the configured end time.
         dt : float or None, default=None
             Integration step. Defaults to config.dt, or config.dt_inner for AMOC.
             For Ricker this is the interval represented by one discrete map update.
@@ -148,19 +148,23 @@ class BoxModel(ABC):
                 else self.default_sample_dt
             )
         stride = sampling_stride(dt_sample, dt)
-        if n is None:
-            n = (
+        if num_samples is None:
+            num_samples = (
                 sampling_stride(self._config.t_end - self._config.t_start, dt_sample)
                 + 1
             )
-        if not isinstance(n, Integral) or isinstance(n, bool) or n < 2:
-            raise ValueError("n must be an integer of at least 2")
+        if (
+            not isinstance(num_samples, Integral)
+            or isinstance(num_samples, bool)
+            or num_samples < 2
+        ):
+            raise ValueError("num_samples must be an integer of at least 2")
         if not isfinite(noise) or noise < 0:
             raise ValueError("noise must be finite and nonnegative")
         if not isfinite(param_end_multiplier) or param_end_multiplier <= 0:
             raise ValueError("param_end_multiplier must be finite and positive")
 
-        steps = (n - 1) * stride
+        steps = (num_samples - 1) * stride
         time = self._config.t_start + jnp.arange(steps + 1) * dt
         control_time = (
             self._config.t_start + jnp.arange(2 * steps + 1) * (dt / 2)
@@ -276,7 +280,7 @@ class BoxModel(ABC):
         is not JAX-transformable; differentiable model kernels remain separate.
         """
         result = self.make_trajectory(
-            total_len,
+            num_samples=total_len,
             seed=int(jax.random.bits(key, dtype=jnp.uint32)),
             noise=sigma_tilde,
             null_simulation=null_simulation,
@@ -300,8 +304,8 @@ class BoxModel(ABC):
         trajectory,
         param_values,
         transition_idx,
-        steps_before_transition,
-        series_len,
+        excluded_samples,
+        context_samples,
     ):
         """Extract context before a full-trajectory marker."""
         from .utils import extract_segment
@@ -311,6 +315,6 @@ class BoxModel(ABC):
             trajectory,
             param_values,
             transition_idx,
-            steps_before_transition,
-            series_len,
+            excluded_samples,
+            context_samples,
         )

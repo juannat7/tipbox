@@ -88,7 +88,7 @@ GALLERY = (
         "b_harvesting",
         MayHarvesting(),
         "May harvesting",
-        {"n": 1400, "noise": 1.0},
+        {"num_samples": 1400, "noise": 1.0},
         "forcing",
         0,
     ),
@@ -96,7 +96,7 @@ GALLERY = (
         "b_rosenzweig_macarthur_tc",
         RosenzweigMacArthur(bifurcation_type="transcritical", a_transcritical_max=10.0),
         "Rosenzweig–\nMacArthur: TC",
-        {"n": 89951, "dt_sample": 0.02, "noise": 1.0},
+        {"num_samples": 89951, "dt_sample": 0.02, "noise": 1.0},
         0,
         1,
     ),
@@ -104,11 +104,11 @@ GALLERY = (
         "b_rosenzweig_macarthur_hopf",
         RosenzweigMacArthur(bifurcation_type="hopf"),
         "Rosenzweig–\nMacArthur: Hopf",
-        {"n": 89951, "dt_sample": 0.02, "noise": 1.0},
+        {"num_samples": 89951, "dt_sample": 0.02, "noise": 1.0},
         0,
         1,
     ),
-    ("b_seirx_tc", SEIRx(), "SEIRx", {"n": 1800, "noise": 0.01}, 0, 1),
+    ("b_seirx_tc", SEIRx(), "SEIRx", {"num_samples": 1800, "noise": 0.01}, 0, 1),
     ("b_amoc", AMOCFold(), "AMOC: fold", {"noise": 0.01}, "forcing", 0),
     (
         "r_saddle_node",
@@ -121,12 +121,12 @@ GALLERY = (
     ("r_bautin", Bautin(), "Bautin: rate", {"noise": 0.01}, 0, 1),
     ("r_compost_bomb", CompostBomb(), "Compost bomb", {"noise": 0.01}, 0, 1),
     ("r_amoc", AMOCRate(), "AMOC: rate", {"noise": 0.01}, "forcing", 0),
-    ("b_ricker", Ricker(), "Ricker", {"n": 600, "noise": 1.0}, "time", 0),
+    ("b_ricker", Ricker(), "Ricker", {"num_samples": 600, "noise": 1.0}, "time", 0),
     (
         "b_thermoacoustic",
         Thermoacoustic(),
         "Thermoacoustic",
-        {"n": 11001, "dt_sample": 0.0001, "noise": 1.0},
+        {"num_samples": 11001, "dt_sample": 0.0001, "noise": 1.0},
         0,
         1,
     ),
@@ -161,9 +161,9 @@ def _simulation_metadata(model, result, arguments):
 def _example(model, arguments, seed, *, null=False):
     selection = generate_dataset(
         model,
-        num_timesteps=300,
-        n_tipping=int(not null),
-        n_null=int(null),
+        context_samples=300,
+        num_tipping=int(not null),
+        num_controls=int(null),
         seed=seed,
         **arguments,
     ).metadata[0]
@@ -308,7 +308,8 @@ def model_preview(name, model, result, control, arguments, selection):
     start = float(time[display][0])
     # Leave room for the reference line without plotting an escaped state.
     stop = max(
-        float(time[display][-1]), float(time[marker]) + 0.02 * float(np.ptp(time[display]))
+        float(time[display][-1]),
+        float(time[marker]) + 0.02 * float(np.ptp(time[display])),
     )
     fig, axes = plt.subplots(
         2,
@@ -364,7 +365,7 @@ def example_data(seed, record):
     metadata = {}
     for column, (model, arguments) in enumerate(
         (
-            (MayHarvesting(), {"n": 1200, "noise": 1.0}),
+            (MayHarvesting(), {"num_samples": 1200, "noise": 1.0}),
             (SaddleNode(epsilon=1.4), {"noise": 0.01}),
         )
     ):
@@ -403,7 +404,7 @@ def example_data(seed, record):
             "rows": [start, stop],
             "time_start": float(record.time[start]),
             "time_stop": float(record.time[stop - 1]),
-            "n": stop - start,
+            "num_samples": stop - start,
         }
         for label, start, stop in RECOVERIES
     ]
@@ -555,17 +556,17 @@ def indicator_examples(examples):
     return fig, metadata
 
 
-def roc_examples(seed, n_per_class):
+def roc_examples(seed, num_per_class):
     fig, ax = plt.subplots(figsize=(4.2, 3.6), layout="constrained")
     manifest = {}
     model = MayHarvesting()
-    arguments = {"n": 1000, "noise": 1.0}
+    arguments = {"num_samples": 1000, "noise": 1.0}
     data = generate_dataset(
         model,
-        num_timesteps=300,
-        n_tipping=n_per_class,
-        n_null=n_per_class,
-        lead_steps=1,
+        context_samples=300,
+        num_tipping=num_per_class,
+        num_controls=num_per_class,
+        lead_samples=1,
         seed=seed,
         **arguments,
     )
@@ -589,9 +590,9 @@ def roc_examples(seed, n_per_class):
         "parameters": model.get_parameters(),
         "arguments": arguments,
         "root_seed": seed,
-        "n_per_class": n_per_class,
-        "num_timesteps": 300,
-        "lead_steps": 1,
+        "num_per_class": num_per_class,
+        "context_samples": 300,
+        "lead_samples": 1,
         "physical_lead_min": float(min(leads)),
         "physical_lead_max": float(max(leads)),
         "window": 100,
@@ -637,7 +638,7 @@ def main():
         help="Local original microcosm ODS; otherwise download to cache",
     )
     parser.add_argument(
-        "--n-per-class",
+        "--num-per-class",
         type=int,
         default=50,
         help="Tipping and null counts per model in the ROC panels",
@@ -645,7 +646,7 @@ def main():
     parser.add_argument(
         "--seed",
         type=int,
-        default=42,
+        default=43,
         help="Declared root seed for simulations and batch selection",
     )
     parser.add_argument(
@@ -656,8 +657,8 @@ def main():
         help="Figure export formats",
     )
     args = parser.parse_args()
-    if args.n_per_class < 1:
-        parser.error("--n-per-class must be positive")
+    if args.num_per_class < 1:
+        parser.error("--num-per-class must be positive")
     args.output_dir.mkdir(parents=True, exist_ok=True)
     record = Microcosm().load(cache_dir=args.cache_dir, source_path=args.source_path)
     manifest = {
@@ -692,7 +693,7 @@ def main():
             ("overview", partial(gallery, runs)),
             ("trajectories", partial(trajectory_examples, examples)),
             ("indicators", partial(indicator_examples, examples)),
-            ("roc", partial(roc_examples, args.seed, args.n_per_class)),
+            ("roc", partial(roc_examples, args.seed, args.num_per_class)),
         ):
             print(f"Rendering {name}...", flush=True)
             fig, metadata = render()

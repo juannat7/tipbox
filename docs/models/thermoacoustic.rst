@@ -12,22 +12,11 @@ Usage
    from tipbox.models import Thermoacoustic
 
    model = Thermoacoustic()
-   result = model.make_trajectory(
-       n=11001,
-       dt_sample=0.0001,
-       noise=1.0,
-       seed=42,
-   )
+   result = model.make_trajectory(num_samples=11001, dt_sample=0.0001, noise=1.0, seed=43)
    pressure = result.trajectory[:, 0]
    amplitude = result.trajectory[:, 2]
 
-   control = model.make_trajectory(
-       n=11001,
-       dt_sample=0.0001,
-       noise=1.0,
-       seed=42,
-       null_simulation=True,
-   )
+   control = model.make_trajectory(num_samples=11001, dt_sample=0.0001, noise=1.0, seed=43, null_simulation=True)
 
 .. figure:: ../_static/figures/b_thermoacoustic.png
    :target: ../_static/figures/b_thermoacoustic.png

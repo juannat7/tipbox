@@ -64,7 +64,7 @@ class MayHarvestingConfig:
     )
     t_end: float = parameter(
         100.0,
-        "End time when make_trajectory is called without n; explicit n sets the end time.",
+        "End time when make_trajectory is called without num_samples; explicit num_samples sets the end time.",
         "model time",
     )
 

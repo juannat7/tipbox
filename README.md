@@ -1,4 +1,4 @@
-# <img src="docs/tipbox-icon-300ppi.png" alt="" width="48" height="48" align="middle"> TipBox
+# <img src="docs/tipbox-icon-300ppi.png" alt="" width="48" height="48" align="absmiddle"> TipBox
 
 TipBox is a collection of tipping models and empirical observations. It covers bifurcation- and rate-induced tipping in stochastic systems, with early-warning indicators such as lag-1 autocorrelation and variance.
 
@@ -35,33 +35,18 @@ TipBox provides a common interface to simulate tipping systems and load observat
 from tipbox.models import MayHarvesting, SaddleNode
 from tipbox.datasets import Microcosm
 
-# Bifurcation-induced tipping: n is the number of sampled observations.
+# Bifurcation-induced tipping (null_simulation=False by default).
 harvesting = MayHarvesting()
-bifurcation = harvesting.make_trajectory(
-    n=1200,
-    noise=1.0,
-    seed=42,
-)
-bifurcation_control = harvesting.make_trajectory(
-    n=1200,
-    noise=1.0,
-    seed=42,
-    null_simulation=True,
-)
+# num_samples: sampled observations; noise: process-noise strength; seed: random seed.
+bifurcation = harvesting.make_trajectory(num_samples=1200, noise=1.0, seed=43)
+# null_simulation=True selects the non-tipping control.
+bifurcation_control = harvesting.make_trajectory(num_samples=1200, noise=1.0, seed=43, null_simulation=True)
 
 # Rate-induced tipping: simulate 2,401 observations of a moving equilibrium.
+# epsilon sets the rate of the equilibrium shift.
 rate_model = SaddleNode(epsilon=1.4)
-rate = rate_model.make_trajectory(
-    n=2401,
-    noise=0.01,
-    seed=43,
-)
-rate_control = rate_model.make_trajectory(
-    n=2401,
-    noise=0.01,
-    seed=42,
-    null_simulation=True,
-)
+rate = rate_model.make_trajectory(num_samples=2401, noise=0.01, seed=43)
+rate_control = rate_model.make_trajectory(num_samples=2401, noise=0.01, seed=43, null_simulation=True)
 
 # Empirical observations: Veraart et al. (2012), chemostats M1 and M2.
 observed = Microcosm().load()
@@ -82,19 +67,12 @@ from tipbox.indicators import rolling_ar1, rolling_variance
 
 before_fold = bifurcation.param_values < harvesting.critical_parameter
 signal = bifurcation.trajectory[before_fold, 0]
-ar1 = rolling_ar1(
-    signal,
-    window=200,
-    detrend="linear",
-)
-variance = rolling_variance(
-    signal,
-    window=200,
-    detrend="linear",
-)
+# window: trailing samples; detrend: trend removed within each window.
+ar1 = rolling_ar1(signal, window=200, detrend="linear")
+variance = rolling_variance(signal, window=200, detrend="linear")
 ```
 
-Here `window=200` means 200 observations. The [indicator reference](https://juannat7.github.io/tipbox/indicators.html) also covers autocorrelation, skewness, and kurtosis.
+The [indicator reference](https://juannat7.github.io/tipbox/indicators.html) also covers autocorrelation, skewness, and kurtosis.
 
 ![AR1 and variance for the same three time series](docs/_static/figures/indicators.png)
 
@@ -112,52 +90,29 @@ from tipbox.datasets import generate_dataset
 from tipbox.indicators import rolling_ar1, rolling_variance
 from tipbox.metrics import ensemble_roc, plot_roc
 
+# 50 tipping trajectories + 50 controls; retain 300 samples before each reference.
 batch = generate_dataset(
-    MayHarvesting(),
-    n_tipping=50,
-    n_null=50,
-    n=1000,
-    num_timesteps=300,
-    noise=1.0,
-    seed=42,
+    MayHarvesting(), num_tipping=50, num_controls=50, num_samples=1000,
+    context_samples=300, noise=1.0, seed=43,
 )
-signals = batch.observations[
-    :, :, 0
-]  # 100 trajectories, 300 retained samples each.
+signals = batch.observations[:, :, 0]  # First observed variable in each trajectory.
 indicators = {
-    "AR1": [
-        rolling_ar1(
-            x,
-            window=100,
-            detrend="linear",
-        )
-        for x in signals
-    ],
-    "Variance": [
-        rolling_variance(
-            x,
-            window=100,
-            detrend="linear",
-        )
-        for x in signals
-    ],
+    "AR1": [rolling_ar1(x, window=100, detrend="linear") for x in signals],
+    "Variance": [rolling_variance(x, window=100, detrend="linear") for x in signals],
 }
 ```
 
 Score the indicator trend in each trajectory and plot the ROC curves:
 
 ```python
-report = ensemble_roc(
-    batch.labels,
-    indicators,
-)
+report = ensemble_roc(batch.labels, indicators)  # Labels: 0 control, 1 tipping.
 print(report.curves["Variance"].auroc)
 ax = plot_roc(report)
 ```
 
 ![AR1 and variance ROC curves for the May harvesting batch](docs/_static/figures/roc.png)
 
-`n` controls the full simulation length; `num_timesteps` selects the context retained before each reference event. See the [benchmark guide](https://juannat7.github.io/tipbox/benchmarks.html) for labels, trend scores, and evaluation conventions.
+See the [benchmark guide](https://juannat7.github.io/tipbox/benchmarks.html) for labels, trend scores, and evaluation conventions.
 
 ## Systems
 

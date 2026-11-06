@@ -39,7 +39,7 @@ class RickerConfig:
         1.0, "Time assigned to one map update; not an ODE accuracy step.", "model time"
     )
     t_start: float = parameter(0.0, "First observation time.", "model time")
-    t_end: float = parameter(500.0, "End time when n is omitted.", "model time")
+    t_end: float = parameter(500.0, "End time when num_samples is omitted.", "model time")
 
     def __post_init__(self):
         if not isfinite(self.density_dependence) or self.density_dependence <= 0:

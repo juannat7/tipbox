@@ -28,11 +28,7 @@ Continuing the :doc:`quickstart`:
 
    from tipbox.indicators import rolling_variance
 
-   variance = rolling_variance(
-       signal,
-       window=200,
-       detrend="linear",
-   )
+   variance = rolling_variance(signal, window=200, detrend="linear")
 
 .. image:: _static/figures/indicators.png
    :alt: AR1 and variance for May harvesting, a rate-driven saddle-node, and microcosm observations.

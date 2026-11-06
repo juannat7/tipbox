@@ -29,11 +29,12 @@ class BenchmarkDataset:
 
 def generate_dataset(
     model: BoxModel,
-    num_timesteps: int,
+    context_samples: int,
     *,
-    n_tipping: int = 100,
-    n_null: int = 100,
-    lead_steps: int = 1,
+    num_samples: int | None = None,
+    num_tipping: int = 100,
+    num_controls: int = 100,
+    lead_samples: int = 1,
     seed: int = 0,
     max_attempts: int = 100,
     **trajectory_kwargs,
@@ -44,19 +45,20 @@ def generate_dataset(
     ----------
     model : BoxModel
         Configured named model. No configuration or time origin is changed.
-    num_timesteps : int
+    context_samples : int
         Positive number of observations retained before each reference marker.
-    n_tipping, n_null : int, default=100 each
+    num_samples : int or None, default=None
+        Full trajectory sample count, including the initial state. None uses
+        the model's configured duration and output spacing.
+    num_tipping, num_controls : int, default=100 each
         Nonnegative class counts; require at least one trajectory overall.
         Label 1 passes model.is_tipped under forced simulation; label 0 fails it
         under null simulation. These are the model's classification conventions,
         which can describe forcing crossings rather than observed state jumps.
         Null rows precede tipping rows; no shuffling is performed.
-    lead_steps : int, default=1
+    lead_samples : int, default=1
         Positive sample distance from the final retained sample to the marker.
-        One ends immediately before the marker. This differs from legacy
-        generate's steps_before_transition, which counts additional omitted
-        samples: lead_steps = steps_before_transition + 1.
+        One ends immediately before the marker.
     seed : int, default=0
         Root seed in [0, 2**32). Draw i, attempt a (both zero based), uses
         seed + i * max_attempts + a. The entire reserved range must fit in uint32,
@@ -66,10 +68,9 @@ def generate_dataset(
         counted; exhausted attempts raise RuntimeError without returning a partial
         dataset. Exceptions from the model propagate immediately.
     **trajectory_kwargs
-        Forwarded to model.make_trajectory: n, dt, dt_sample, noise, initial_state,
+        Forwarded to model.make_trajectory: dt, dt_sample, noise, initial_state,
         innovations, param_end_multiplier, and forcing. Defaults remain the
         model's defaults. seed and null_simulation are controlled by this function.
-        An explicit n sets the full simulation length, not the retained length.
 
     Notes
     -----
@@ -84,41 +85,44 @@ def generate_dataset(
     if not isinstance(model, BoxModel):
         raise TypeError("model must be a configured BoxModel instance")
     controls = {
-        "num_timesteps": num_timesteps,
-        "n_tipping": n_tipping,
-        "n_null": n_null,
-        "lead_steps": lead_steps,
+        "context_samples": context_samples,
+        "num_tipping": num_tipping,
+        "num_controls": num_controls,
+        "lead_samples": lead_samples,
         "seed": seed,
         "max_attempts": max_attempts,
     }
     for name, value in controls.items():
         if not isinstance(value, Integral) or isinstance(value, bool):
             raise TypeError(f"{name} must be an integer")
-    if num_timesteps < 1 or lead_steps < 1 or max_attempts < 1:
-        raise ValueError("num_timesteps, lead_steps, and max_attempts must be positive")
-    n_total = int(n_tipping) + int(n_null)
-    if n_tipping < 0 or n_null < 0 or n_total == 0:
+    if context_samples < 1 or lead_samples < 1 or max_attempts < 1:
+        raise ValueError(
+            "context_samples, lead_samples, and max_attempts must be positive"
+        )
+    num_trajectories = int(num_tipping) + int(num_controls)
+    if num_tipping < 0 or num_controls < 0 or num_trajectories == 0:
         raise ValueError(
             "class counts must be nonnegative with at least one trajectory"
         )
-    if seed < 0 or int(seed) + n_total * int(max_attempts) > 2**32:
+    if seed < 0 or int(seed) + num_trajectories * int(max_attempts) > 2**32:
         raise ValueError("seed and the reserved attempt seeds must fit in uint32")
 
-    labels = np.repeat([0, 1], [n_null, n_tipping])
+    labels = np.repeat([0, 1], [num_controls, num_tipping])
     observations, times, parameters, metadata = [], [], [], []
     for index, label in enumerate(labels):
         rejected = {"label": 0, "marker": 0, "context": 0, "nonfinite": 0}
         for attempt in range(max_attempts):
             sample_seed = int(seed) + index * int(max_attempts) + attempt
             full = model.make_trajectory(
+                num_samples=num_samples,
                 seed=sample_seed,
                 null_simulation=not bool(label),
                 **trajectory_kwargs,
             )
-            if full.time.size < num_timesteps + lead_steps:
+            if full.time.size < context_samples + lead_samples:
                 raise ValueError(
                     "Simulation is too short for the requested context and lead. "
-                    "Increase n or the configured duration."
+                    "Increase num_samples or the configured duration."
                 )
             tipped = model.is_tipped(full.trajectory, param_values=full.param_values)
             if tipped != bool(label):
@@ -139,8 +143,8 @@ def generate_dataset(
                 or not 0 <= marker < full.time.size
             ):
                 raise ValueError("model returned an invalid reference index")
-            stop = marker - lead_steps + 1
-            start = stop - num_timesteps
+            stop = marker - lead_samples + 1
+            start = stop - context_samples
             if start < 0:
                 rejected["context"] += 1
                 continue
@@ -169,7 +173,7 @@ def generate_dataset(
                     "marker_time": float(full.time[marker]),
                     "segment_start_index": int(start),
                     "segment_stop_index": int(stop),
-                    "lead_steps": int(lead_steps),
+                    "lead_samples": int(lead_samples),
                     "lead_time": float(full.time[marker] - full.time[stop - 1]),
                     "integration_step_noise_scale": np.asarray(full.sigma).tolist(),
                     "attempt": attempt + 1,
