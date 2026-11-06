@@ -26,12 +26,7 @@ def sampling_stride(dt_sample: float, dt_integrate: float) -> int:
 
 
 def register_dataclass_pytree(cls: Type[T]) -> Type[T]:
-    """Register a dataclass as a JAX pytree, with backward-compatible fallback."""
-    register = getattr(jax.tree_util, "register_pytree_node_dataclass", None)
-    if register is not None:
-        return register(cls)
-
-    # Older JAX: register manually using dataclass fields.
+    """Register dataclass fields as a JAX pytree."""
     from dataclasses import fields
 
     def flatten(instance: T):

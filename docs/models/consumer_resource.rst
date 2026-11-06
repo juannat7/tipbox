@@ -11,16 +11,31 @@ Usage
 
    from tipbox.models import RosenzweigMacArthur
 
-   model = RosenzweigMacArthur(bifurcation_type="transcritical")
+   model = RosenzweigMacArthur(
+       bifurcation_type="transcritical",
+       a_transcritical_max=10.0,
+   )
    result = model.make_trajectory(
-       n=89951, dt_sample=0.02, noise=1.0, seed=42,
+       n=89951,
+       dt_sample=0.02,
+       noise=1.0,
+       seed=42,
    )
    resource, consumer = result.trajectory.T
 
-.. figure:: ../_static/figures/b_rosenzweig_macarthur_tc.png
-   :alt: Resource and consumer populations. Dashed lines mark the transcritical threshold.
+   control = model.make_trajectory(
+       n=89951,
+       dt_sample=0.02,
+       noise=1.0,
+       seed=42,
+       null_simulation=True,
+   )
 
-   Resource and consumer populations. Dashed lines mark the transcritical threshold.
+.. figure:: ../_static/figures/b_rosenzweig_macarthur_tc.png
+   :target: ../_static/figures/b_rosenzweig_macarthur_tc.png
+   :alt: Consumer invasion under increasing attack rate, compared with a control. The example extends attack rate to 10; dashed lines mark the transcritical threshold.
+
+   Consumer invasion under increasing attack rate, compared with a control. The example extends attack rate to 10; dashed lines mark the transcritical threshold.
 
 Select ``"hopf"`` for the oscillatory scenario:
 
@@ -28,16 +43,25 @@ Select ``"hopf"`` for the oscillatory scenario:
 
    model = RosenzweigMacArthur(bifurcation_type="hopf")
    result = model.make_trajectory(
-       n=89951, dt_sample=0.02, noise=1.0, seed=42,
+       n=89951,
+       dt_sample=0.02,
+       noise=1.0,
+       seed=42,
+   )
+
+   control = model.make_trajectory(
+       n=89951,
+       dt_sample=0.02,
+       noise=1.0,
+       seed=42,
+       null_simulation=True,
    )
 
 .. figure:: ../_static/figures/b_rosenzweig_macarthur_hopf.png
-   :alt: Resource and consumer over 20 time units around the Hopf threshold. The parameter strip shows the full schedule and shades the displayed interval.
+   :target: ../_static/figures/b_rosenzweig_macarthur_hopf.png
+   :alt: Resource fluctuations grow in the tipping trajectory; control forcing stays below the Hopf threshold.
 
-   Resource and consumer over 20 time units around the Hopf threshold. The parameter strip shows the full schedule and shades the displayed interval.
-
-``n`` counts sampled observations. See :doc:`../usage` for integration,
-sampling, noise, and custom-forcing controls.
+   Resource fluctuations grow in the tipping trajectory; control forcing stays below the Hopf threshold.
 
 Equations and forcing
 ---------------------
@@ -87,5 +111,4 @@ Both modes share these constructor defaults. ``bifurcation_type`` selects the
 
 Reference: `Rosenzweig and MacArthur (1963)
 <https://doi.org/10.1086/282272>`_; benchmark parameterization follows
-`Bury et al. (2021) <https://doi.org/10.1073/pnas.2106140118>`_. See
-:doc:`../compatibility` for corrected noise controls and historical markers.
+`Bury et al. (2021) <https://doi.org/10.1073/pnas.2106140118>`_.

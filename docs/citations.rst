@@ -15,7 +15,7 @@ Research using TipBox
 Citation
 --------
 
-If you use TipBox's code or datasets in your work, we would appreciate a citation to:
+If you use TipBox's code or datasets, we would appreciate citations to these works:
 
 .. literalinclude:: ../references.bib
    :language: bibtex

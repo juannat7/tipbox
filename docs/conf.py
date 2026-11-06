@@ -28,6 +28,7 @@ html_sidebars = {
     ]
 }
 html_title = "TipBox"
+html_logo = "tipbox-icon-300ppi.png"
 html_baseurl = "https://juannat7.github.io/tipbox/"
 html_theme_options = {
     "light_css_variables": {

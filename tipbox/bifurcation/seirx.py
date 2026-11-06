@@ -270,7 +270,7 @@ class SEIRxModel(BoxModel):
         initial_state: Optional[jnp.ndarray] = None,
         noise: Optional[jnp.ndarray] = None,
     ):
-        """Legacy simulator: returns time, [infectious, opinion], vaccination risk and step-noise scale.
+        """simulator: returns time, [infectious, opinion], vaccination risk and step-noise scale.
 
         total_len counts output intervals; the result includes the initial sample."""
         key_noise, key_ic = jax.random.split(key)

@@ -1,99 +1,110 @@
 API reference
 =============
 
-The :doc:`system catalog <systems>` lists every model class and empirical loader.
-Choose the operation first. All public imports below work from the installed
-package; examples use ``T`` time points, ``D`` observable columns, and ``N``
-independent trajectories.
+.. _simulation-api:
 
-.. list-table:: API at a glance
-   :header-rows: 1
-   :widths: 22 37 41
-   :class: contract-table
+Simulation
+----------
 
-   * - Task
-     - Import or method
-     - Contract
-   * - Simulate
-     - ``model.make_trajectory(n, noise=..., seed=...)``
-     - ``TrajectoryResult``: time ``(T,)``, observations ``(T,D)``, forcing ``(T,)``, noise scale, and metadata.
-   * - Build a labeled batch
-     - ``tipbox.datasets.generate_dataset``
-     - ``BenchmarkDataset``: observations ``(N,T,D)``, labels ``(N,)``, time and forcing ``(N,T)``, metadata per row.
-   * - Compute a window statistic
-     - ``tipbox.indicators.rolling_*``
-     - One scalar signal ``(T,)`` becomes an aligned NumPy array ``(T,)``; warm-up, skipped, and invalid windows are ``NaN``.
-   * - Score a trend
-     - ``tipbox.metrics.kendall_tau``
-     - One indicator series becomes one Kendall tau-b score; undefined trends are ``NaN``.
-   * - Evaluate scores
-     - ``tipbox.metrics.binary_roc``
-     - Binary labels plus one score per trajectory become a ``BinaryRocResult`` with AUROC and coverage counts.
-   * - Evaluate several indicators
-     - ``tipbox.metrics.ensemble_roc``
-     - A mapping of indicator series or scalar scores becomes an ``EnsembleRocResult``; larger scores mean tipping.
-   * - Plot ROC curves
-     - ``tipbox.metrics.plot_roc``
-     - Returns a Matplotlib ``Axes``. Undefined curves remain in the result and are omitted from the plot.
-   * - Load observations
-     - ``tipbox.datasets.Microcosm().load()`` or ``Paleoclimate().load()``
-     - ``EmpiricalRecord``: time ``(T,)``, observations ``(T,D)``, and source/sampling metadata. No class labels are inferred.
+Constructors take the parameters listed on each :doc:`model page <models/index>`.
+``make_trajectory`` returns time ``(T,)``, observations ``(T,D)``, and forcing ``(T,)``.
 
-See :doc:`indicators` for statistic definitions, :doc:`benchmarks` for batch
-controls and metric signatures, and :doc:`datasets` for source/cache controls.
-For an end-to-end example, start with :doc:`quickstart`.
-
-Discover and configure a model
-------------------------------
-
-.. code-block:: python
-
-   from tipbox import get_system_info, list_systems
-
-   print(list_systems())
-   model = get_system_info("b_harvesting").create_model()
-   print(model.state_names, model.observable_names)
-   print(model.get_parameters())
-
-``get_parameters()`` exposes resolved configuration values. ``model.config``
-is the immutable typed configuration. A parameter override belongs in the
-constructor; integration, sampling, noise, seed, and custom forcing belong in
-``make_trajectory``. The :doc:`model collection <models/index>` links equations,
-units, defaults, and constructor examples.
-
-References, missingness, and failures
--------------------------------------
-
-* ``n`` counts returned samples, including the initial state. Batch
-  ``num_timesteps`` counts retained pre-reference samples.
-* ``initial_state`` and ``innovations`` use the model's state/noise dimensions,
-  which can differ from its observable dimension. Ricker uses a log-population
-  state; its observed column is population.
-* ``locate_transition`` returns a reference index, or ``None`` when the requested
-  reference is absent. A null reference is a comparison point. State-jump and
-  forcing-crossing references have distinct meanings.
-* Use fixed integer windows for streaming. Nonfinite observations invalidate
-  the whole window; they are not dropped or imputed. A skipped endpoint is
-  distinct from a computed statistic equal to zero.
-* ROC requires both binary classes in the supplied labels. Missing scores are
-  excluded with counts. If retained scores lose a class, AUROC is ``NaN`` and
-  the curve is empty. ``plot_roc`` raises ``ValueError`` if no curve is defined.
-* Invalid dimensions or controls raise ``TypeError`` or ``ValueError``.
-  Exhausted batch rejection sampling raises ``RuntimeError`` with rejection
-  counts. Empirical network failures propagate; unavailable offline files raise
-  ``FileNotFoundError`` and checksum mismatches raise ``ValueError``.
-
-Array outputs can be converted with ``numpy.asarray``. For strict JSON, convert
-nonfinite indicator values to ``null`` and select the metadata fields you need;
-``NaN`` is meaningful analysis output, not a zero-valued measurement.
-
-Shared interface
-----------------
+* ``n`` includes the initial sample; ``dt_sample`` must be an integer multiple of ``dt``.
+* Duration-normalized ramps change when ``n`` changes. Rate forcing uses absolute time.
+* ``noise`` scales diffusion; SaddleNode instead takes a diffusion intensity.
+* Initial states use ``model.state_names``; Ricker uses log population.
+* ``noise=0`` removes process noise. Supply ``initial_state`` for fixed initialization.
+* Retain custom ``forcing`` and ``innovations`` alongside the seed to replay a run.
 
 .. autoclass:: tipbox.types.BoxModel
    :members: config, get_parameters, make_trajectory, is_tipped, locate_transition
 
 .. autoclass:: tipbox.types.TrajectoryResult
+   :members:
+
+.. _indicator-api:
+
+Indicators
+----------
+
+Functions return NumPy arrays aligned to the input signal. Windows are trailing;
+warm-up, skipped, and nonfinite windows produce ``NaN``. Autocorrelation assumes
+regular sampling. Use integer windows for streaming; fractional windows depend
+on the series length. Analyze recovery intervals separately.
+
+.. list-table:: Shared options
+   :header-rows: 1
+   :class: catalog-table
+
+   * - Argument
+     - Default
+     - Meaning
+   * - ``window``
+     - ``0.5``
+     - Integer sample count, or fraction of the signal length in ``(0,1]``
+   * - ``step``
+     - ``1``
+     - Spacing between evaluated window endpoints
+   * - ``detrend``
+     - ``None``
+     - ``"linear"`` fits and removes a line inside each window
+
+For centered lagged pairs :math:`u,v`, AR1 is :math:`S_{uv}/S_{uu}`;
+Pearson correlation is :math:`S_{uv}/\sqrt{S_{uu}S_{vv}}`. AR1 may exceed
+:math:`[-1,1]`. Variance uses ``ddof=0``; skewness and kurtosis use population
+moments, with excess kurtosis by default. Constant windows have zero variance
+and undefined normalized statistics.
+
+.. automodule:: tipbox.indicators
+   :members: window_size, rolling_ar1, rolling_acf, rolling_variance, rolling_skewness, rolling_kurtosis
+
+.. _benchmark-api:
+
+Benchmarking
+------------
+
+``generate_dataset`` returns observations ``(N,T,D)``, labels ``(N,)``, and
+per-row times, forcing, and metadata. ``lead_steps=1`` ends the context one
+sample before the model reference. Null references are comparison points;
+a forcing crossing need not coincide with an observed state jump. Balanced,
+outcome-selected batches do not estimate natural tipping probabilities.
+
+Each indicator series contributes one Kendall tau-b trend score. Declare score
+directions before evaluation; negate decreasing indicators. Nonfinite scores
+are excluded and reported in ``n_missing``. Input labels must include both
+classes; AUROC is ``NaN`` if filtering removes a class. Report coverage with the score.
+
+.. autofunction:: tipbox.datasets.generate_dataset
+
+.. automodule:: tipbox.metrics
+   :members: kendall_tau, binary_roc, ensemble_roc, plot_roc
+
+Observations
+------------
+
+``load()`` returns time ``(T,)``, observations ``(T,D)``, and source metadata.
+Original ordering, missing values, and time coordinates are retained.
+``cache_dir=None`` uses ``$XDG_CACHE_HOME/tipbox`` or ``~/.cache/tipbox``;
+``download=False`` requires a cached file. Local source paths bypass downloads.
+All loads verify the pinned source checksum. Source terms are listed in the
+:ref:`empirical-observations` catalog and record metadata.
+
+.. autoclass:: tipbox.datasets.Microcosm
+   :members: load
+
+.. autoclass:: tipbox.datasets.VoiceOnset
+   :inherited-members: load
+
+.. autoclass:: tipbox.datasets.CellularATP
+   :inherited-members: load
+
+.. autoclass:: tipbox.datasets.Paleoclimate
+   :inherited-members: load
+
+.. autoclass:: tipbox.datasets.ElectricalBlackout
+   :inherited-members: load
+
+.. autoclass:: tipbox.datasets.EmpiricalRecord
    :members:
 
 Discovery
@@ -102,12 +113,3 @@ Discovery
 .. autofunction:: tipbox.registry.list_systems
 
 .. autofunction:: tipbox.registry.get_system_info
-
-Historical generation interface
---------------------------------
-
-New code can use the model and batch APIs above. The established entry point
-remains available with its original context-buffer conventions; see
-:doc:`compatibility` before comparing earlier experiments.
-
-.. autofunction:: tipbox.generate.generate

@@ -2,9 +2,7 @@ Thermoacoustic subcritical Hopf oscillator
 ==========================================
 
 ``Thermoacoustic`` implements the pressure oscillator in Bonciolini et al.
-(2018), Eq. 3.7. The numerical-example coefficients are published; experimental
-calibration and query preprocessing are separate steps described in
-:doc:`../sim_to_real`.
+(2018), Eq. 3.7, with the coefficients from their numerical example.
 
 Usage
 -----
@@ -15,18 +13,27 @@ Usage
 
    model = Thermoacoustic()
    result = model.make_trajectory(
-       n=11001, dt_sample=0.0001, noise=1.0, seed=42,
+       n=11001,
+       dt_sample=0.0001,
+       noise=1.0,
+       seed=42,
    )
    pressure = result.trajectory[:, 0]
    amplitude = result.trajectory[:, 2]
 
+   control = model.make_trajectory(
+       n=11001,
+       dt_sample=0.0001,
+       noise=1.0,
+       seed=42,
+       null_simulation=True,
+   )
+
 .. figure:: ../_static/figures/b_thermoacoustic.png
-   :alt: Pressure and instantaneous phase-plane amplitude. Dashed lines mark the linear Hopf threshold; a noise-driven switch can occur earlier.
+   :target: ../_static/figures/b_thermoacoustic.png
+   :alt: Pressure under tipping and control forcing. Dashed lines mark the linear Hopf reference.
 
-   Pressure and instantaneous phase-plane amplitude. Dashed lines mark the linear Hopf threshold; a noise-driven switch can occur earlier.
-
-``n`` counts sampled observations. See :doc:`../usage` for integration,
-sampling, noise, and custom-forcing controls.
+   Pressure under tipping and control forcing. Dashed lines mark the linear Hopf reference.
 
 Pressure equation
 -----------------

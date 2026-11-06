@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional, Type
 
-from .bifurcation.amoc import AMOCConfig, AMOCModel
+from .bifurcation.amoc import AMOCFoldConfig, AMOCFoldModel
 from .bifurcation.may_harvesting import MayHarvestingConfig, MayHarvestingModel
 from .bifurcation.ricker import RickerConfig, RickerModel
 from .bifurcation.rosenzweig_macarthur import (
@@ -147,41 +147,20 @@ SYSTEM_REGISTRY: Dict[str, SystemSpec] = {
         name="b_amoc",
         system_type=SystemType.BIFURCATION,
         bifurcation_system="amoc",
-        config_cls=AMOCConfig,
-        model_cls=AMOCModel,
+        config_cls=AMOCFoldConfig,
+        model_cls=AMOCFoldModel,
         description="AMOC 2-box model (bifurcation-induced)",
     ),
 }
 
 
-def normalize_system_name(name: str) -> str:
-    """Resolve a registered name or the legacy ``rate`` alias."""
-    normalized = {"rate": "r_bautin"}.get(name, name)
-    if normalized not in SYSTEM_REGISTRY:
-        raise ValueError(
-            f"Unknown system name: {name}. Available: {list_systems()}; legacy alias: rate"
-        )
-    return normalized
-
-
 def get_system_info(system_name: str) -> SystemSpec:
-    """Get system specification."""
-    normalized = normalize_system_name(system_name)
-    return SYSTEM_REGISTRY[normalized]
-
-
-def get_system_dict(system_name: str) -> Dict:
-    """Get system information as dictionary (for backward compatibility)."""
-    spec = get_system_info(system_name)
-    result = {
-        "type": spec.system_type,
-        "description": spec.description,
-    }
-    if spec.bifurcation_system is not None:
-        result["bifurcation_system"] = spec.bifurcation_system
-    if spec.rate_system is not None:
-        result["rate_system"] = spec.rate_system
-    return result
+    """Get a registered system's configuration and model class."""
+    if system_name not in SYSTEM_REGISTRY:
+        raise ValueError(
+            f"Unknown system name: {system_name}. Available: {list_systems()}"
+        )
+    return SYSTEM_REGISTRY[system_name]
 
 
 def list_systems(

@@ -71,7 +71,7 @@ class CompostBombConfig:
     T_ref: float = parameter(0.0, "Reference soil temperature for respiration.", "degC")
     tip_threshold: float = parameter(
         30.0,
-        "Soil-temperature threshold used by the legacy tipping classifier.",
+        "Soil-temperature threshold used by the tipping classifier.",
         "degC",
     )
 

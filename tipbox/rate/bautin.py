@@ -53,7 +53,7 @@ class BautinConfig:
         1.0, "Upper bound for the default uniform initial-state sampler.", "state"
     )
     tip_threshold: float = parameter(
-        10.0, "Radius about the origin used by the legacy tipping classifier.", "state"
+        10.0, "Radius about the origin used by the tipping classifier.", "state"
     )
 
     @classmethod
@@ -200,7 +200,7 @@ class BautinModel(BoxModel):
         noise: Optional[jnp.ndarray] = None,
         null_simulation: bool = False,
     ):
-        """Legacy simulator on the configured absolute-time grid.
+        """simulator on the configured absolute-time grid.
 
         Returns time, Cartesian state, forcing and step-noise scale; total_len is ignored."""
         key_noise, key_ic = jax.random.split(key)

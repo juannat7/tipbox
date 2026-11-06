@@ -18,7 +18,6 @@ class TrajectoryResult:
     """Time, observed state, forcing, per-step noise scale, and provenance.
 
     ``make_trajectory`` always returns observations shaped ``(n_time, n_observables)``.
-    The historical ``generate`` interface retains each model's original shape.
     ``sigma`` is the standard deviation of an integration-step noise increment,
     including the square root of the integration step for continuous-time models.
     Discrete maps report their per-update state-noise scale instead.
@@ -139,15 +138,6 @@ class BoxModel(ABC):
             If the time grid is not finite and strictly increasing at the active
             JAX precision. Adjust the clock origin or step, or enable 64-bit mode.
 
-        Notes
-        -----
-        Increasing n extends the time interval at fixed output spacing. The
-        ecological bifurcation schedules normalize their ramp to that duration,
-        so trajectories with different n are not generally prefixes of one another.
-        Analytic critical parameters follow the model coefficients. AMOC uses
-        an explicitly calibrated marker that must be reconsidered after changing
-        its physical parameters. This method validates concrete arrays eagerly;
-        use the low-level JAX kernels or legacy simulate method for autodiff.
         """
         critical_parameter = self.critical_parameter
         dt = getattr(self._config, self.integration_step_field) if dt is None else dt
@@ -276,7 +266,7 @@ class BoxModel(ABC):
         noise=None,
         **kwargs,
     ):
-        """Adapt new models to generate; historical models keep their overrides.
+        """Return the simulator tuple used by single-system generation.
 
         The JAX key deterministically supplies a local uint32 seed. ``total_len``
         is an observation count, ``sigma_tilde`` is the noise multiplier, and

@@ -11,16 +11,25 @@ Usage
    from tipbox.models import MayHarvesting
 
    model = MayHarvesting()
-   result = model.make_trajectory(n=1400, noise=1.0, seed=42)
+   result = model.make_trajectory(
+       n=1400,
+       noise=1.0,
+       seed=42,
+   )
    biomass = result.trajectory[:, 0]
 
+   control = model.make_trajectory(
+       n=1400,
+       noise=1.0,
+       seed=42,
+       null_simulation=True,
+   )
+
 .. figure:: ../_static/figures/b_harvesting.png
+   :target: ../_static/figures/b_harvesting.png
    :alt: Biomass under increasing harvesting. Dashed lines mark the upper fold.
 
    Biomass under increasing harvesting. Dashed lines mark the upper fold.
-
-``n`` counts sampled observations. See :doc:`../usage` for integration,
-sampling, noise, and custom-forcing controls.
 
 Equations and forcing
 ---------------------
@@ -48,9 +57,7 @@ satisfies :math:`f(x,h)=0` and :math:`\partial f/\partial x=0`:
    h_c=r\left(1-\frac{x_c}{k}\right)\frac{s^2+x_c^2}{x_c}.
 
 ``critical_parameter`` computes this value unless ``h_bifurcation`` is explicitly
-set. Coefficients outside the analytic upper-fold regime raise a clear error
-when requesting an automatic marker. An explicit marker supports historical
-benchmark conventions.
+set. The automatic marker requires the upper-fold regime above.
 
 Euler–Maruyama updates are projected to nonnegative biomass. Forced initial
 states use the configured uniform interval; null initial states use the clipped

@@ -27,7 +27,7 @@ from tipbox.datasets import Microcosm, generate_dataset
 from tipbox.indicators import rolling_ar1, rolling_variance
 from tipbox.metrics import ensemble_roc, plot_roc
 from tipbox.models import (
-    AMOC,
+    AMOCFold,
     AMOCRate,
     Bautin,
     CompostBomb,
@@ -94,7 +94,7 @@ GALLERY = (
     ),
     (
         "b_rosenzweig_macarthur_tc",
-        RosenzweigMacArthur(bifurcation_type="transcritical"),
+        RosenzweigMacArthur(bifurcation_type="transcritical", a_transcritical_max=10.0),
         "Rosenzweig–\nMacArthur: TC",
         {"n": 89951, "dt_sample": 0.02, "noise": 1.0},
         0,
@@ -109,7 +109,7 @@ GALLERY = (
         1,
     ),
     ("b_seirx_tc", SEIRx(), "SEIRx", {"n": 1800, "noise": 0.01}, 0, 1),
-    ("b_amoc", AMOC(), "AMOC: fold", {"noise": 0.01}, "forcing", 0),
+    ("b_amoc", AMOCFold(), "AMOC: fold", {"noise": 0.01}, "forcing", 0),
     (
         "r_saddle_node",
         SaddleNode(epsilon=1.4),
@@ -135,7 +135,7 @@ GALLERY = (
 
 # Physical-time offsets around each reference; resolve the dense oscillations.
 VIEW_WINDOWS = {
-    "b_rosenzweig_macarthur_tc": (-0.5, 1.0),
+    "b_rosenzweig_macarthur_tc": (-100.0, 400.0),
     "b_rosenzweig_macarthur_hopf": (-2.0, 4.0),
     "b_thermoacoustic": (-0.01, 0.02),
 }
@@ -158,13 +158,22 @@ def _simulation_metadata(model, result, arguments):
     }
 
 
-def _tipping_example(model, arguments, seed):
+def _example(model, arguments, seed, *, null=False):
     selection = generate_dataset(
-        model, num_timesteps=300, n_tipping=1, n_null=0, seed=seed, **arguments
+        model,
+        num_timesteps=300,
+        n_tipping=int(not null),
+        n_null=int(null),
+        seed=seed,
+        **arguments,
     ).metadata[0]
-    result = model.make_trajectory(seed=selection["seed"], **arguments)
+    result = model.make_trajectory(
+        seed=selection["seed"], null_simulation=null, **arguments
+    )
     return result, {
-        "selection": "first accepted tipping trajectory from generate_dataset",
+        "selection": "first accepted control"
+        if null
+        else "first accepted tipping trajectory",
         "selection_context_samples": 300,
         "root_seed": seed,
         "attempt": selection["attempt"],
@@ -282,80 +291,71 @@ def gallery(runs):
     return fig, manifest
 
 
-def model_preview(name, model, result):
-    """Time-domain companion to a phase portrait, using the same simulation."""
+def model_preview(name, model, result, control, arguments, selection):
+    """Compare an accepted tipping path with a control on the same time window."""
     time = np.asarray(result.time)
     values = np.asarray(result.trajectory)
-    control = np.asarray(result.param_values)
-    marker = model.locate_transition(values, False, param_values=control, time=time)
-    columns = {
-        "b_rosenzweig_macarthur_tc": (0, 1),
-        "b_rosenzweig_macarthur_hopf": (0, 1),
-        "r_bautin": (0, 1),
-        "r_compost_bomb": (1,),
-        "b_thermoacoustic": (0, 2),
-    }.get(name, (0,))
-    display = np.isfinite(values[:, columns]).all(axis=1)
+    forcing = np.asarray(result.param_values)
+    marker = model.locate_transition(values, False, param_values=forcing, time=time)
+    column = {"b_rosenzweig_macarthur_tc": 1, "r_compost_bomb": 1}.get(name, 0)
+    display = np.isfinite(values[:, column])
     if name == "r_saddle_node":
         display &= (time >= -8) & (values[:, 0] <= 5)
     if name == "r_bautin":
         display &= np.linalg.norm(values[:, :2], axis=1) <= model.config.tip_threshold
     if name == "r_compost_bomb":
         display &= values[:, 1] <= 150
-    if name == "b_rosenzweig_macarthur_hopf":
-        display &= (time >= time[marker] - 10) & (time <= time[marker] + 10)
-    fig, (parameter, ax) = plt.subplots(
+    start = float(time[display][0])
+    # Leave room for the reference line without plotting an escaped state.
+    stop = max(
+        float(time[display][-1]), float(time[marker]) + 0.02 * float(np.ptp(time[display]))
+    )
+    fig, axes = plt.subplots(
         2,
-        1,
-        figsize=(6.8, 3.4),
+        2,
+        figsize=(8.2, 3.5),
         height_ratios=(1, 3),
+        sharex="col",
+        sharey="row",
         layout="constrained",
     )
-    for column in columns:
-        ax.plot(
-            time[display],
-            values[display, column],
-            linewidth=1.1,
-            label=model.observable_names[column].replace("_", " "),
+    for index, (run, mask, title, color) in enumerate(
+        (
+            (result, display, "Tipping", BLUE),
+            (control, np.ones(len(control.time), dtype=bool), "Control", ORANGE),
         )
-    ax.axvline(time[marker], color=RED, linestyle="--", linewidth=0.9)
-    ax.set(
-        xlabel=f"Time ({model.time_unit})",
-        ylabel=" / ".join(
-            model.observable_names[column].replace("_", " ") for column in columns
-        ),
-    )
-    if len(columns) > 1:
-        ax.set_ylabel("Population" if name.startswith("b_rosenzweig") else "State")
-        ax.legend(
-            loc="lower left", bbox_to_anchor=(0, 1), ncol=len(columns), borderaxespad=0
+    ):
+        t = np.asarray(run.time)
+        observed = np.asarray(run.trajectory[:, column])
+        shown = mask & (t >= start) & (t <= stop) & np.isfinite(observed)
+        parameter, trajectory = axes[:, index]
+        parameter.plot(t, run.param_values, color=INK, linewidth=1)
+        parameter.set_title(title, loc="left")
+        trajectory.plot(
+            t, np.where(shown, observed, np.nan), color=color, linewidth=0.8
         )
-    ax.locator_params(nbins=5)
-    _clean(ax)
-    parameter.plot(time, control, color=INK, linewidth=1)
-    critical = model.critical_parameter
-    if critical is not None:
-        parameter.axhline(float(critical), color=RED, linestyle="--", linewidth=0.8)
-    parameter.axvline(time[marker], color=RED, linestyle="--", linewidth=0.8)
-    parameter.set_ylabel("Parameter")
-    parameter.set_title(model.forcing_name.replace("_", " "), loc="left", fontsize=9)
-    parameter.locator_params(axis="y", nbins=2)
-    ax.set_xlim(float(time[display][0]), float(time[display][-1]))
-    if name == "b_rosenzweig_macarthur_hopf":
-        parameter.axvspan(time[display][0], time[display][-1], color=BLUE, alpha=0.12)
-    else:
-        parameter.set_xlim(ax.get_xlim())
-    parameter.tick_params(
-        labelbottom=name == "b_rosenzweig_macarthur_hopf", labelsize=7
-    )
-    _clean(parameter)
+        critical = model.critical_parameter
+        if critical is not None:
+            parameter.axhline(float(critical), color=RED, linestyle="--", linewidth=0.8)
+        if index == 0:
+            parameter.axvline(time[marker], color=RED, linestyle="--", linewidth=0.8)
+            trajectory.axvline(time[marker], color=RED, linestyle="--", linewidth=0.8)
+        parameter.set_xlim(start, stop)
+        trajectory.set_xlabel(f"Time ({model.time_unit})")
+        for ax in (parameter, trajectory):
+            ax.locator_params(nbins=4)
+            _clean(ax)
+    axes[0, 0].set_ylabel("Parameter")
+    axes[1, 0].set_ylabel(model.observable_names[column].replace("_", " "))
     return fig, {
-        "observed_columns": list(columns),
-        "display_time_interval": [float(time[display][0]), float(time[display][-1])],
-        "n_displayed": int(display.sum()),
+        "observed_column": column,
+        "display_time_interval": [start, stop],
         "reference_time": float(time[marker]),
-        "reference_line": "model reference event, not an estimated jump time",
         "simulation": f"overview.{name}",
+        "control": _simulation_metadata(
+            model, control, {**arguments, "null_simulation": True}
+        ),
+        "control_selection": selection,
     }
 
 
@@ -368,7 +368,7 @@ def example_data(seed, record):
             (SaddleNode(epsilon=1.4), {"noise": 0.01}),
         )
     ):
-        result, selection = _tipping_example(model, arguments, seed)
+        result, selection = _example(model, arguments, seed)
         marker = model.locate_transition(
             result.trajectory, False, param_values=result.param_values, time=result.time
         )
@@ -378,10 +378,17 @@ def example_data(seed, record):
         if column == 1:
             display &= (time >= -8) & (values <= 5)
         limits = (float(time[display].min()), float(time[display].max()))
-        simulations.append((model, time, values, marker, display))
+        control, control_selection = _example(model, arguments, seed, null=True)
+        simulations.append(
+            (model, time, values, marker, display, np.asarray(control.trajectory[:, 0]))
+        )
         metadata[type(model).__name__] = {
             **_simulation_metadata(model, result, arguments),
             **selection,
+            "control": _simulation_metadata(
+                model, control, {**arguments, "null_simulation": True}
+            ),
+            "control_selection": control_selection,
             "marker_index": int(marker),
             "marker_time": float(time[marker]),
             "indicator_input_slice": [0, int(marker)],
@@ -432,13 +439,21 @@ def _data_credit(fig):
 def trajectory_examples(examples):
     simulations, record, metadata = examples
     fig, axes = plt.subplots(1, 3, figsize=(11.8, 3.0), layout="constrained")
-    for column, ((model, time, values, marker, display), title, ylabel) in enumerate(
+    for column, (
+        (model, time, values, marker, display, control),
+        title,
+        ylabel,
+    ) in enumerate(
         zip(simulations, ("May harvesting", "Saddle-node"), ("Population", "State"))
     ):
         ax = axes[column]
-        before = display & (np.arange(len(time)) < marker)
-        ax.plot(time[display], values[display], color=GRAY, linewidth=1.1)
-        ax.plot(time[before], values[before], color=BLUE, linewidth=1.2)
+        ax.plot(
+            time[display], values[display], color=BLUE, linewidth=1.2, label="Tipping"
+        )
+        ax.plot(
+            time[display], control[display], color=ORANGE, linewidth=1, label="Control"
+        )
+        ax.legend(loc="lower left")
         ax.axvline(time[marker], color=RED, linestyle="--", linewidth=0.8)
         ax.set(
             title=f"({chr(97 + column)}) {title}",
@@ -476,25 +491,32 @@ def trajectory_examples(examples):
 def indicator_examples(examples):
     simulations, record, metadata = examples
     fig, axes = plt.subplots(2, 3, figsize=(11.8, 4.5), layout="constrained")
-    for column, ((model, time, values, marker, display), title) in enumerate(
+    for column, ((model, time, values, marker, display, control), title) in enumerate(
         zip(simulations, ("May harvesting", "Saddle-node"))
     ):
-        for row, (function, label, color) in enumerate(
-            ((rolling_ar1, "AR1 slope", BLUE), (rolling_variance, "Variance", ORANGE))
+        for row, (function, label) in enumerate(
+            ((rolling_ar1, "AR1 slope"), (rolling_variance, "Variance"))
         ):
-            indicator = function(values[:marker], window=200, detrend="linear")
             limits = metadata[type(model).__name__]["display_time_limits"]
             shown = time[:marker] >= limits[0]
-            axes[row, column].plot(
-                time[:marker][shown], indicator[shown], color=color, linewidth=1.3
-            )
+            for signal, color, name in (
+                (values, BLUE, "Tipping"),
+                (control, ORANGE, "Control"),
+            ):
+                indicator = function(signal[:marker], window=200, detrend="linear")
+                axes[row, column].plot(
+                    time[:marker][shown],
+                    indicator[shown],
+                    color=color,
+                    linewidth=1.1,
+                    label=name,
+                )
             axes[row, column].axvline(
                 time[marker], color=RED, linestyle="--", linewidth=0.8
             )
             axes[row, column].set_ylabel(label)
-            axes[row, column].set_xlim(
-                metadata[type(model).__name__]["display_time_limits"]
-            )
+            axes[row, column].set_xlim(limits)
+        axes[0, column].legend(loc="lower left")
         axes[0, column].set_title(f"({chr(97 + column)}) {title}")
         axes[1, column].set_xlabel(f"Time ({model.time_unit})")
     for (label, start, stop), color, shape in zip(
@@ -658,7 +680,11 @@ def main():
     }
     examples = example_data(args.seed, record)
     runs = {
-        name: _tipping_example(model, arguments, args.seed)
+        name: _example(model, arguments, args.seed)
+        for name, model, _, arguments, _, _ in GALLERY
+    }
+    controls = {
+        name: _example(model, arguments, args.seed, null=True)
         for name, model, _, arguments, _, _ in GALLERY
     }
     with mpl.rc_context(STYLE):
@@ -674,8 +700,15 @@ def main():
             manifest[name] = metadata
             print(f"Rendered {name}", flush=True)
         manifest["model_previews"] = {}
-        for name, model, _, _, _, _ in GALLERY:
-            fig, metadata = model_preview(name, model, runs[name][0])
+        for name, model, _, arguments, _, _ in GALLERY:
+            fig, metadata = model_preview(
+                name,
+                model,
+                runs[name][0],
+                controls[name][0],
+                arguments,
+                controls[name][1],
+            )
             _save(fig, name, args.output_dir, args.formats)
             manifest["model_previews"][name] = metadata
     (args.output_dir / "manifest.json").write_text(

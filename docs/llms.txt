@@ -8,25 +8,22 @@ Use `from tipbox.datasets import generate_dataset` for labeled pre-reference con
 
 Rolling statistics return NumPy arrays aligned to the input, with NaN at warm-up, skipped, or invalid windows. Use integer windows for streaming. One trajectory supplies one score; larger scores mean tipping. Predeclare directions and analysis settings. Do not infer an empirical null class or a physical time unit that the source does not establish.
 
-Use `from tipbox.datasets import Microcosm, Paleoclimate` and `Microcosm().load()` or `Paleoclimate().load()` for empirical observations. All five system-named observation classes expose `.load()` with explicit cache and offline controls; functional loaders remain available. Records preserve source times, missing values, and provenance.
+Use `from tipbox.datasets import Microcosm, Paleoclimate` and `Microcosm().load()` or `Paleoclimate().load()` for empirical observations. All five system-named observation classes expose `.load()` with explicit cache and offline controls. Records preserve source times, missing values, and provenance.
 
 ## Start here
 
-- [Complete quickstart](_sources/quickstart.rst.txt): Installation, simulation, causal indicators, labeled ROC, and one empirical recovery.
+- [Complete quickstart](_sources/quickstart.rst.txt): Installation, simulation, indicators, and observed data.
 - [API contracts](_sources/api.rst.txt): Imports, required inputs, return shapes, and failure behavior.
 - [Model controls](_sources/usage.rst.txt): Parameter overrides, grids, initial states, forcing, and innovations.
 
 ## Scientific reference
 
-- [Master system catalog](_sources/systems.rst.txt): Every public model class, sim-to-real simulation component, and observation class, grouped by dataset type.
-- [Citations](_sources/citations.rst.txt): Suggested KEWS citation and research using TipBox.
-- [Model collection](models/index.html): Equations, generated default-parameter tables, units, and reference-event rules.
+- [Master system catalog](_sources/models/index.rst.txt): Every public model and observation class, grouped by dataset type.
+- [Citations](_sources/citations.rst.txt): KEWS and TipPFN BibTeX.
 - [Indicator definitions](_sources/indicators.rst.txt): AR1 versus Pearson correlation, variance, population moments, detrending, and missingness.
 - [Benchmark protocol](_sources/benchmarks.rst.txt): Outcome-conditioned labels, seed allocation, reference alignment, and ROC conventions.
-- [Observed records](_sources/datasets.rst.txt): Original sources, checksums, licenses, missing data, recovery intervals, and the unresolved mitochondrial clock.
+- [Observed records](_sources/models/index.rst.txt): Sources, data terms, and sampling notes.
 
 ## Optional
 
 - [Figure reproduction](_sources/figures.rst.txt): Fixed presets, export controls, and numerical provenance.
-- [Sim-to-real boundary](_sources/sim_to_real.rst.txt): Daphnia/TAC simulation components; raw observation parsers and verified calibration require source access.
-- [Historical compatibility](_sources/compatibility.rst.txt): Removed generators, numerical corrections, and legacy-interface conventions.

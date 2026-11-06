@@ -51,7 +51,7 @@ def simulate_real_bifurcation_trajectory(
     config=None,
     **generate_kwargs,
 ):
-    """Simulate and extract legacy bifurcation context. Return None on outcome/context rejection."""
+    """Simulate and extract bifurcation context. Return None on outcome/context rejection."""
 
     key_select, key_sim = jax.random.split(key)
 
