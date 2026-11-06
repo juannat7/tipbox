@@ -1,72 +1,76 @@
 """Named box models: ``b_*`` for bifurcation tipping and ``r_*`` for rate tipping."""
 
-from typing import Dict, List, Optional, Type, Any
+from dataclasses import dataclass, field
 from enum import Enum
+from typing import Any, Dict, List, Optional, Type
 
-from .types import BoxModel
-
-# Import config and model classes
+from .bifurcation.amoc import AMOCConfig, AMOCModel
+from .bifurcation.may_harvesting import MayHarvestingConfig, MayHarvestingModel
+from .bifurcation.ricker import RickerConfig, RickerModel
+from .bifurcation.rosenzweig_macarthur import (
+    RosenzweigMacArthurConfig,
+    RosenzweigMacArthurModel,
+)
+from .bifurcation.seirx import SEIRxConfig, SEIRxModel
+from .bifurcation.thermoacoustic import ThermoacousticConfig, ThermoacousticModel
+from .rate.amoc import AMOCRateConfig, AMOCRateModel
 from .rate.bautin import BautinConfig, BautinModel
 from .rate.compost_bomb import CompostBombConfig, CompostBombModel
 from .rate.saddle_node import SaddleNodeConfig, SaddleNodeModel
-from .bifurcation.may_harvesting import MayHarvestingConfig, MayHarvestingModel
-from .bifurcation.rosenzweig_macarthur import RosenzweigMacArthurConfig, RosenzweigMacArthurModel
-from .bifurcation.seirx import SEIRxConfig, SEIRxModel
-from .bifurcation.amoc import AMOCConfig, AMOCModel
-from .rate.amoc import AMOCRateConfig, AMOCRateModel
+from .types import BoxModel
 
 
 class SystemType(Enum):
     """Types of tipping mechanisms."""
+
     BIFURCATION = "bifurcation"
     RATE = "rate"
 
 
+@dataclass(frozen=True)
 class SystemSpec:
     """Unified specification for a tipping point system."""
-    
-    def __init__(
-        self,
-        name: str,
-        system_type: SystemType,
-        description: str,
-        config_cls: Optional[Type[Any]] = None,
-        model_cls: Optional[Type[BoxModel]] = None,
-        bifurcation_system: Optional[str] = None,
-        rate_system: Optional[str] = None,
-        config_kwargs: Optional[Dict[str, Any]] = None,
-    ):
-        self.name = name
-        self.system_type = system_type
-        self.description = description
-        self.config_cls = config_cls
-        self.model_cls = model_cls
-        self.bifurcation_system = bifurcation_system
-        self.rate_system = rate_system
-        self.config_kwargs = config_kwargs or {}
-    
+
+    name: str
+    system_type: SystemType
+    description: str
+    config_cls: Type[Any]
+    model_cls: Type[BoxModel]
+    bifurcation_system: Optional[str] = None
+    rate_system: Optional[str] = None
+    config_kwargs: Dict[str, Any] = field(default_factory=dict)
+
     def default_config(self) -> Any:
         """Create default configuration for this system."""
-        if self.config_cls is None:
-            raise ValueError(f"System '{self.name}' does not have a config class")
         return self.config_cls(**self.config_kwargs)
-    
+
     def create_model(self, config: Optional[Any] = None) -> BoxModel:
         """Create model instance for this system."""
-        if self.model_cls is None:
-            raise ValueError(f"System '{self.name}' does not have a model class")
-        if config is None:
-            config = self.default_config()
-        if not isinstance(config, self.config_cls):
-            raise TypeError(f"{self.name} requires {self.config_cls.__name__}")
+        model = self.model_cls(self.default_config() if config is None else config)
         for name, expected in self.config_kwargs.items():
-            if getattr(config, name) != expected:
+            if getattr(model.config, name) != expected:
                 raise ValueError(f"{self.name} requires {name}={expected!r}")
-        return self.model_cls(config)
+        return model
 
 
 # System registry with full specifications
 SYSTEM_REGISTRY: Dict[str, SystemSpec] = {
+    "b_ricker": SystemSpec(
+        name="b_ricker",
+        system_type=SystemType.BIFURCATION,
+        bifurcation_system="ricker",
+        config_cls=RickerConfig,
+        model_cls=RickerModel,
+        description="Stochastic Ricker map with a declining log-growth rate",
+    ),
+    "b_thermoacoustic": SystemSpec(
+        name="b_thermoacoustic",
+        system_type=SystemType.BIFURCATION,
+        bifurcation_system="thermoacoustic",
+        config_cls=ThermoacousticConfig,
+        model_cls=ThermoacousticModel,
+        description="Thermoacoustic pressure oscillator with a subcritical Hopf bifurcation",
+    ),
     # Rate-induced systems
     "r_bautin": SystemSpec(
         name="r_bautin",
@@ -100,7 +104,6 @@ SYSTEM_REGISTRY: Dict[str, SystemSpec] = {
         model_cls=AMOCRateModel,
         description="AMOC 2-box model (rate-induced)",
     ),
-
     # Semi-real bifurcation systems (for validation)
     "b_harvesting": SystemSpec(
         name="b_harvesting",
@@ -110,7 +113,6 @@ SYSTEM_REGISTRY: Dict[str, SystemSpec] = {
         model_cls=MayHarvestingModel,
         description="May's harvesting model (semi-real bifurcation)",
     ),
-    
     # Rosenzweig-MacArthur consumer-resource model (Bury et al. 2021)
     # Supports both transcritical and Hopf bifurcations
     "b_rosenzweig_macarthur_tc": SystemSpec(
@@ -131,7 +133,6 @@ SYSTEM_REGISTRY: Dict[str, SystemSpec] = {
         description="Rosenzweig-MacArthur consumer-resource model (Hopf bifurcation)",
         config_kwargs={"bifurcation_type": "hopf"},
     ),
-
     # SEIRx behaviour–disease model (Bury et al. 2021) — transcritical bifurcation
     "b_seirx_tc": SystemSpec(
         name="b_seirx_tc",
@@ -141,7 +142,6 @@ SYSTEM_REGISTRY: Dict[str, SystemSpec] = {
         model_cls=SEIRxModel,
         description="SEIRx disease dynamics with vaccinator behaviour (transcritical bifurcation)",
     ),
-
     # AMOC 2-box model (Ritchie et al. 2023; Alkhayuon et al. 2019) — bifurcation-induced
     "b_amoc": SystemSpec(
         name="b_amoc",
@@ -156,19 +156,12 @@ SYSTEM_REGISTRY: Dict[str, SystemSpec] = {
 
 def normalize_system_name(name: str) -> str:
     """Resolve a registered name or the legacy ``rate`` alias."""
-    if name in SYSTEM_REGISTRY:
-        return name
-    
-    legacy_map = {"rate": "r_bautin"}
-
-    if name in legacy_map:
-        return legacy_map[name]
-    
-    raise ValueError(
-        f"Unknown system name: {name}. "
-        f"Available systems: {list(SYSTEM_REGISTRY.keys())}. "
-        f"Legacy names supported: {list(legacy_map.keys())}"
-    )
+    normalized = {"rate": "r_bautin"}.get(name, name)
+    if normalized not in SYSTEM_REGISTRY:
+        raise ValueError(
+            f"Unknown system name: {name}. Available: {list_systems()}; legacy alias: rate"
+        )
+    return normalized
 
 
 def get_system_info(system_name: str) -> SystemSpec:
@@ -195,12 +188,11 @@ def list_systems(
     system_type: Optional[SystemType] = None,
 ) -> List[str]:
     """List available systems, optionally filtered by type."""
-    systems = []
-    for name, spec in SYSTEM_REGISTRY.items():
-        if system_type is not None and spec.system_type != system_type:
-            continue
-        systems.append(name)
-    return sorted(systems)
+    return sorted(
+        name
+        for name, spec in SYSTEM_REGISTRY.items()
+        if system_type is None or spec.system_type == system_type
+    )
 
 
 def get_bifurcation_systems() -> List[str]:

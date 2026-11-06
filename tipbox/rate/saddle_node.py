@@ -6,21 +6,51 @@ import jax.numpy as jnp
 from jax import lax
 
 from ..types import BoxModel
-from ..utils import convert_scalar_trajectory, extract_segment, register_dataclass_pytree
+from ..utils import (
+    parameter,
+    convert_scalar_trajectory,
+    register_dataclass_pytree,
+)
+
 
 @register_dataclass_pytree
 @dataclass(frozen=True)
 class SaddleNodeConfig:
     """Configuration for the stochastic saddle-node system."""
 
-    epsilon: float = 1.25
-    lambda_max: float = 3.0
-    dt: float = 0.01
-    t_start: float = -16.0
-    t_end: float = 8.0
-    initial_state_min: float = -10.0
-    initial_state_max: float = -1.0
-    tip_threshold: float = 0.0
+    epsilon: float = parameter(
+        1.25, "Rate of the tanh equilibrium-shift forcing.", "model rate"
+    )
+    lambda_max: float = parameter(3.0, "Total equilibrium displacement.", "state")
+    null_rate_factor: float = parameter(
+        0.5,
+        "Multiplier applied to the forcing rate for null simulations.",
+        "dimensionless",
+    )
+    dt: float = parameter(
+        0.01,
+        "Default integration step.",
+        "model time",
+    )
+    t_start: float = parameter(
+        -16.0,
+        "Simulation start time.",
+        "model time",
+    )
+    t_end: float = parameter(
+        8.0,
+        "End time when make_trajectory is called without n; explicit n sets the end time.",
+        "model time",
+    )
+    initial_state_min: float = parameter(
+        -10.0, "Lower bound for the default uniform initial-state sampler.", "state"
+    )
+    initial_state_max: float = parameter(
+        -1.0, "Upper bound for the default uniform initial-state sampler.", "state"
+    )
+    tip_threshold: float = parameter(
+        0.0, "State threshold used by the legacy tipping classifier.", "state"
+    )
 
     @classmethod
     def default(cls) -> "SaddleNodeConfig":
@@ -28,40 +58,54 @@ class SaddleNodeConfig:
         return cls()
 
 
-
-
 class SaddleNodeModel(BoxModel):
     """BoxModel abstraction for the stochastic saddle-node system."""
 
-    def __init__(self, config: SaddleNodeConfig):
-        self._config = config
+    config_class = SaddleNodeConfig
 
-    def get_parameters(self):
-        """Get the parameters of the model."""
-        return {
-            "epsilon": self._config.epsilon,
-            "lambda_max": self._config.lambda_max,
-            "dt": self._config.dt,
-            "t_start": self._config.t_start,
-            "t_end": self._config.t_end,
-            "initial_state_min": self._config.initial_state_min,
-            "initial_state_max": self._config.initial_state_max,
-            "tip_threshold": self._config.tip_threshold,
-        }
+    state_names = ("state",)
+    observable_names = state_names
+    noise_dimension = 1
+    forcing_name = "equilibrium_shift"
+
+    def _initial_state(self, key, null_simulation):
+        return self._sample_initial_state(key, self._config)
+
+    def _forcing(self, time, null_simulation, param_end_multiplier):
+        config = (
+            replace(
+                self._config,
+                epsilon=self._config.epsilon * self._config.null_rate_factor,
+            )
+            if null_simulation
+            else self._config
+        )
+        return self._lambda_schedule(time, config)
+
+    def _integrate(
+        self, time, forcing, dt, noise, state, innovations, midpoint_forcing
+    ):
+        scale = jnp.sqrt(2 * noise * dt)
+        path = self._simulate_path(
+            None, forcing, dt, scale, state[0], noise=innovations[:, 0]
+        )
+        return path[:, None], scale
 
     def _lambda_schedule(
-        self, 
-        t: jnp.ndarray, 
+        self,
+        t: jnp.ndarray,
         config: SaddleNodeConfig,
     ):
         """Compute the lambda schedule."""
-        return 0.5 * config.lambda_max * (
-            jnp.tanh(0.5 * config.lambda_max * config.epsilon * t) + 1.0
+        return (
+            0.5
+            * config.lambda_max
+            * (jnp.tanh(0.5 * config.lambda_max * config.epsilon * t) + 1.0)
         )
 
     def _sample_initial_state(
-        self, 
-        key: jax.random.PRNGKey, 
+        self,
+        key: jax.random.PRNGKey,
         config: SaddleNodeConfig,
     ):
         """Sample an initial state from the uniform distribution."""
@@ -99,7 +143,6 @@ class SaddleNodeModel(BoxModel):
         _, x_tail = lax.scan(step, initial_state, (lambda_t[:-1], noise))
         x0 = jnp.full((1,), initial_state, dtype=lambda_t.dtype)
         return jnp.concatenate([x0, x_tail], axis=0)
-    
 
     def simulate(
         self,
@@ -111,30 +154,29 @@ class SaddleNodeModel(BoxModel):
         null_simulation: bool = False,
     ):
         """Simulate the saddle-node system.
-        
+
         For null_simulation=True, same ramp formula but epsilon at 50% (slower rate).
         """
         key_noise, key_ic = jax.random.split(key)
 
-        # Setup time and lambda schedule
-        self._config = replace(self._config, t_start=-(total_len * self._config.dt))
-        time = jnp.arange(self._config.t_start, self._config.t_end, self._config.dt)
+        config = replace(self._config, t_start=-(total_len * self._config.dt))
+        time = jnp.arange(config.t_start, config.t_end, config.dt)
         if null_simulation:
-            config_null = replace(self._config, epsilon=0.5 * self._config.epsilon)
+            config_null = replace(
+                self._config,
+                epsilon=self._config.null_rate_factor * self._config.epsilon,
+            )
             lambda_t = self._lambda_schedule(time, config_null)
         else:
             lambda_t = self._lambda_schedule(time, self._config)
 
-        # Randomly sample initial state if not provided
         if initial_state is None:
             initial_state = self._sample_initial_state(key_ic, self._config)
         else:
             initial_state = jnp.asarray(initial_state)
 
-        # Configure noise scale
         noise_scale = jnp.sqrt(2.0 * sigma_tilde * self._config.dt)
 
-        # Simulate trajectory
         trajectory = self._simulate_path(
             key_noise,
             lambda_t,
@@ -144,7 +186,6 @@ class SaddleNodeModel(BoxModel):
             noise=noise,
         )
 
-        # Post-process trajectory
         trajectory = convert_scalar_trajectory(trajectory)
 
         return time, trajectory, lambda_t, noise_scale
@@ -174,24 +215,3 @@ class SaddleNodeModel(BoxModel):
         if not has_crossed:
             return None
         return int(jnp.argmax(crossed))
-
-    def extract_segment(
-        self,
-        time: jnp.ndarray,
-        trajectory: jnp.ndarray,
-        param_values: jnp.ndarray,
-        transition_idx: int,
-        steps_before_transition: int,
-        series_len: int,
-    ):
-        """Extract a segment of the trajectory around the transition."""
-        time_seg, traj_seg, param_seg, trans_idx_out, success = extract_segment(
-            time,
-            trajectory,
-            param_values,
-            transition_idx,
-            steps_before_transition,
-            series_len,
-        )
-
-        return time_seg, traj_seg, param_seg, trans_idx_out, success

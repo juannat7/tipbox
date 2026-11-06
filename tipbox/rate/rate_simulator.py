@@ -2,6 +2,7 @@ from dataclasses import asdict
 from typing import Any, Dict
 
 import jax
+import jax.numpy as jnp
 
 from ..types import TrajectoryResult
 from ..registry import get_rate_system_spec, get_rate_systems
@@ -16,9 +17,12 @@ def available_rate_systems():
 def _select_system(key: jax.random.PRNGKey):
     """Randomly select a rate-induced tipping system."""
     from ..registry import SYSTEM_REGISTRY, SystemType
-    
-    rate_systems = [name for name, spec in SYSTEM_REGISTRY.items() 
-                    if spec.system_type == SystemType.RATE and spec.rate_system]
+
+    rate_systems = [
+        name
+        for name, spec in SYSTEM_REGISTRY.items()
+        if spec.system_type == SystemType.RATE and spec.rate_system
+    ]
     idx = int(jax.random.randint(key, (), 0, len(rate_systems)))
     system_name = rate_systems[idx]
     return SYSTEM_REGISTRY[system_name]
@@ -34,42 +38,9 @@ def simulate_rate_trajectory(
     system_name: str = None,
     param_end_multiplier: float = 1.1,
     config=None,
-    **generate_kwargs
+    **generate_kwargs,
 ):
-    """Simulate a single rate-induced tipping trajectory.
-
-    Parameters
-    ----------
-    key : jax.random.PRNGKey
-        Random key for reproducibility
-    series_len : int, default=500
-        Desired output trajectory length
-    steps_before_transition : int, default=1
-        Number of samples to stay before the detected transition (>=0).
-    buffer_size : int, default=1000
-        Extra samples simulated prior to the transition to ensure enough
-        pre-transition context. Keep this constant to preserve the
-        bifurcation parameter ramp rate.
-    null_simulation : bool, default=False
-        If True, simulate null (non-tipping) trajectory
-    system_name : str, optional
-        Specific rate system to use. If None, randomly selects from available systems.
-        Options: 'bautin', 'compost_bomb', 'saddle_node'
-    param_end_multiplier : float, default=1.1
-        Multiplier for extending simulation time beyond transition
-    **generate_kwargs : additional arguments
-        Passed to the model.simulate method; unsupported names raise TypeError.
-
-    Returns
-    -------
-    full_trajectory : tipbox.types.TrajectoryResult
-        Full trajectory with metadata
-    part_trajectory : tipbox.types.TrajectoryResult
-        Part trajectory with metadata
-
-    Returns None if the simulated trajectory does not match the requested
-    tipping/null behaviour or lacks sufficient pre-transition context.
-    """
+    """Simulate and extract legacy rate-model context. Return None on outcome/context rejection."""
 
     key_select, key_sim = jax.random.split(key)
 
@@ -88,7 +59,7 @@ def simulate_rate_trajectory(
     else:
         # Random selection (backward compatibility)
         system_spec = _select_system(key_select)
-    
+
     config = system_spec.default_config() if config is None else config
     model = system_spec.create_model(config)
 
@@ -99,8 +70,22 @@ def simulate_rate_trajectory(
         null_simulation=null_simulation,
         **generate_kwargs,
     )
-    time, trajectory, param_values, sigma = sim_ret[0], sim_ret[1], sim_ret[2], sim_ret[3]
+    time, trajectory, param_values, sigma = (
+        sim_ret[0],
+        sim_ret[1],
+        sim_ret[2],
+        sim_ret[3],
+    )
     state_trajectory = sim_ret[4] if len(sim_ret) > 4 else None
+
+    if null_simulation and (
+        not bool(jnp.isfinite(trajectory).all())
+        or (
+            state_trajectory is not None
+            and not bool(jnp.isfinite(state_trajectory).all())
+        )
+    ):
+        return None
 
     # Check if the trajectory is tipped (pass time/param_values for models that need them, e.g. AMOC)
     is_tipped = model.is_tipped(
@@ -142,7 +127,9 @@ def simulate_rate_trajectory(
         "steps_before_transition": steps_before_transition,
         "system_config": asdict(config),
         "transition_index": int(trans_idx_out),
-        "param_value_transition": float(param_values[min(trans_idx_out, param_values.shape[0] - 1)])
+        "param_value_transition": float(
+            param_values[min(trans_idx_out, param_values.shape[0] - 1)]
+        ),
     }
     if state_trajectory is not None:
         metadata["state_trajectory"] = state_trajectory
@@ -152,7 +139,7 @@ def simulate_rate_trajectory(
         trajectory=trajectory,
         param_values=param_values,
         sigma=sigma,
-        metadata=metadata
+        metadata=metadata,
     )
 
     part_trajectory = TrajectoryResult(
@@ -160,7 +147,7 @@ def simulate_rate_trajectory(
         trajectory=traj_seg,
         param_values=param_seg,
         sigma=sigma,
-        metadata=metadata
+        metadata=metadata,
     )
 
     return (full_trajectory, part_trajectory)
