@@ -1,14 +1,4 @@
-"""
-System registry for organizing tipping point systems.
-
-Naming convention:
-- b_* : Bifurcation-induced tipping (b_fold, b_hopf, b_transcritical, b_harvesting)
-- r_* : Rate-induced tipping (r_bautin, r_compost_bomb, r_saddle_node)
-
-Categories:
-- synthetic: Randomly generated systems for training (b_fold, b_hopf, b_transcritical, r_*)
-- semi_real: Real-world inspired systems for validation (b_harvesting)
-"""
+"""Named box models: ``b_*`` for bifurcation tipping and ``r_*`` for rate tipping."""
 
 from typing import Dict, List, Optional, Type, Any
 from enum import Enum
@@ -55,12 +45,6 @@ class SystemSpec:
         self.rate_system = rate_system
         self.config_kwargs = config_kwargs or {}
     
-    @property
-    def is_synthetic_bifurcation(self) -> bool:
-        """Check if this is a synthetic bifurcation (polynomial model)."""
-        return (self.system_type == SystemType.BIFURCATION 
-                and self.bifurcation_system in ["fold", "hopf", "transcritical"])
-    
     def default_config(self) -> Any:
         """Create default configuration for this system."""
         if self.config_cls is None:
@@ -73,31 +57,16 @@ class SystemSpec:
             raise ValueError(f"System '{self.name}' does not have a model class")
         if config is None:
             config = self.default_config()
+        if not isinstance(config, self.config_cls):
+            raise TypeError(f"{self.name} requires {self.config_cls.__name__}")
+        for name, expected in self.config_kwargs.items():
+            if getattr(config, name) != expected:
+                raise ValueError(f"{self.name} requires {name}={expected!r}")
         return self.model_cls(config)
 
 
 # System registry with full specifications
 SYSTEM_REGISTRY: Dict[str, SystemSpec] = {
-    # Synthetic bifurcation systems (polynomial models - no config/model classes)
-    "b_fold": SystemSpec(
-        name="b_fold",
-        system_type=SystemType.BIFURCATION,
-        bifurcation_system="fold",
-        description="Synthetic fold (saddle-node) bifurcation",
-    ),
-    "b_hopf": SystemSpec(
-        name="b_hopf",
-        system_type=SystemType.BIFURCATION,
-        bifurcation_system="hopf",
-        description="Synthetic Hopf bifurcation",
-    ),
-    "b_transcritical": SystemSpec(
-        name="b_transcritical",
-        system_type=SystemType.BIFURCATION,
-        bifurcation_system="transcritical",
-        description="Synthetic transcritical bifurcation",
-    ),
-    
     # Rate-induced systems
     "r_bautin": SystemSpec(
         name="r_bautin",
@@ -170,7 +139,7 @@ SYSTEM_REGISTRY: Dict[str, SystemSpec] = {
         bifurcation_system="seirx_transcritical",
         config_cls=SEIRxConfig,
         model_cls=SEIRxModel,
-        description="SEIRx disease dynamics with vaccinator behaviour (transcritical bifurcatio)",
+        description="SEIRx disease dynamics with vaccinator behaviour (transcritical bifurcation)",
     ),
 
     # AMOC 2-box model (Ritchie et al. 2023; Alkhayuon et al. 2019) — bifurcation-induced
@@ -186,43 +155,12 @@ SYSTEM_REGISTRY: Dict[str, SystemSpec] = {
 
 
 def normalize_system_name(name: str) -> str:
-    """Normalize system name (handle legacy names).
-    
-    Supports legacy names for backward compatibility:
-    - "fold" -> "b_fold"
-    - "hopf" -> "b_hopf"
-    - "transcritical" -> "b_transcritical"
-    - "rate" -> "r_bautin" (default rate system)
-    
-    Parameters
-    ----------
-    name : str
-        System name (can be legacy or normalized)
-        
-    Returns
-    -------
-    str
-        Normalized system name
-        
-    Raises
-    ------
-    ValueError
-        If system name is not recognized
-    """
+    """Resolve a registered name or the legacy ``rate`` alias."""
     if name in SYSTEM_REGISTRY:
         return name
     
-    # Handle legacy names for backward compatibility
-    legacy_map = {
-        # Legacy bifurcation names (without "b_" prefix)
-        "fold": "b_fold",
-        "hopf": "b_hopf",
-        "transcritical": "b_transcritical",
-        
-        # Legacy rate name (defaults to bautin)
-        "rate": "r_bautin",
-    }
-    
+    legacy_map = {"rate": "r_bautin"}
+
     if name in legacy_map:
         return legacy_map[name]
     
@@ -289,9 +227,9 @@ def get_rate_system_spec(rate_system_name: str) -> SystemSpec:
 def get_bifurcation_real_system_spec(real_system_name: str) -> SystemSpec:
     """Get bifurcation real system specification by internal name (e.g., 'may_harvesting' -> 'b_harvesting')."""
     for name, spec in SYSTEM_REGISTRY.items():
-        if spec.bifurcation_system == real_system_name and not spec.is_synthetic_bifurcation:
+        if spec.bifurcation_system == real_system_name:
             return spec
     raise ValueError(
         f"Unknown bifurcation real system: {real_system_name}. "
-        f"Available systems: {[s.bifurcation_system for s in SYSTEM_REGISTRY.values() if s.bifurcation_system and not s.is_synthetic_bifurcation]}"
+        f"Available systems: {[s.bifurcation_system for s in SYSTEM_REGISTRY.values() if s.bifurcation_system]}"
     )

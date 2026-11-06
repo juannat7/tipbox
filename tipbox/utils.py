@@ -1,9 +1,20 @@
+from math import isclose, isfinite
 from typing import Tuple, Type, TypeVar
 
 import jax
 import jax.numpy as jnp
 
 T = TypeVar("T")
+
+
+def sampling_stride(dt_sample: float, dt_integrate: float) -> int:
+    """Return an exact positive sampling stride on a fixed integration grid."""
+    if not isfinite(dt_sample) or not isfinite(dt_integrate) or dt_integrate <= 0:
+        raise ValueError("Sampling and integration steps must be finite and positive")
+    stride = round(dt_sample / dt_integrate)
+    if stride < 1 or not isclose(stride * dt_integrate, dt_sample, rel_tol=1e-7):
+        raise ValueError("dt_sample must be a positive integer multiple of the integration step")
+    return stride
 
 
 def register_dataclass_pytree(cls: Type[T]) -> Type[T]:

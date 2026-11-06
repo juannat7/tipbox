@@ -12,7 +12,7 @@ cd tipbox
 pip install -e .
 ```
 
-> **Note:** `AUTO-07P` is required for synthetic bifurcation models (`b_fold`, `b_hopf`, `b_transcritical`). See [`docs/INSTALL_AUTO.md`](docs/INSTALL_AUTO.md) for instructions.
+The named box models require no external continuation software. The former random-polynomial generators (`b_fold`, `b_hopf`, `b_transcritical`) have been removed; their implementation is preserved in [the repository history](https://github.com/juannat7/tipbox/tree/6b6443e).
 
 ## Available Box Models
 
@@ -20,9 +20,6 @@ pip install -e .
 
 | System | Type | Description | Reference |
 |--------|------|-------------|-----------|
-| `b_fold` | Synthetic | Fold (saddle-node) bifurcation | Bury et al. 2021 |
-| `b_hopf` | Synthetic | Hopf bifurcation | Bury et al. 2021 |
-| `b_transcritical` | Synthetic | Transcritical bifurcation | Bury et al. 2021 |
 | `b_harvesting` | Semi-real | May's harvesting model (fold) | May 1977 |
 | `b_rosenzweig_macarthur_tc` | Semi-real | Consumer-resource model (transcritical) | Bury et al. 2021 |
 | `b_rosenzweig_macarthur_hopf` | Semi-real | Consumer-resource model (Hopf) | Bury et al. 2021 |
@@ -47,7 +44,7 @@ from tipbox import generate
 # Generate a tipping trajectory
 full, part, info = generate.generate(
     key=jax.random.PRNGKey(42),
-    tipping_type='b_fold',          # or 'b_harvesting', 'r_compost_bomb', etc.
+    tipping_type='b_harvesting',          # or 'b_harvesting', 'r_compost_bomb', etc.
     null_simulation=False,           # True for non-tipping trajectory
     num_timesteps=500,
     sigma_tilde=0.01,
@@ -57,6 +54,8 @@ full, part, info = generate.generate(
 # part.trajectory  - extracted pre-transition segment
 # info             - metadata (transition_index, sigma, etc.)
 ```
+
+The SEIRx simulator now applies `sigma_tilde` to its configured noise amplitudes, as documented. To reproduce its former noise level, use `sigma_tilde=1.0`; the high-level default is `0.01`. Rate models use their configured time grid; change their typed configuration to adjust integration steps or physical parameters.
 
 ## Tutorial
 

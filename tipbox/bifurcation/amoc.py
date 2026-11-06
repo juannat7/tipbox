@@ -12,7 +12,7 @@ import jax.numpy as jnp
 from jax import lax
 
 from ..types import BoxModel
-from ..utils import extract_segment, register_dataclass_pytree
+from ..utils import extract_segment, register_dataclass_pytree, sampling_stride
 
 # 2x CO2 parameters from BoxModel_2DH_IVP.m (rtippingreview)
 _S0 = 0.035
@@ -228,20 +228,19 @@ class AMOCModel(BoxModel):
         total_len: int,
         sigma_tilde: float = 1.0,
         null_simulation: bool = False,
-        dt_sample: float = 1.0,
+        dt_sample: Optional[float] = None,
         param_end_multiplier: float = 1.1,
         initial_state: Optional[jnp.ndarray] = None,
         noise: Optional[jnp.ndarray] = None,
-        **kwargs
     ):
         key_noise, _ = jax.random.split(key)
         total_time = self._config.t_end
         dt_inner = self._config.dt_inner
-        dt_out = self._config.dt
+        dt_out = self._config.dt if dt_sample is None else dt_sample
+        sample_every = sampling_stride(dt_out, dt_inner)
+        n_steps = sampling_stride(total_time - self._config.t_start, dt_inner)
         # Single inner grid: RK4 for both branches (stochastic adds noise per step)
-        time_inner = jnp.linspace(
-            self._config.t_start, total_time, int(total_time / dt_inner) + 1
-        )
+        time_inner = jnp.linspace(self._config.t_start, total_time, n_steps + 1)
         H_inner = self._H_schedule(
             time_inner, null_simulation=null_simulation, param_end_multiplier=param_end_multiplier
         )
@@ -269,26 +268,22 @@ class AMOCModel(BoxModel):
             H_cur, H_mid, H_next, dt_inner, initial_state, noise_scale, noise_arr
         )
 
-        sample_every = max(1, int(dt_out / dt_inner))
         n_inner = trajectory_fine.shape[0]
         indices = jnp.arange(0, n_inner, sample_every)
         time = time_inner[indices]
         path_sampled = trajectory_fine[indices]
 
-        # Returned H(t) = forcing_bifurcation_ramp_cap at output times (so plot shows ramp-cap)
-        t_end_eff = (time[-1] - time[0]) / param_end_multiplier
-        rate, H_cap_nontip, H_cap_tip = _bifurcation_ramp_cap_params(
-            t_end_eff, self._config.H0, self._config.H_fold,
-            delta_cap=self._config.delta_cap, tip_ramp_end=self._config.tip_ramp_end,
-        )
-        H_cap = H_cap_nontip if null_simulation else H_cap_tip
-        t_rel = time - time[0]
-        param_values = _forcing_bifurcation_ramp_cap(t_rel, self._config.H0, rate, H_cap)
+        param_values = H_inner[indices]
 
-        # Output Q(t) = AMOC strength (1D) for EWS
+        # Output trajectory with both physical state (S_N, S_T) and AMOC strength Q(t).
+        # Column convention:
+        #   trajectory[:, 0] = Q(t)  (AMOC strength in Sv, for 1D EWS)
+        #   trajectory[:, 1] = S_N(t)  (North Atlantic salinity)
+        #   trajectory[:, 2] = S_T(t)  (Tropical Atlantic salinity)
         SN_sampled = path_sampled[:, 0]
+        ST_sampled = path_sampled[:, 1]
         Q_t = _amoc_strength_sv(SN_sampled)
-        trajectory = Q_t  # (T,)
+        trajectory = jnp.stack([Q_t, SN_sampled, ST_sampled], axis=1)
 
         sigma_float = float(jnp.max(noise_scale))
         return time, trajectory, param_values, sigma_float
