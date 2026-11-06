@@ -109,7 +109,7 @@ class RosenzweigMacArthurConfig:
     # Simulation parameters
     dt: float = parameter(
         0.01,
-        "Default integration step; AMOC uses this field for output spacing.",
+        "Default integration step.",
         "model time",
     )
     t_start: float = parameter(
@@ -422,7 +422,7 @@ class RosenzweigMacArthurModel(BoxModel):
         ----------
         key : JAX random key
         total_len : int
-            Total number of output time points
+            Number of output intervals; returns total_len+1 samples including the initial state.
         sigma_tilde : float, default=0.01
             Base noise amplitude
         null_simulation : bool, default=False
@@ -434,11 +434,11 @@ class RosenzweigMacArthurModel(BoxModel):
 
         Returns
         -------
-        time : (total_len,) array
+        time : (total_len+1,) array
             Time points
-        trajectory : (total_len, 2) array
+        trajectory : (total_len+1, 2) array
             State trajectory [x, y]
-        param_values : (total_len,) array
+        param_values : (total_len+1,) array
             Attack rate a(t) values
         noise_scale : (2,) array
             Effective noise scales used [σ₁, σ₂]

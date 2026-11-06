@@ -86,7 +86,7 @@ class AMOCConfig:
     )
     dt: float = parameter(
         5.0,
-        "Default integration step; AMOC uses this field for output spacing.",
+        "Default output spacing; dt_inner controls RK4 integration.",
         "year",
     )
     t_start: float = parameter(

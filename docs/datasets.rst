@@ -81,7 +81,7 @@ and analysis choices, not estimates made by the loader or universal EWS defaults
      - 200 / 50
    * - ``mitochondria``
      - Relative fluorescence ratio
-     - s
+     - unresolved; raw source coordinates
      - 271
      - 4.7
      - 3.2
@@ -110,6 +110,17 @@ file. ``metadata["sampling"]`` reports adjacent minimum/median/maximum time
 increments, duplicate and backward counts, missing counts, and regularity using
 ``rtol=1e-5, atol=0`` with strictly positive increments. No interval is inferred
 across dropped rows because no rows are dropped.
+
+The mitochondrial case has inconsistent upstream time labels. The archive
+script and published Fig. 3G–H label seconds; the
+`cellular-energy methods <https://pmc.ncbi.nlm.nih.gov/articles/PMC9821862/>`_
+describe minutes and also report a 40-second acquisition interval. The median
+raw increment is approximately 0.011111. TipBox therefore reports
+``time_unit="unresolved"`` and retains the discrepancy in
+``time_unit_notes``; it does not rescale the timestamps or reference values.
+Resolve the physical clock before reporting durations or lead times for this
+record. Its original experiment is Wagner et al. (2019),
+`New Phytologist 224, 1668–1684 <https://doi.org/10.1111/nph.16093>`_.
 
 Indicator example
 -----------------

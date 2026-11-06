@@ -37,7 +37,7 @@ class BoxModel(ABC):
     Parameters
     ----------
     config : dataclass or None
-        Typed configuration for this model. Omit to use published defaults.
+        Typed configuration for this model. Omit to use its documented defaults.
     **parameters
         Configuration field overrides, checked by the typed dataclass constructor.
         ``model.config`` and ``model.get_parameters()`` expose all resolved values.
@@ -96,17 +96,20 @@ class BoxModel(ABC):
             An explicit n overrides the configured end time.
         dt : float or None, default=None
             Integration step. Defaults to config.dt, or config.dt_inner for AMOC.
+            For Ricker this is the interval represented by one discrete map update.
         dt_sample : float or None, default=None
             Output spacing; a positive integer multiple of dt. Defaults to 1.0
-            for ecological bifurcation models and config.dt for rate/AMOC models.
+            for MayHarvesting, RosenzweigMacArthur and SEIRx, 0.0005 for Thermoacoustic,
+            and config.dt for the remaining models.
         noise : float, default=0.01
             Nonnegative noise-strength parameter, with the same meaning as
             sigma_tilde in simulate. The model reference gives its exact diffusion
             formula; saddle-node uses an intensity and other models a multiplier.
             Zero disables process noise, but does not disable random initial states.
         initial_state : array-like or None, default=None
-            Physical initial state in the order of model.state_names. None uses
-            the model's initial-state sampler. A scalar is accepted for 1D models.
+            Initial model state in the order of model.state_names. Ricker uses
+            log population, and Thermoacoustic uses pressure and scaled velocity.
+            None uses the model's sampler. A scalar is accepted for 1D models.
         seed : int, default=0
             Local random seed; global random state is never changed.
         innovations : array-like or None, default=None

@@ -33,6 +33,8 @@ class EmpiricalSpec:
     inferred by this loader. ``example_window`` and ``example_step`` are sample
     counts from that analysis, rather than tuned classical-indicator defaults.
     Recovery intervals are inclusive (label, start, stop) triples.
+    ``time_unit_notes`` records source inconsistencies; an unresolved unit must
+    be clarified before assigning physical durations to its raw time coordinates.
     """
 
     name: str
@@ -48,6 +50,7 @@ class EmpiricalSpec:
     time_column: int = 0
     value_column: int = 1
     recovery_intervals: tuple[tuple[str, float, float], ...] = ()
+    time_unit_notes: str = ""
 
 
 _SPECS = {
@@ -86,7 +89,7 @@ _SPECS = {
     "mitochondria": EmpiricalSpec(
         name="mitochondria",
         display_name="Cellular ATP",
-        time_unit="s",
+        time_unit="unresolved",
         observable="Relative fluorescence ratio",
         observable_unit="relative ratio",
         contributor="Markus Schwarzländer",
@@ -94,6 +97,13 @@ _SPECS = {
         trend_start=3.2,
         example_window=125,
         example_step=1,
+        time_unit_notes=(
+            "The archive script and Grziwotz et al. (2023) Fig.3G-H label seconds, "
+            "but the cellular-energy methods report minutes and a 40-second "
+            "acquisition interval. The raw median increment is about 0.011111; "
+            "no physical scale is assumed or conversion applied. Original "
+            "experiment: Wagner et al. (2019), doi:10.1111/nph.16093."
+        ),
     ),
     "climate": EmpiricalSpec(
         name="climate",

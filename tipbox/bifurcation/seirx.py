@@ -114,7 +114,7 @@ class SEIRxConfig:
     # Simulation parameters (time in weeks)
     dt: float = parameter(
         0.01,
-        "Default integration step; AMOC uses this field for output spacing.",
+        "Default integration step.",
         "week",
     )
     t_start: float = parameter(
@@ -352,7 +352,7 @@ class SEIRxModel(BoxModel):
         ----------
         key : JAX random key
         total_len : int
-            Total number of output time points
+            Number of output intervals; returns total_len+1 samples including the initial state.
         sigma_tilde : float, default=1.0
             Noise scaling factor (multiplies config sigma values)
         null_simulation : bool, default=False
@@ -364,11 +364,11 @@ class SEIRxModel(BoxModel):
 
         Returns
         -------
-        time : (total_len,) array
+        time : (total_len+1,) array
             Time points
-        trajectory : (total_len, 2) array
+        trajectory : (total_len+1, 2) array
             State trajectory [I, x] (infectious count, provaccine fraction)
-        param_values : (total_len,) array
+        param_values : (total_len+1,) array
             ω(t) values
         noise_scale : (4,) array
             Effective noise scales used [noise_S, noise_E, noise_I, noise_x]

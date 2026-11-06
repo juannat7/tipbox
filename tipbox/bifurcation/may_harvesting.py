@@ -69,7 +69,7 @@ class MayHarvestingConfig:
     # Simulation parameters
     dt: float = parameter(
         0.01,
-        "Default integration step; AMOC uses this field for output spacing.",
+        "Default integration step.",
         "model time",
     )
     t_start: float = parameter(
@@ -154,8 +154,8 @@ class MayHarvestingModel(BoxModel):
         For null simulations: same linear ramp as forced but clipped so the range from
         null_cap to critical equals the range from critical to h_max (symmetric about critical).
         For forced simulations:
-          - h increases linearly from h_min to h_max (up to bifurcation point)
-          - Beyond the bifurcation point, h stays constant at h_max
+          - h increases linearly from h_min to h_max, passing through the fold
+          - After the ramp endpoint, h stays constant at h_max
           - param_end_multiplier extends the time series, keeping h constant beyond critical point
         """
         # Total time range
@@ -291,7 +291,7 @@ class MayHarvestingModel(BoxModel):
         ----------
         key : JAX random key
         total_len : int
-            Total number of output time points
+            Number of output intervals; returns total_len+1 samples including the initial state.
         sigma_tilde : float, default=0.01
             Base noise amplitude
         null_simulation : bool, default=False
@@ -303,11 +303,11 @@ class MayHarvestingModel(BoxModel):
 
         Returns
         -------
-        time : (total_len,) array
+        time : (total_len+1,) array
             Time points
-        trajectory : (total_len, 2) array
+        trajectory : (total_len+1, 2) array
             State trajectory [x, 0] (second column is zero for 1D system)
-        param_values : (total_len,) array
+        param_values : (total_len+1,) array
             Harvesting rate h(t) values
         noise_scale : float
             Effective noise scale used

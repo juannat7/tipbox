@@ -15,6 +15,9 @@ work, as does ``from tipbox import generate; generate.generate(...)``.
 simulator's fixed-duration or context-buffer conventions. Reproducibility is
 per interface: the new method uses a shared random-increment layout, so the
 same integer seed does not imply the same noise realization as legacy simulate.
+The legacy harvesting, Rosenzweig–MacArthur, and SEIRx simulators interpret
+``total_len`` as an interval count and return ``total_len+1`` samples, including
+the initial state. The new ``make_trajectory(n)`` returns exactly ``n`` samples.
 
 For a forced bifurcation path that never reaches its critical parameter,
 ``locate_transition`` returns ``None``. It no longer substitutes the last sample
@@ -72,4 +75,9 @@ Unused ``tip_ramp_end`` has been removed. ``a_*_null`` and ``omega_null`` are no
 optional cap overrides; ``None`` computes the previous symmetric-cap formula.
 Initial-state dispersion ``sigma_ic`` is active in AMOC ``make_trajectory``;
 legacy ``simulate`` retains its configured mean unless an initial state is given.
+
+The empirical mitochondrial record's ``time_unit`` is ``"unresolved"`` because
+the source figure, methods, and stated acquisition interval conflict. Raw time
+coordinates and reference markers remain unchanged; ``time_unit_notes`` retains
+the evidence. See :doc:`datasets` before interpreting a physical lead time.
 

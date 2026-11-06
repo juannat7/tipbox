@@ -2,7 +2,8 @@
 AMOC 2-box model, rate-induced tipping (Ritchie et al. 2023; Alkhayuon et al. 2019).
 
 Port from dews/experiments/amoc_boxmodel.py. H(t) = ramp then plateau (forcing_ramp).
-Tip threshold: transition during ramp phase (t < 0).
+Collapse means a finite transport below the configured threshold. Positive
+context extraction uses time zero as its forcing reference after outcome checks.
 """
 
 from dataclasses import dataclass
@@ -43,8 +44,8 @@ class AMOCRateConfig:
     )
     H0: float = parameter(0.0, "Initial freshwater-hosing level.", "Sv")
     dH: float = parameter(0.365, "Freshwater-hosing increase above H0.", "Sv")
-    r_slow: float = parameter(0.005, "Null forcing rate.", "1 / model time")
-    r_fast: float = parameter(0.017, "Forced ramp rate.", "1 / model time")
+    r_slow: float = parameter(0.005, "Null forcing rate.", "1 / year")
+    r_fast: float = parameter(0.017, "Forced ramp rate.", "1 / year")
     sigma_SN: float = parameter(
         0.0001,
         "North Atlantic diffusion coefficient before the noise multiplier.",
@@ -62,7 +63,7 @@ class AMOCRateConfig:
     )
     dt: float = parameter(
         5.0,
-        "Default integration step; AMOC uses this field for output spacing.",
+        "Default output spacing; dt_inner controls RK4 integration.",
         "year",
     )
     dt_inner: float = parameter(0.2, "AMOC RK4 integration step.", "year")
@@ -123,7 +124,7 @@ class AMOCRateModel(BoxModel):
         return observe(path, self._config.physics)
 
     def _H_schedule(self, t: jnp.ndarray, null_simulation: bool) -> jnp.ndarray:
-        """H(t) = forcing_ramp(t, r, dH, H0). null_simulation=True -> r_slow (no tip); False -> r_fast (tip)."""
+        """Choose r_slow or r_fast; the schedule alone does not guarantee an outcome."""
         r = self._config.r_slow if null_simulation else self._config.r_fast
         return _forcing_ramp(t, r, self._config.dH, self._config.H0)
 
