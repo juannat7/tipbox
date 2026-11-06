@@ -11,19 +11,10 @@ Usage
    from tipbox.models import SEIRx
 
    model = SEIRx()
-   result = model.make_trajectory(
-       n=1800,
-       noise=0.01,
-       seed=42,
-   )
+   result = model.make_trajectory(n=1800, noise=0.01, seed=43)
    infectious, vaccinators = result.trajectory.T
 
-   control = model.make_trajectory(
-       n=1800,
-       noise=0.01,
-       seed=42,
-       null_simulation=True,
-   )
+   control = model.make_trajectory(n=1800, noise=0.01, seed=43, null_simulation=True)
 
 .. figure:: ../_static/figures/b_seirx_tc.png
    :target: ../_static/figures/b_seirx_tc.png

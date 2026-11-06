@@ -645,7 +645,7 @@ def main():
     parser.add_argument(
         "--seed",
         type=int,
-        default=42,
+        default=43,
         help="Declared root seed for simulations and batch selection",
     )
     parser.add_argument(

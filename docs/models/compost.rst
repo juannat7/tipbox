@@ -11,19 +11,10 @@ Usage
    from tipbox.models import CompostBomb
 
    model = CompostBomb()
-   result = model.make_trajectory(
-       n=2001,
-       noise=0.01,
-       seed=45,
-   )
+   result = model.make_trajectory(n=2001, noise=0.01, seed=45)  # Selected tipping realization.
    carbon, temperature = result.trajectory.T
 
-   control = model.make_trajectory(
-       n=2001,
-       noise=0.01,
-       seed=42,
-       null_simulation=True,
-   )
+   control = model.make_trajectory(n=2001, noise=0.01, seed=43, null_simulation=True)
 
 .. figure:: ../_static/figures/r_compost_bomb.png
    :target: ../_static/figures/r_compost_bomb.png

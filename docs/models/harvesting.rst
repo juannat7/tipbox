@@ -11,19 +11,10 @@ Usage
    from tipbox.models import MayHarvesting
 
    model = MayHarvesting()
-   result = model.make_trajectory(
-       n=1400,
-       noise=1.0,
-       seed=42,
-   )
+   result = model.make_trajectory(n=1400, noise=1.0, seed=43)
    biomass = result.trajectory[:, 0]
 
-   control = model.make_trajectory(
-       n=1400,
-       noise=1.0,
-       seed=42,
-       null_simulation=True,
-   )
+   control = model.make_trajectory(n=1400, noise=1.0, seed=43, null_simulation=True)
 
 .. figure:: ../_static/figures/b_harvesting.png
    :target: ../_static/figures/b_harvesting.png

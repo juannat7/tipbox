@@ -12,19 +12,10 @@ Usage
    from tipbox.models import Ricker
 
    model = Ricker()
-   result = model.make_trajectory(
-       n=600,
-       noise=1.0,
-       seed=42,
-   )
+   result = model.make_trajectory(n=600, noise=1.0, seed=43)
    population = result.trajectory[:, 0]
 
-   control = model.make_trajectory(
-       n=600,
-       noise=1.0,
-       seed=42,
-       null_simulation=True,
-   )
+   control = model.make_trajectory(n=600, noise=1.0, seed=43, null_simulation=True)
 
 .. figure:: ../_static/figures/b_ricker.png
    :target: ../_static/figures/b_ricker.png

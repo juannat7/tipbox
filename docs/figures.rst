@@ -17,7 +17,7 @@ source checksums, and software versions.
    * - Option
      - Default
    * - ``--seed``
-     - ``42``
+     - ``43``
    * - ``--n-per-class``
      - ``50`` for the ROC example
    * - ``--formats``

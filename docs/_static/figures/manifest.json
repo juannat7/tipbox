@@ -8,7 +8,7 @@
   },
   "jax_backend": "cpu",
   "jax_enable_x64": false,
-  "script_sha256": "bc10fb63a22343c1211f1ca1b722d376ca05c69fa908e33d4a61cc8f54f70db7",
+  "script_sha256": "4ed585462c417166ae1858cbecfc1a6a700c34d9ff0b1f71d16ff13697b14a77",
   "package_sources_sha256": {
     "__init__.py": "3c6b12ed5bfaa65508d5ed1731a5ed26dad3a94a83ccde96ec2d916d5f0062eb",
     "_amoc.py": "3aa4751ec838a7d6041c782a9dfd9a5fbfb176b3efe08e1acb7c522f0e635add",
@@ -62,11 +62,11 @@
         "n": 1400,
         "noise": 1.0
       },
-      "seed": 42,
+      "seed": 43,
       "dt": 0.01,
       "dt_sample": 1.0,
       "initial_state": [
-        0.8638321161270142
+        0.5139253735542297
       ],
       "observables": [
         "biomass"
@@ -77,7 +77,7 @@
       "time_end": 1399.0,
       "selection": "first accepted tipping trajectory",
       "selection_context_samples": 300,
-      "root_seed": 42,
+      "root_seed": 43,
       "attempt": 1,
       "horizontal": "harvesting_rate",
       "vertical": "biomass",
@@ -121,12 +121,12 @@
         "dt_sample": 0.02,
         "noise": 1.0
       },
-      "seed": 42,
+      "seed": 43,
       "dt": 0.01,
       "dt_sample": 0.02,
       "initial_state": [
-        1.4376566410064697,
-        0.02893168292939663
+        1.6664665937423706,
+        0.04167177528142929
       ],
       "observables": [
         "resource",
@@ -138,7 +138,7 @@
       "time_end": 1799.0,
       "selection": "first accepted tipping trajectory",
       "selection_context_samples": 300,
-      "root_seed": 42,
+      "root_seed": 43,
       "attempt": 1,
       "horizontal": "resource",
       "vertical": "consumer",
@@ -182,12 +182,12 @@
         "dt_sample": 0.02,
         "noise": 1.0
       },
-      "seed": 42,
+      "seed": 43,
       "dt": 0.01,
       "dt_sample": 0.02,
       "initial_state": [
-        0.7961273193359375,
-        0.37277016043663025
+        0.8978038430213928,
+        0.4070734679698944
       ],
       "observables": [
         "resource",
@@ -199,7 +199,7 @@
       "time_end": 1799.0,
       "selection": "first accepted tipping trajectory",
       "selection_context_samples": 300,
-      "root_seed": 42,
+      "root_seed": 43,
       "attempt": 1,
       "horizontal": "resource",
       "vertical": "consumer",
@@ -241,7 +241,7 @@
         "n": 1800,
         "noise": 0.01
       },
-      "seed": 42,
+      "seed": 43,
       "dt": 0.01,
       "dt_sample": 1.0,
       "initial_state": [
@@ -260,7 +260,7 @@
       "time_end": 1799.0,
       "selection": "first accepted tipping trajectory",
       "selection_context_samples": 300,
-      "root_seed": 42,
+      "root_seed": 43,
       "attempt": 1,
       "horizontal": "infectious",
       "vertical": "vaccinator_fraction",
@@ -320,12 +320,12 @@
       "arguments": {
         "noise": 0.01
       },
-      "seed": 42,
+      "seed": 43,
       "dt": 0.2,
       "dt_sample": 5.0,
       "initial_state": [
-        0.024958796799182892,
-        0.15861709415912628
+        0.045294102281332016,
+        0.14282794296741486
       ],
       "observables": [
         "amoc_strength",
@@ -338,7 +338,7 @@
       "time_end": 5200.0,
       "selection": "first accepted tipping trajectory",
       "selection_context_samples": 300,
-      "root_seed": 42,
+      "root_seed": 43,
       "attempt": 1,
       "horizontal": "freshwater_hosing",
       "vertical": "amoc_strength",
@@ -385,8 +385,8 @@
       "time_end": 8.0,
       "selection": "first accepted tipping trajectory",
       "selection_context_samples": 300,
-      "root_seed": 42,
-      "attempt": 2,
+      "root_seed": 43,
+      "attempt": 1,
       "horizontal": "equilibrium_shift",
       "vertical": "state",
       "display_scaling": "physical coordinates; no min/max normalization",
@@ -421,12 +421,12 @@
       "arguments": {
         "noise": 0.01
       },
-      "seed": 42,
+      "seed": 45,
       "dt": 0.01,
       "dt_sample": 0.01,
       "initial_state": [
-        -0.543196439743042,
-        -0.7022771835327148
+        0.15210270881652832,
+        -0.7155196666717529
       ],
       "observables": [
         "x",
@@ -438,19 +438,19 @@
       "time_end": 15.0,
       "selection": "first accepted tipping trajectory",
       "selection_context_samples": 300,
-      "root_seed": 42,
-      "attempt": 1,
+      "root_seed": 43,
+      "attempt": 3,
       "horizontal": "x",
       "vertical": "y",
       "display_scaling": "physical coordinates; no min/max normalization",
       "display_filter": "finite points; saddle-node |state|<=5; Bautin radius<=tip_threshold; compost temperature<=150",
-      "n_displayed": 1150,
+      "n_displayed": 655,
       "display_time_interval": [
         -15.0,
-        -3.510000228881836
+        -8.460000038146973
       ],
-      "reference_index": 1150,
-      "reference_time": -3.5,
+      "reference_index": 655,
+      "reference_time": -8.450000762939453,
       "critical_parameter": null,
       "parameter_inset": "full forcing schedule; shading marks displayed interval; dashed line is the critical parameter when defined"
     },
@@ -494,8 +494,8 @@
       "time_end": 100.0,
       "selection": "first accepted tipping trajectory",
       "selection_context_samples": 300,
-      "root_seed": 42,
-      "attempt": 4,
+      "root_seed": 43,
+      "attempt": 3,
       "horizontal": "soil_carbon",
       "vertical": "soil_temperature",
       "display_scaling": "physical coordinates; no min/max normalization",
@@ -556,12 +556,12 @@
       "arguments": {
         "noise": 0.01
       },
-      "seed": 42,
+      "seed": 43,
       "dt": 0.2,
       "dt_sample": 5.0,
       "initial_state": [
-        0.03845763951539993,
-        0.1513904333114624
+        0.013266369700431824,
+        0.14494358003139496
       ],
       "observables": [
         "amoc_strength",
@@ -574,7 +574,7 @@
       "time_end": 3200.0,
       "selection": "first accepted tipping trajectory",
       "selection_context_samples": 300,
-      "root_seed": 42,
+      "root_seed": 43,
       "attempt": 1,
       "horizontal": "freshwater_hosing",
       "vertical": "amoc_strength",
@@ -607,7 +607,7 @@
         "n": 600,
         "noise": 1.0
       },
-      "seed": 42,
+      "seed": 43,
       "dt": 1.0,
       "dt_sample": 1.0,
       "initial_state": [
@@ -622,7 +622,7 @@
       "time_end": 599.0,
       "selection": "first accepted tipping trajectory",
       "selection_context_samples": 300,
-      "root_seed": 42,
+      "root_seed": 43,
       "attempt": 1,
       "horizontal": "time (model time)",
       "vertical": "population",
@@ -659,7 +659,7 @@
         "dt_sample": 0.0001,
         "noise": 1.0
       },
-      "seed": 42,
+      "seed": 43,
       "dt": 0.0001,
       "dt_sample": 0.0001,
       "initial_state": [
@@ -677,7 +677,7 @@
       "time_end": 1.100000023841858,
       "selection": "first accepted tipping trajectory",
       "selection_context_samples": 300,
-      "root_seed": 42,
+      "root_seed": 43,
       "attempt": 1,
       "horizontal": "pressure",
       "vertical": "scaled_velocity",
@@ -717,11 +717,11 @@
         "n": 1200,
         "noise": 1.0
       },
-      "seed": 42,
+      "seed": 43,
       "dt": 0.01,
       "dt_sample": 1.0,
       "initial_state": [
-        0.8638321161270142
+        0.5139253735542297
       ],
       "observables": [
         "biomass"
@@ -732,7 +732,7 @@
       "time_end": 1199.0,
       "selection": "first accepted tipping trajectory",
       "selection_context_samples": 300,
-      "root_seed": 42,
+      "root_seed": 43,
       "attempt": 1,
       "control": {
         "model": "MayHarvestingModel",
@@ -757,11 +757,11 @@
           "noise": 1.0,
           "null_simulation": true
         },
-        "seed": 42,
+        "seed": 43,
         "dt": 0.01,
         "dt_sample": 1.0,
         "initial_state": [
-          0.8105763792991638
+          0.5586636662483215
         ],
         "observables": [
           "biomass"
@@ -774,7 +774,7 @@
       "control_selection": {
         "selection": "first accepted control",
         "selection_context_samples": 300,
-        "root_seed": 42,
+        "root_seed": 43,
         "attempt": 1
       },
       "marker_index": 1004,
@@ -822,8 +822,8 @@
       "time_end": 8.0,
       "selection": "first accepted tipping trajectory",
       "selection_context_samples": 300,
-      "root_seed": 42,
-      "attempt": 2,
+      "root_seed": 43,
+      "attempt": 1,
       "control": {
         "model": "SaddleNodeModel",
         "parameters": {
@@ -841,11 +841,11 @@
           "noise": 0.01,
           "null_simulation": true
         },
-        "seed": 42,
+        "seed": 43,
         "dt": 0.01,
         "dt_sample": 0.01,
         "initial_state": [
-          -3.451021909713745
+          -9.749342918395996
         ],
         "observables": [
           "state"
@@ -858,7 +858,7 @@
       "control_selection": {
         "selection": "first accepted control",
         "selection_context_samples": 300,
-        "root_seed": 42,
+        "root_seed": 43,
         "attempt": 1
       },
       "marker_index": 1709,
@@ -973,11 +973,11 @@
         "n": 1200,
         "noise": 1.0
       },
-      "seed": 42,
+      "seed": 43,
       "dt": 0.01,
       "dt_sample": 1.0,
       "initial_state": [
-        0.8638321161270142
+        0.5139253735542297
       ],
       "observables": [
         "biomass"
@@ -988,7 +988,7 @@
       "time_end": 1199.0,
       "selection": "first accepted tipping trajectory",
       "selection_context_samples": 300,
-      "root_seed": 42,
+      "root_seed": 43,
       "attempt": 1,
       "control": {
         "model": "MayHarvestingModel",
@@ -1013,11 +1013,11 @@
           "noise": 1.0,
           "null_simulation": true
         },
-        "seed": 42,
+        "seed": 43,
         "dt": 0.01,
         "dt_sample": 1.0,
         "initial_state": [
-          0.8105763792991638
+          0.5586636662483215
         ],
         "observables": [
           "biomass"
@@ -1030,7 +1030,7 @@
       "control_selection": {
         "selection": "first accepted control",
         "selection_context_samples": 300,
-        "root_seed": 42,
+        "root_seed": 43,
         "attempt": 1
       },
       "marker_index": 1004,
@@ -1078,8 +1078,8 @@
       "time_end": 8.0,
       "selection": "first accepted tipping trajectory",
       "selection_context_samples": 300,
-      "root_seed": 42,
-      "attempt": 2,
+      "root_seed": 43,
+      "attempt": 1,
       "control": {
         "model": "SaddleNodeModel",
         "parameters": {
@@ -1097,11 +1097,11 @@
           "noise": 0.01,
           "null_simulation": true
         },
-        "seed": 42,
+        "seed": 43,
         "dt": 0.01,
         "dt_sample": 0.01,
         "initial_state": [
-          -3.451021909713745
+          -9.749342918395996
         ],
         "observables": [
           "state"
@@ -1114,7 +1114,7 @@
       "control_selection": {
         "selection": "first accepted control",
         "selection_context_samples": 300,
-        "root_seed": 42,
+        "root_seed": 43,
         "attempt": 1
       },
       "marker_index": 1709,
@@ -1228,7 +1228,7 @@
         "n": 1000,
         "noise": 1.0
       },
-      "root_seed": 42,
+      "root_seed": 43,
       "n_per_class": 50,
       "num_timesteps": 300,
       "lead_steps": 1,
@@ -1238,106 +1238,106 @@
       "detrend": "linear",
       "score": "Kendall tau-b, increasing direction declared for both indicators",
       "accepted_seeds": [
-        42,
-        142,
-        242,
-        342,
-        442,
-        542,
-        642,
-        742,
-        842,
-        942,
-        1042,
-        1142,
-        1242,
-        1342,
-        1442,
-        1542,
-        1642,
-        1742,
-        1842,
-        1942,
-        2042,
-        2142,
-        2242,
-        2342,
-        2442,
-        2542,
-        2642,
-        2742,
-        2842,
-        2942,
-        3042,
-        3142,
-        3242,
-        3342,
-        3442,
-        3542,
-        3642,
-        3742,
-        3842,
-        3942,
-        4042,
-        4142,
-        4242,
-        4342,
-        4442,
-        4542,
-        4642,
-        4742,
-        4842,
-        4942,
-        5042,
-        5142,
-        5242,
-        5342,
-        5442,
-        5542,
-        5642,
-        5742,
-        5842,
-        5942,
-        6042,
-        6142,
-        6242,
-        6342,
-        6442,
-        6542,
-        6642,
-        6742,
-        6842,
-        6942,
-        7042,
-        7142,
-        7242,
-        7342,
-        7442,
-        7542,
-        7642,
-        7742,
-        7842,
-        7942,
-        8042,
-        8142,
-        8242,
-        8342,
-        8442,
-        8542,
-        8642,
-        8742,
-        8842,
-        8942,
-        9042,
-        9142,
-        9242,
-        9342,
-        9442,
-        9542,
-        9642,
-        9742,
-        9842,
-        9942
+        43,
+        143,
+        243,
+        343,
+        443,
+        543,
+        643,
+        743,
+        843,
+        943,
+        1043,
+        1143,
+        1243,
+        1343,
+        1443,
+        1543,
+        1643,
+        1743,
+        1843,
+        1943,
+        2043,
+        2143,
+        2243,
+        2343,
+        2443,
+        2543,
+        2643,
+        2743,
+        2843,
+        2943,
+        3043,
+        3143,
+        3243,
+        3343,
+        3443,
+        3543,
+        3643,
+        3743,
+        3843,
+        3943,
+        4043,
+        4143,
+        4243,
+        4343,
+        4443,
+        4543,
+        4643,
+        4743,
+        4843,
+        4943,
+        5043,
+        5143,
+        5243,
+        5343,
+        5443,
+        5543,
+        5643,
+        5743,
+        5843,
+        5943,
+        6043,
+        6143,
+        6243,
+        6343,
+        6443,
+        6543,
+        6643,
+        6743,
+        6843,
+        6943,
+        7043,
+        7143,
+        7243,
+        7343,
+        7443,
+        7543,
+        7643,
+        7743,
+        7843,
+        7943,
+        8043,
+        8143,
+        8243,
+        8343,
+        8443,
+        8543,
+        8643,
+        8743,
+        8843,
+        8943,
+        9043,
+        9143,
+        9243,
+        9343,
+        9443,
+        9543,
+        9643,
+        9743,
+        9843,
+        9943
       ],
       "attempts": [
         1,
@@ -1443,14 +1443,14 @@
       ],
       "curves": {
         "AR1": {
-          "auroc": 0.6664000000000001,
+          "auroc": 0.6704,
           "n_valid": 100,
           "n_missing": 0,
           "n_positive": 50,
           "n_negative": 50
         },
         "Variance": {
-          "auroc": 0.6612,
+          "auroc": 0.6824000000000001,
           "n_valid": 100,
           "n_missing": 0,
           "n_positive": 50,
@@ -1491,11 +1491,11 @@
           "noise": 1.0,
           "null_simulation": true
         },
-        "seed": 42,
+        "seed": 43,
         "dt": 0.01,
         "dt_sample": 1.0,
         "initial_state": [
-          0.8105763792991638
+          0.5586636662483215
         ],
         "observables": [
           "biomass"
@@ -1508,7 +1508,7 @@
       "control_selection": {
         "selection": "first accepted control",
         "selection_context_samples": 300,
-        "root_seed": 42,
+        "root_seed": 43,
         "attempt": 1
       }
     },
@@ -1549,12 +1549,12 @@
           "noise": 1.0,
           "null_simulation": true
         },
-        "seed": 42,
+        "seed": 43,
         "dt": 0.01,
         "dt_sample": 0.02,
         "initial_state": [
-          1.4376566410064697,
-          0.02893168292939663
+          1.6664665937423706,
+          0.04167177528142929
         ],
         "observables": [
           "resource",
@@ -1568,7 +1568,7 @@
       "control_selection": {
         "selection": "first accepted control",
         "selection_context_samples": 300,
-        "root_seed": 42,
+        "root_seed": 43,
         "attempt": 1
       }
     },
@@ -1609,12 +1609,12 @@
           "noise": 1.0,
           "null_simulation": true
         },
-        "seed": 42,
+        "seed": 43,
         "dt": 0.01,
         "dt_sample": 0.02,
         "initial_state": [
-          0.7961273193359375,
-          0.37277016043663025
+          0.8978038430213928,
+          0.4070734679698944
         ],
         "observables": [
           "resource",
@@ -1628,7 +1628,7 @@
       "control_selection": {
         "selection": "first accepted control",
         "selection_context_samples": 300,
-        "root_seed": 42,
+        "root_seed": 43,
         "attempt": 1
       }
     },
@@ -1667,7 +1667,7 @@
           "noise": 0.01,
           "null_simulation": true
         },
-        "seed": 42,
+        "seed": 43,
         "dt": 0.01,
         "dt_sample": 1.0,
         "initial_state": [
@@ -1688,7 +1688,7 @@
       "control_selection": {
         "selection": "first accepted control",
         "selection_context_samples": 300,
-        "root_seed": 42,
+        "root_seed": 43,
         "attempt": 1
       }
     },
@@ -1745,12 +1745,12 @@
           "noise": 0.01,
           "null_simulation": true
         },
-        "seed": 42,
+        "seed": 43,
         "dt": 0.2,
         "dt_sample": 5.0,
         "initial_state": [
-          0.024958796799182892,
-          0.15861709415912628
+          0.045294102281332016,
+          0.14282794296741486
         ],
         "observables": [
           "amoc_strength",
@@ -1765,7 +1765,7 @@
       "control_selection": {
         "selection": "first accepted control",
         "selection_context_samples": 300,
-        "root_seed": 42,
+        "root_seed": 43,
         "attempt": 1
       }
     },
@@ -1794,11 +1794,11 @@
           "noise": 0.01,
           "null_simulation": true
         },
-        "seed": 42,
+        "seed": 43,
         "dt": 0.01,
         "dt_sample": 0.01,
         "initial_state": [
-          -3.451021909713745
+          -9.749342918395996
         ],
         "observables": [
           "state"
@@ -1811,7 +1811,7 @@
       "control_selection": {
         "selection": "first accepted control",
         "selection_context_samples": 300,
-        "root_seed": 42,
+        "root_seed": 43,
         "attempt": 1
       }
     },
@@ -1819,9 +1819,9 @@
       "observed_column": 0,
       "display_time_interval": [
         -15.0,
-        -3.270200004577637
+        -8.319200763702392
       ],
-      "reference_time": -3.5,
+      "reference_time": -8.450000762939453,
       "simulation": "overview.r_bautin",
       "control": {
         "model": "BautinModel",
@@ -1863,8 +1863,8 @@
       "control_selection": {
         "selection": "first accepted control",
         "selection_context_samples": 300,
-        "root_seed": 42,
-        "attempt": 2
+        "root_seed": 43,
+        "attempt": 1
       }
     },
     "r_compost_bomb": {
@@ -1899,7 +1899,7 @@
           "noise": 0.01,
           "null_simulation": true
         },
-        "seed": 42,
+        "seed": 43,
         "dt": 0.05,
         "dt_sample": 0.05,
         "initial_state": [
@@ -1918,7 +1918,7 @@
       "control_selection": {
         "selection": "first accepted control",
         "selection_context_samples": 300,
-        "root_seed": 42,
+        "root_seed": 43,
         "attempt": 1
       }
     },
@@ -1977,12 +1977,12 @@
           "noise": 0.01,
           "null_simulation": true
         },
-        "seed": 42,
+        "seed": 43,
         "dt": 0.2,
         "dt_sample": 5.0,
         "initial_state": [
-          0.03845763951539993,
-          0.1513904333114624
+          0.013266369700431824,
+          0.14494358003139496
         ],
         "observables": [
           "amoc_strength",
@@ -1997,7 +1997,7 @@
       "control_selection": {
         "selection": "first accepted control",
         "selection_context_samples": 300,
-        "root_seed": 42,
+        "root_seed": 43,
         "attempt": 1
       }
     },
@@ -2027,7 +2027,7 @@
           "noise": 1.0,
           "null_simulation": true
         },
-        "seed": 42,
+        "seed": 43,
         "dt": 1.0,
         "dt_sample": 1.0,
         "initial_state": [
@@ -2044,7 +2044,7 @@
       "control_selection": {
         "selection": "first accepted control",
         "selection_context_samples": 300,
-        "root_seed": 42,
+        "root_seed": 43,
         "attempt": 1
       }
     },
@@ -2078,7 +2078,7 @@
           "noise": 1.0,
           "null_simulation": true
         },
-        "seed": 42,
+        "seed": 43,
         "dt": 0.0001,
         "dt_sample": 0.0001,
         "initial_state": [
@@ -2098,7 +2098,7 @@
       "control_selection": {
         "selection": "first accepted control",
         "selection_context_samples": 300,
-        "root_seed": 42,
+        "root_seed": 43,
         "attempt": 1
       }
     }

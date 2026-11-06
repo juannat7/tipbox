@@ -11,25 +11,17 @@ Usage
    from tipbox.models import Bautin
 
    model = Bautin()
-   result = model.make_trajectory(
-       n=3001,
-       noise=0.01,
-       seed=42,
-   )
+   result = model.make_trajectory(n=3001, noise=0.01, seed=45)  # Selected tipping realization.
    x, y = result.trajectory.T
 
-   control = model.make_trajectory(
-       n=3001,
-       noise=0.01,
-       seed=43,
-       null_simulation=True,
-   )
+   control = model.make_trajectory(n=3001, noise=0.01, seed=43, null_simulation=True)
 
 .. figure:: ../_static/figures/r_bautin.png
    :target: ../_static/figures/r_bautin.png
    :alt: X trajectories for tipping and control. The dashed line marks the first radius-threshold crossing time.
 
-   X trajectories for tipping and control. The dashed line marks the first radius-threshold crossing time.
+   Selected stochastic escape and control; the escape precedes the main forcing change.
+   The dashed line marks the first radius-threshold crossing.
 
 Equations and forcing
 ---------------------

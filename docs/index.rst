@@ -9,11 +9,8 @@ trajectory-level ROC/AUROC benchmarking.
 
    from tipbox.models import MayHarvesting
 
-   result = MayHarvesting().make_trajectory(
-       n=1000,
-       noise=1,
-       seed=42,
-   )
+   # n: sampled observations; noise: process-noise strength; seed: random seed.
+   result = MayHarvesting().make_trajectory(n=1000, noise=1, seed=43)
    population = result.trajectory[:, 0]
 
 :doc:`quickstart` covers installation through evaluation. Each
