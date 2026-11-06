@@ -27,7 +27,8 @@ from tipbox.models import MayHarvesting, SaddleNode
 from tipbox.datasets import load_veraart2012
 
 # Bifurcation-induced tipping: n is the number of sampled observations.
-bifurcation = MayHarvesting().make_trajectory(n=1200, noise=1.0, seed=42)
+harvesting = MayHarvesting()
+bifurcation = harvesting.make_trajectory(n=1200, noise=1.0, seed=42)
 
 # Rate-induced tipping: simulate 2,401 observations of a moving equilibrium.
 rate = SaddleNode(epsilon=1.4).make_trajectory(n=2401, noise=0.01, seed=43)
@@ -40,14 +41,17 @@ Simulation results contain `time` and `trajectory` arrays; loaded observations c
 
 ![Bifurcation-induced tipping, rate-induced tipping, and empirical observations](docs/_static/figures/trajectories.png)
 
+Empirical panels: [CC BY-NC 4.0](docs/_static/figures/LICENSE.md).
+
 ## Compute early-warning indicators
 
-Choose an observable and apply a trailing-window statistic:
+Choose an observable and apply a trailing-window statistic before the fold:
 
 ```python
 from tipbox.indicators import rolling_ar1, rolling_variance
 
-signal = bifurcation.trajectory[:, 0]
+before_fold = bifurcation.param_values < harvesting.critical_parameter
+signal = bifurcation.trajectory[before_fold, 0]
 ar1 = rolling_ar1(signal, window=200, detrend="linear")
 variance = rolling_variance(signal, window=200, detrend="linear")
 ```
