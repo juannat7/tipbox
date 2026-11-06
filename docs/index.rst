@@ -23,6 +23,7 @@ integration kernels and forcing conventions of its tipping-point models.
    models/index
    indicators
    benchmarks
+   datasets
    api
    compatibility
 
