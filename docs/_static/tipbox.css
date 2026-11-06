@@ -1,0 +1,17 @@
+body { --content-width: 52rem; }
+h1 { letter-spacing: -.035em; }
+article p, article li { line-height: 1.7; }
+a { text-underline-offset: .18em; }
+.sidebar-brand-text { font-weight: 750; letter-spacing: -.025em; }
+.highlight { border-radius: .45rem; }
+article img { max-width: 100%; height: auto; }
+article div.math { max-width: 100%; overflow-x: auto; padding-block: .2rem; }
+.table-wrapper { max-width: 100%; overflow-x: auto; }
+table.parameter-table { table-layout: fixed; width: 100%; font-size: .85rem; }
+table.parameter-table td, table.parameter-table th { padding: .65rem .7rem; vertical-align: top; overflow-wrap: anywhere; }
+table.parameter-table td:first-child { font-family: var(--font-stack--monospace); }
+table.parameter-table p { line-height: 1.5; }
+table.contract-table td { overflow-wrap: anywhere; }
+@media (max-width: 48rem) {
+  table.parameter-table { min-width: 36rem; }
+}

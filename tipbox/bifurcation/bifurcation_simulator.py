@@ -11,30 +11,28 @@ from ..utils import calculate_total_len
 def available_bifurcation_real_systems():
     """Get the available real systems with bifurcation tipping (internal names)."""
     from ..registry import SYSTEM_REGISTRY
-    return tuple(spec.bifurcation_system 
-                for spec in SYSTEM_REGISTRY.values() 
-                if spec.bifurcation_system is not None)
+
+    return tuple(
+        spec.bifurcation_system
+        for spec in SYSTEM_REGISTRY.values()
+        if spec.bifurcation_system is not None
+    )
 
 
 def _select_system(key: jax.random.PRNGKey, system_name: str = None):
-    """Select a bifurcation real system.
-    
-    Parameters
-    ----------
-    key : JAX random key
-    system_name : str, optional
-        If provided, select this specific system. Otherwise, randomly select.
-    """
+    """Resolve a named bifurcation model and its typed configuration."""
     from ..registry import SYSTEM_REGISTRY, SystemType
-    
+
     if system_name is not None:
         return get_bifurcation_real_system_spec(system_name)
-    
+
     # Random selection
-    real_systems = [spec for spec in SYSTEM_REGISTRY.values() 
-                    if spec.system_type == SystemType.BIFURCATION 
-                    and spec.bifurcation_system is not None 
-                   ]
+    real_systems = [
+        spec
+        for spec in SYSTEM_REGISTRY.values()
+        if spec.system_type == SystemType.BIFURCATION
+        and spec.bifurcation_system is not None
+    ]
     if not real_systems:
         raise ValueError("No bifurcation real systems available")
     idx = int(jax.random.randint(key, (), 0, len(real_systems)))
@@ -51,41 +49,9 @@ def simulate_real_bifurcation_trajectory(
     system_name: str = None,
     param_end_multiplier: float = 1.1,
     config=None,
-    **generate_kwargs
+    **generate_kwargs,
 ):
-    """Simulate a single real system bifurcation trajectory.
-
-    Parameters
-    ----------
-    key : jax.random.PRNGKey
-        Random key for reproducibility
-    series_len : int, default=500
-        Desired output trajectory length
-    steps_before_transition : int, default=1
-        Number of samples to stay before the detected transition (>=0).
-    buffer_size : int, default=1000
-        Extra samples simulated prior to the transition to ensure enough
-        pre-transition context. Keep this constant to preserve the
-        bifurcation parameter ramp rate.
-    null_simulation : bool, default=False
-        If True, simulate null (non-tipping) trajectory
-    system_name : str, optional
-        If provided, use this specific system. Otherwise, randomly select.
-    param_end_multiplier : float, default=1.1
-        Multiplier for the end parameter value
-    **generate_kwargs : additional arguments
-        Passed to the model.simulate method; unsupported names raise TypeError.
-
-    Returns
-    -------
-    full_trajectory : tipbox.types.TrajectoryResult
-        Full trajectory with metadata
-    part_trajectory : tipbox.types.TrajectoryResult
-        Part trajectory with metadata
-
-    Returns None if the simulated trajectory does not match the requested
-    tipping/null behaviour or lacks sufficient pre-transition context.
-    """
+    """Simulate and extract legacy bifurcation context. Return None on outcome/context rejection."""
 
     key_select, key_sim = jax.random.split(key)
 
@@ -94,7 +60,7 @@ def simulate_real_bifurcation_trajectory(
             "steps_before_transition exceeds buffer_size. "
             "Increase buffer_size to maintain constant parameter rate."
         )
-    
+
     # Calculate total simulation length (extended if param_end_multiplier > 1.0)
     total_len = calculate_total_len(series_len, buffer_size, param_end_multiplier)
 
@@ -110,7 +76,7 @@ def simulate_real_bifurcation_trajectory(
         sigma_tilde=sigma_tilde,
         null_simulation=null_simulation,
         param_end_multiplier=param_end_multiplier,
-        **generate_kwargs
+        **generate_kwargs,
     )
 
     # Check if the trajectory crossed the bifurcation point
@@ -148,7 +114,9 @@ def simulate_real_bifurcation_trajectory(
         "steps_before_transition": steps_before_transition,
         "system_config": asdict(config),
         "transition_index": int(trans_idx_out),
-        "param_value_transition": float(param_values[min(trans_idx_out, param_values.shape[0] - 1)])
+        "param_value_transition": float(
+            param_values[min(trans_idx_out, param_values.shape[0] - 1)]
+        ),
     }
 
     full_trajectory = TrajectoryResult(
@@ -156,7 +124,7 @@ def simulate_real_bifurcation_trajectory(
         trajectory=trajectory,
         param_values=param_values,
         sigma=sigma,
-        metadata=metadata
+        metadata=metadata,
     )
 
     part_trajectory = TrajectoryResult(
@@ -164,8 +132,7 @@ def simulate_real_bifurcation_trajectory(
         trajectory=traj_seg,
         param_values=param_seg,
         sigma=sigma,
-        metadata=metadata
+        metadata=metadata,
     )
 
     return (full_trajectory, part_trajectory)
-

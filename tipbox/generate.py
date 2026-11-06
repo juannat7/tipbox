@@ -95,7 +95,9 @@ def generate(
         if result is not None:
             full, segment = result
             info = dict(full.metadata)
-            info.update(attempt=attempt, system_name=spec.name, type=spec.system_type.value)
+            info.update(
+                attempt=attempt, system_name=spec.name, type=spec.system_type.value
+            )
             return full, segment, info
     raise RuntimeError(
         f"Could not generate {spec.name} trajectory after {max_attempts} attempts. "

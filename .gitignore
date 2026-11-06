@@ -185,3 +185,10 @@ cython_debug/
 
 output/
 data/
+
+# Reproducible documentation figures are versioned; source data stay in the cache.
+!docs/_static/figures/*.png
+
+# Vector exports are reproducible; keep PNG previews and provenance in Git.
+docs/_static/figures/*.svg
+docs/_static/figures/*.pdf
