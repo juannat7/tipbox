@@ -35,15 +35,12 @@ TipBox provides a common interface to simulate tipping systems and load observat
 from tipbox.models import MayHarvesting, SaddleNode
 from tipbox.datasets import Microcosm
 
-# Bifurcation-induced tipping (null_simulation=False by default).
+# Bifurcation-induced tipping
 harvesting = MayHarvesting()
-# num_samples: sampled observations; noise: process-noise strength; seed: random seed.
 bifurcation = harvesting.make_trajectory(num_samples=1200, noise=1.0, seed=43)
-# null_simulation=True selects the non-tipping control.
 bifurcation_control = harvesting.make_trajectory(num_samples=1200, noise=1.0, seed=43, null_simulation=True)
 
-# Rate-induced tipping: simulate 2,401 observations of a moving equilibrium.
-# epsilon sets the rate of the equilibrium shift.
+# Rate-induced tipping
 rate_model = SaddleNode(epsilon=1.4)
 rate = rate_model.make_trajectory(num_samples=2401, noise=0.01, seed=43)
 rate_control = rate_model.make_trajectory(num_samples=2401, noise=0.01, seed=43, null_simulation=True)
@@ -67,7 +64,8 @@ from tipbox.indicators import rolling_ar1, rolling_variance
 
 before_fold = bifurcation.param_values < harvesting.critical_parameter
 signal = bifurcation.trajectory[before_fold, 0]
-# window: trailing samples; detrend: trend removed within each window.
+
+# Get early warning signals
 ar1 = rolling_ar1(signal, window=200, detrend="linear")
 variance = rolling_variance(signal, window=200, detrend="linear")
 ```
@@ -90,7 +88,7 @@ from tipbox.datasets import generate_dataset
 from tipbox.indicators import rolling_ar1, rolling_variance
 from tipbox.metrics import ensemble_roc, plot_roc
 
-# 50 tipping trajectories + 50 controls; retain 300 samples before each reference.
+# 50 tipping trajectories + 50 controls; retain 300 samples before each tipping threshold.
 batch = generate_dataset(
     MayHarvesting(), num_tipping=50, num_controls=50, num_samples=1000,
     context_samples=300, noise=1.0, seed=43,
@@ -106,7 +104,6 @@ Score the indicator trend in each trajectory and plot the ROC curves:
 
 ```python
 report = ensemble_roc(batch.labels, indicators)  # Labels: 0 control, 1 tipping.
-print(report.curves["Variance"].auroc)
 ax = plot_roc(report)
 ```
 
