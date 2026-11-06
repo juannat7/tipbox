@@ -1,6 +1,6 @@
 # tipbox
 
-A collection of JAX-based, differentiable box models for tipping point time series generation and analysis.
+Named stochastic box models and classical early-warning benchmarks for tipping-point time series, with JAX integration kernels.
 
 ## Developer's Guide
 
@@ -46,6 +46,24 @@ print(model.get_parameters())
 ```
 
 Every model exposes typed configuration, physical state and observable names, and an exact-grid trajectory method. See the [model reference](docs/index.rst) for equations, units, defaults, numerical conventions, and historical compatibility. To build the documentation locally, install `pip install -e ".[docs]"` and run `python -m sphinx -b html docs docs/_build/html`.
+
+## Classical warning indicators
+
+```python
+from tipbox.models import MayHarvesting
+from tipbox.indicators import rolling_ar1, rolling_variance
+from tipbox.metrics import kendall_tau
+
+result = MayHarvesting().make_trajectory(1000, seed=42)
+signal = result.trajectory[:, 0]
+ar1 = rolling_ar1(signal, window=200, detrend="linear")
+variance = rolling_variance(signal, window=200, detrend="linear")
+print(kendall_tau(variance))
+```
+
+Trailing AR1 regression slope, Pearson autocorrelation, variance, skewness, and kurtosis share explicit window, step, and detrending controls. Results keep the input length, with `NaN` for warm-up or missing-data windows. See [definitions and defaults](docs/indicators.rst).
+
+For a labeled ensemble, `ensemble_roc(labels, {"Variance": variance_series})` reduces each trajectory's indicator to a Kendall trend and returns ROC/AUROC with valid and missing counts. It also accepts precomputed scalar scores. See the [complete benchmark example](docs/benchmarks.rst) for generation, labels, event conventions, and plotting.
 
 ## Quickstart
 
